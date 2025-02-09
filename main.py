@@ -9,7 +9,7 @@ def main():
   project_path = os.path.dirname(__file__)
   model_path = os.path.join(project_path, "model")
   plot_path = os.path.join(project_path, "plot")
-  image_path = os.path.join(project_path, "images", "page1.png")
+  image_path = os.path.join(project_path, "images", "to-rotation.png")
   os.makedirs(model_path, exist_ok=True)
   os.makedirs(plot_path, exist_ok=True)
 

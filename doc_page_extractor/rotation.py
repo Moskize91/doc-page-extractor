@@ -1,4 +1,4 @@
-from math import atan2, pi, sqrt, sin, cos, atan
+from math import pi, atan2, sqrt, sin, cos
 from .rectangle import Point
 from .types import OCRFragment
 
@@ -9,30 +9,42 @@ class RotationAdjuster:
       origin_size: tuple[int, int],
       new_size: tuple[int, int],
       rotation: float,
+      to_origin_coordinate: bool,
     ):
+    from_size: tuple[int, int]
+    to_size: tuple[int, int]
+    if to_origin_coordinate:
+      from_size = origin_size
+      to_size = new_size
+    else:
+      from_size = new_size
+      to_size = origin_size
+      rotation = -rotation
+
     self._rotation: float = rotation
     self._center_offset: tuple[float, float] = (
-      - origin_size[0] / 2.0,
-      - origin_size[1] / 2.0,
+      - from_size[0] / 2.0,
+      - from_size[1] / 2.0,
     )
     self._new_offset: tuple[float, float] = (
-      (new_size[0] - origin_size[0]) / 2.0,
-      (new_size[1] - origin_size[1]) / 2.0,
+      (to_size[0] - from_size[0]) / 2.0,
+      (to_size[1] - from_size[1]) / 2.0,
     )
 
   def adjust(self, point: Point) -> Point:
-    x, y = self._center_offset
-    x += point[0]
-    y += point[1]
+    dx, dy = self._center_offset
+    x, y = point
+    x += dx
+    y += dy
 
     if x != 0.0 or y != 0.0:
       radius = sqrt(x*x + y*y)
-      angle = atan(y, x) - self._rotation
+      angle = atan2(y, x) + self._rotation
       x = radius * cos(angle)
       y = radius * sin(angle)
 
-    x += self._new_offset[0]
-    y += self._new_offset[1]
+    x += self._new_offset[0] - dx
+    y += self._new_offset[1] - dy
 
     return x, y
 
