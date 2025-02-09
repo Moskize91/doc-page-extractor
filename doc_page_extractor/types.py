@@ -25,8 +25,7 @@ class LayoutClass(Enum):
 @dataclass
 class Layout:
   cls: LayoutClass
-  origin: tuple[float, float]
-  size: tuple[float, float]
+  rect: Rectangle
   fragments: list[OCRFragment]
 
 @dataclass

@@ -147,32 +147,29 @@ class DocExtractor:
 
     for cls_id, rect in zip(boxes.cls, boxes.xyxy):
       cls_id = cls_id.item()
-      origin = (rect[0].item(), rect[1].item())
-      size = (rect[2].item() - origin[0], rect[3].item() - origin[1])
-      layouts.append(Layout(
-        cls=LayoutClass(round(cls_id)),
-        origin=origin,
-        size=size,
-        fragments=[],
-      ))
+      cls=LayoutClass(round(cls_id))
+
+      x1, y1, x2, y2 = rect
+      x1 = x1.item()
+      y1 = y1.item()
+      x2 = x2.item()
+      y2 = y2.item()
+      rect = Rectangle(
+        lt=(x1, y1),
+        rt=(x2, y1),
+        lb=(x1, y2),
+        rb=(x2, y2),
+      )
+      layouts.append(Layout(cls, rect, []))
+
     return layouts
 
   def _layouts_matched_by_fragments(self, fragments: list[OCRFragment], layouts: list[Layout]):
-    layout_rectangles: list[Rectangle] = []
-    for layout in layouts:
-      x0, y0 = layout.origin
-      width, height = layout.size
-      layout_rectangles.append(Rectangle(
-        lt=(x0, y0),
-        rt=(x0 + width, y0),
-        rb=(x0 + width, y0 + height),
-        lb=(x0, y0 + height),
-      ))
     for fragment in fragments:
       max_area: float = 0.0
       max_layout_index: int = 0
-      for i, layout_rect in enumerate(layout_rectangles):
-        area = intersection_area(fragment.rect, layout_rect)
+      for i, layout in enumerate(layouts):
+        area = intersection_area(fragment.rect, layout.rect)
         if area > max_area:
           max_area = area
           max_layout_index = i
