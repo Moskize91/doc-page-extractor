@@ -9,6 +9,7 @@ from doclayout_yolo import YOLOv10
 from paddleocr import PaddleOCR
 
 from .layoutreader import prepare_inputs, boxes2inputs, parse_logits
+from .rotation import calculate_rotation
 from .rectangle import intersection_area, Rectangle
 from .types import OCRFragment, LayoutClass, Layout
 from .downloader import download
@@ -33,10 +34,12 @@ class DocExtractor:
   def extract(self, image: Image, lang: PaddleLang) -> list[Layout]:
     image_np = np.array(image)
     fragments = list(self._search_orc_fragments(image_np, lang))
-    #TODO: 矫正角度
+    rotation = calculate_rotation(fragments)
     self._order_fragments(image.width, image.height, fragments)
     layouts = self._get_layouts(image)
     layouts = self._layouts_matched_by_fragments(fragments, layouts)
+
+    print("rotation:", rotation)
 
     return layouts
 
