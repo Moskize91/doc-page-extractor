@@ -1,6 +1,40 @@
-from math import atan2, pi
+from math import atan2, pi, sqrt, sin, cos, atan
+from .rectangle import Point
 from .types import OCRFragment
 
+
+class RotationAdjuster:
+  def __init__(
+      self,
+      origin_size: tuple[int, int],
+      new_size: tuple[int, int],
+      rotation: float,
+    ):
+    self._rotation: float = rotation
+    self._center_offset: tuple[float, float] = (
+      - origin_size[0] / 2.0,
+      - origin_size[1] / 2.0,
+    )
+    self._new_offset: tuple[float, float] = (
+      (new_size[0] - origin_size[0]) / 2.0,
+      (new_size[1] - origin_size[1]) / 2.0,
+    )
+
+  def adjust(self, point: Point) -> Point:
+    x, y = self._center_offset
+    x += point[0]
+    y += point[1]
+
+    if x != 0.0 or y != 0.0:
+      radius = sqrt(x*x + y*y)
+      angle = atan(y, x) - self._rotation
+      x = radius * cos(angle)
+      y = radius * sin(angle)
+
+    x += self._new_offset[0]
+    y += self._new_offset[1]
+
+    return x, y
 
 def calculate_rotation(fragments: list[OCRFragment]):
   rotations0: list[float] = []

@@ -2,22 +2,25 @@ import os
 import numpy as np
 
 from typing import Literal, Generator
+from math import pi
 from pathlib import Path
-from PIL import Image
+from PIL.ImageFile import ImageFile
 from transformers import LayoutLMv3ForTokenClassification
 from doclayout_yolo import YOLOv10
 from paddleocr import PaddleOCR
 
 from .layoutreader import prepare_inputs, boxes2inputs, parse_logits
-from .rotation import calculate_rotation
+from .rotation import calculate_rotation, RotationAdjuster
 from .rectangle import intersection_area, Rectangle
-from .types import OCRFragment, LayoutClass, Layout
+from .types import ExtractedResult, OCRFragment, LayoutClass, Layout
 from .downloader import download
 from .utils import ensure_dir
 
 
 # https://github.com/PaddlePaddle/PaddleOCR/blob/2c0c4beb0606819735a16083cdebf652939c781a/paddleocr.py#L108-L157
 type PaddleLang = Literal["ch", "en", "korean", "japan", "chinese_cht", "ta", "te", "ka", "latin", "arabic", "cyrillic", "devanagari"]
+
+_TINY_ROTATION = 0.0005 # below this angle, we consider the text is horizontal
 
 class DocExtractor:
   def __init__(
@@ -31,17 +34,27 @@ class DocExtractor:
     self._yolo: YOLOv10 | None = None
     self._layout: LayoutLMv3ForTokenClassification | None = None
 
-  def extract(self, image: Image, lang: PaddleLang) -> list[Layout]:
+  def extract(self, image: ImageFile, lang: PaddleLang) -> ExtractedResult:
     image_np = np.array(image)
     fragments = list(self._search_orc_fragments(image_np, lang))
     rotation = calculate_rotation(fragments)
+
+    adjusted_image: ImageFile | None = None
+    if abs(rotation) <= _TINY_ROTATION:
+      image = self._adjust_fragment_rectangles(
+        fragments, image, rotation,
+      )
+      adjusted_image = image
+
     self._order_fragments(image.width, image.height, fragments)
     layouts = self._get_layouts(image)
     layouts = self._layouts_matched_by_fragments(fragments, layouts)
 
-    print("rotation:", rotation)
-
-    return layouts
+    return ExtractedResult(
+      rotation=rotation,
+      layouts=layouts,
+      adjusted_image=adjusted_image,
+    )
 
   # https://paddlepaddle.github.io/PaddleOCR/latest/quick_start.html#_2
   def _search_orc_fragments(self, image: np.ndarray, lang: PaddleLang) -> Generator[OCRFragment, None, None]:
@@ -62,6 +75,27 @@ class DocExtractor:
             lb=(react[3][0], react[3][1]),
           ),
         )
+
+  def _adjust_fragment_rectangles(self, fragments: list[OCRFragment], image: ImageFile, rotation: float):
+    origin_size = image.size
+    image = image.rotate(
+      angle=-rotation * 180 / pi,
+      fillcolor=(255, 255, 255),
+      expand=True,
+    )
+    adjuster = RotationAdjuster(
+      origin_size=origin_size,
+      new_size=image.size,
+      rotation=rotation,
+    )
+    for fragment in fragments:
+      rect = fragment.rect
+      rect.lt = adjuster.adjust(rect.lt)
+      rect.rt = adjuster.adjust(rect.rt)
+      rect.lb = adjuster.adjust(rect.lb)
+      rect.rb = adjuster.adjust(rect.rb)
+
+    return image
 
   def _order_fragments(self, width: int, height: int, fragments: list[OCRFragment]):
     if self._layout is None:
@@ -99,7 +133,7 @@ class DocExtractor:
     for order, fragment in zip(orders, fragments):
       fragment.order = order
 
-  def _get_layouts(self, source: Image) -> list[Layout]:
+  def _get_layouts(self, source: ImageFile) -> list[Layout]:
     # about source parameter to see:
     # https://github.com/opendatalab/DocLayout-YOLO/blob/7c4be36bc61f11b67cf4a44ee47f3c41e9800a91/doclayout_yolo/data/build.py#L157-L175
     det_res = self._get_yolo().predict(
