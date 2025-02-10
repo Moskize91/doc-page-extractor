@@ -75,13 +75,7 @@ class DocExtractor:
         )
 
   def _order_fragments(self, width: int, height: int, fragments: list[OCRFragment]):
-    if self._layout is None:
-      self._layout = LayoutLMv3ForTokenClassification.from_pretrained(
-        pretrained_model_name_or_path="hantian/layoutreader",
-        cache_dir=ensure_dir(
-          os.path.join(self._model_dir_path, "layoutreader"),
-        ),
-      )
+    layout_model = self._get_layout()
     boxes: list[list[int]] = []
     steps: float = 1000.0 # max value of layoutreader
     x_rate: float = 1.0
@@ -103,8 +97,8 @@ class DocExtractor:
         round((bottom * y_rate + y_offset) * steps),
       ])
     inputs = boxes2inputs(boxes)
-    inputs = prepare_inputs(inputs, self._layout)
-    logits = self._layout(**inputs).logits.cpu().squeeze(0)
+    inputs = prepare_inputs(inputs, layout_model)
+    logits = layout_model(**inputs).logits.cpu().squeeze(0)
     orders: list[int] = parse_logits(logits, len(boxes))
 
     for order, fragment in zip(orders, fragments):
@@ -192,6 +186,18 @@ class DocExtractor:
         download(yolo_model_url, yolo_model_path)
       self._yolo = YOLOv10(str(yolo_model_path))
     return self._yolo
+
+  def _get_layout(self) -> LayoutLMv3ForTokenClassification:
+    if self._layout is None:
+      cache_dir = ensure_dir(
+        os.path.join(self._model_dir_path, "layoutreader"),
+      )
+      self._layout = LayoutLMv3ForTokenClassification.from_pretrained(
+        pretrained_model_name_or_path="hantian/layoutreader",
+        cache_dir=cache_dir,
+        local_files_only=os.path.exists(os.path.join(cache_dir, "models--hantian--layoutreader")),
+      )
+    return self._layout
 
   def _collect_rate_boxes(self, fragments: list[OCRFragment]):
     boxes = self._get_boxes(fragments)

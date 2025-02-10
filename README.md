@@ -1,4 +1,4 @@
-# test-yolo
+# doc page extractor
 
 ## Setup dev env
 
@@ -19,6 +19,3 @@ exit env.
 ```shell
 $ conda deactivate
 ```
-
-## Dependencies
-https://paddlepaddle.github.io/PaddleOCR/latest/quick_start.html
