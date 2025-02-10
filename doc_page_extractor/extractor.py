@@ -2,7 +2,6 @@ import os
 import numpy as np
 
 from typing import Literal, Generator
-from math import pi
 from pathlib import Path
 from PIL.ImageFile import ImageFile
 from transformers import LayoutLMv3ForTokenClassification
@@ -10,7 +9,7 @@ from doclayout_yolo import YOLOv10
 from paddleocr import PaddleOCR
 
 from .layoutreader import prepare_inputs, boxes2inputs, parse_logits
-from .rotation import calculate_rotation, RotationAdjuster
+from .raw_optimizer import RawOptimizer
 from .rectangle import intersection_area, Rectangle
 from .types import ExtractedResult, OCRFragment, LayoutClass, Layout
 from .downloader import download
@@ -19,8 +18,6 @@ from .utils import ensure_dir
 
 # https://github.com/PaddlePaddle/PaddleOCR/blob/2c0c4beb0606819735a16083cdebf652939c781a/paddleocr.py#L108-L157
 type PaddleLang = Literal["ch", "en", "korean", "japan", "chinese_cht", "ta", "te", "ka", "latin", "arabic", "cyrillic", "devanagari"]
-
-_TINY_ROTATION = 0.005 # below this angle, we consider the text is horizontal
 
 class DocExtractor:
   def __init__(
@@ -41,39 +38,20 @@ class DocExtractor:
       adjust_points: bool = False,
     ) -> ExtractedResult:
 
-    image_np = np.array(image)
-    fragments = list(self._search_orc_fragments(image_np, lang))
-    rotation = calculate_rotation(fragments)
+    raw_optimizer = RawOptimizer(image, adjust_points)
+    fragments = list(self._search_orc_fragments(raw_optimizer.image_np, lang))
+    raw_optimizer.receive_raw_fragments(fragments)
 
-    fragment_origin_rectangles: list[Rectangle] | None = None
-    to_origin_adjuster: RotationAdjuster | None = None
-    to_new_adjuster: RotationAdjuster | None = None
-    adjusted_image: ImageFile | None = None
-
-    if abs(rotation) > _TINY_ROTATION:
-      to_origin_adjuster, to_new_adjuster, image = self._create_adjusters(image, rotation)
-      if adjust_points:
-        adjusted_image = image
-
-    if to_new_adjuster is not None:
-      fragment_origin_rectangles = [f.rect for f in fragments]
-      self._adjust_fragment_rectangles(fragments, to_new_adjuster)
-
-    self._order_fragments(image.width, image.height, fragments)
-    layouts = self._get_layouts(image)
+    width, height = raw_optimizer.image.size
+    self._order_fragments(width, height, fragments)
+    layouts = self._get_layouts(raw_optimizer.image)
     layouts = self._layouts_matched_by_fragments(fragments, layouts)
-
-    if not adjust_points:
-      if fragment_origin_rectangles is not None:
-        for fragment, origin_rect in zip(fragments, fragment_origin_rectangles):
-          fragment.rect = origin_rect
-      if to_origin_adjuster is not None:
-        self._adjust_layout_rectangles(layouts, to_origin_adjuster)
+    raw_optimizer.receive_raw_layouts(layouts)
 
     return ExtractedResult(
-      rotation=rotation,
+      rotation=raw_optimizer.rotation,
       layouts=layouts,
-      adjusted_image=adjusted_image,
+      adjusted_image=raw_optimizer.adjusted_image,
     )
 
   # https://paddlepaddle.github.io/PaddleOCR/latest/quick_start.html#_2
@@ -95,46 +73,6 @@ class DocExtractor:
             lb=(react[3][0], react[3][1]),
           ),
         )
-
-  def _create_adjusters(self, image: ImageFile, rotation: float):
-    origin_size = image.size
-    image = image.rotate(
-      angle=rotation * 180 / pi,
-      fillcolor=(255, 255, 255),
-      expand=True,
-    )
-    to_origin_adjuster = RotationAdjuster(
-      origin_size=origin_size,
-      new_size=image.size,
-      rotation=rotation,
-      to_origin_coordinate=True,
-    )
-    to_new_adjuster = RotationAdjuster(
-      origin_size=origin_size,
-      new_size=image.size,
-      rotation=rotation,
-      to_origin_coordinate=False,
-    )
-    return to_origin_adjuster, to_new_adjuster, image
-
-  def _adjust_fragment_rectangles(self, fragments: list[OCRFragment], adjuster = RotationAdjuster) -> ImageFile:
-    for fragment in fragments:
-      rect = fragment.rect
-      fragment.rect = Rectangle(
-        lt=adjuster.adjust(rect.lt),
-        rt=adjuster.adjust(rect.rt),
-        lb=adjuster.adjust(rect.lb),
-        rb=adjuster.adjust(rect.rb),
-      )
-
-  def _adjust_layout_rectangles(self, layouts: list[Layout], adjuster = RotationAdjuster) -> ImageFile:
-    for layout in layouts:
-      layout.rect = Rectangle(
-        lt=adjuster.adjust(layout.rect.lt),
-        rt=adjuster.adjust(layout.rect.rt),
-        lb=adjuster.adjust(layout.rect.lb),
-        rb=adjuster.adjust(layout.rect.rb),
-      )
 
   def _order_fragments(self, width: int, height: int, fragments: list[OCRFragment]):
     if self._layout is None:
