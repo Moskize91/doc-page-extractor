@@ -4,4 +4,4 @@ shapely==2.0.6
 transformers==4.48.2
 doclayout_yolo==0.0.2
 paddlepaddle==2.6.2
-paddleocr==2.9.1
+albumentations==1.4.11
