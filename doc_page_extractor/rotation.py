@@ -14,11 +14,11 @@ class RotationAdjuster:
     from_size: tuple[int, int]
     to_size: tuple[int, int]
     if to_origin_coordinate:
-      from_size = origin_size
-      to_size = new_size
-    else:
       from_size = new_size
       to_size = origin_size
+    else:
+      from_size = origin_size
+      to_size = new_size
       rotation = -rotation
 
     self._rotation: float = rotation
@@ -27,15 +27,14 @@ class RotationAdjuster:
       - from_size[1] / 2.0,
     )
     self._new_offset: tuple[float, float] = (
-      (to_size[0] - from_size[0]) / 2.0,
-      (to_size[1] - from_size[1]) / 2.0,
+      to_size[0] / 2.0,
+      to_size[1] / 2.0,
     )
 
   def adjust(self, point: Point) -> Point:
-    dx, dy = self._center_offset
     x, y = point
-    x += dx
-    y += dy
+    x += self._center_offset[0]
+    y += self._center_offset[1]
 
     if x != 0.0 or y != 0.0:
       radius = sqrt(x*x + y*y)
@@ -43,8 +42,8 @@ class RotationAdjuster:
       x = radius * cos(angle)
       y = radius * sin(angle)
 
-    x += self._new_offset[0] - dx
-    y += self._new_offset[1] - dy
+    x += self._new_offset[0]
+    y += self._new_offset[1]
 
     return x, y
 
