@@ -19,5 +19,3 @@ conda activate ./.venv
 
 pip install --upgrade pip
 pip install -r requirements.txt
-
-scripts/patch.sh
