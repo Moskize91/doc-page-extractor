@@ -32,4 +32,5 @@ class Layout:
 class ExtractedResult:
   rotation: float
   layouts: list[Layout]
+  extracted_image: ImageFile
   adjusted_image: ImageFile | None

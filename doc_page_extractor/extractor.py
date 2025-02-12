@@ -1,4 +1,5 @@
 import os
+import sys
 import numpy as np
 
 from typing import Literal, Generator
@@ -51,6 +52,7 @@ class DocExtractor:
     return ExtractedResult(
       rotation=raw_optimizer.rotation,
       layouts=layouts,
+      extracted_image=image,
       adjusted_image=raw_optimizer.adjusted_image,
     )
 
@@ -149,10 +151,16 @@ class DocExtractor:
     for layout in layouts:
       layout.fragments.sort(key=lambda x: x.order)
 
-    layouts = [layout for layout in layouts if len(layout.fragments) > 0]
-    layouts.sort(key=lambda x: x.fragments[0].order)
+    layouts.sort(key=self._layout_order)
 
     return layouts
+
+  def _layout_order(self, layout: Layout) -> int:
+    fragments = layout.fragments
+    if len(fragments) == 0:
+      return sys.maxsize
+    else:
+      return fragments[0].order
 
   def _get_ocr(self, lang: PaddleLang) -> PaddleOCR:
     if self._ocr_and_lan is not None:
