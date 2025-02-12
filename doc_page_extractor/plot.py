@@ -1,9 +1,9 @@
 from typing import Iterable
 from PIL import ImageDraw
-from PIL.ImageFile import ImageFile
+from PIL.Image import Image
 from .types import Layout
 
-def plot(image: ImageFile, layouts: Iterable[Layout]):
+def plot(image: Image, layouts: Iterable[Layout]):
   draw = ImageDraw.Draw(image, mode="RGBA")
   for layout in layouts:
     draw.polygon([p for p in layout.rect], outline=(255, 0, 0), width=3)

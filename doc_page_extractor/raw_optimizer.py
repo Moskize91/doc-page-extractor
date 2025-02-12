@@ -1,7 +1,7 @@
 import numpy as np
 
 from dataclasses import dataclass
-from PIL.ImageFile import ImageFile
+from PIL.Image import Image
 from math import pi
 from .types import OCRFragment, Layout
 from .rotation import calculate_rotation, RotationAdjuster
@@ -20,22 +20,22 @@ class _RotationContext:
 class RawOptimizer:
   def __init__(
       self,
-      raw: ImageFile,
+      raw: Image,
       adjust_points: bool,
     ):
-    self._raw: ImageFile = raw
-    self._image: ImageFile = raw
+    self._raw: Image = raw
+    self._image: Image = raw
     self._adjust_points: bool = adjust_points
     self._fragments: list[OCRFragment]
     self._rotation: float = 0.0
     self._rotation_context: _RotationContext | None  = None
 
   @property
-  def image(self) -> ImageFile:
+  def image(self) -> Image:
     return self._image
 
   @property
-  def adjusted_image(self) -> ImageFile | None:
+  def adjusted_image(self) -> Image | None:
     if self._adjust_points and self._image != self._raw:
       return self._image
 

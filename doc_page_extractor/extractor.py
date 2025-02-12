@@ -4,7 +4,7 @@ import numpy as np
 
 from typing import Literal, Generator
 from pathlib import Path
-from PIL.ImageFile import ImageFile
+from PIL.Image import Image
 from transformers import LayoutLMv3ForTokenClassification
 from doclayout_yolo import YOLOv10
 from paddleocr import PaddleOCR
@@ -34,7 +34,7 @@ class DocExtractor:
 
   def extract(
       self,
-      image: ImageFile,
+      image: Image,
       lang: PaddleLang,
       adjust_points: bool = False,
     ) -> ExtractedResult:
@@ -106,7 +106,7 @@ class DocExtractor:
     for order, fragment in zip(orders, fragments):
       fragment.order = order
 
-  def _get_layouts(self, source: ImageFile) -> list[Layout]:
+  def _get_layouts(self, source: Image) -> list[Layout]:
     # about source parameter to see:
     # https://github.com/opendatalab/DocLayout-YOLO/blob/7c4be36bc61f11b67cf4a44ee47f3c41e9800a91/doclayout_yolo/data/build.py#L157-L175
     det_res = self._get_yolo().predict(
