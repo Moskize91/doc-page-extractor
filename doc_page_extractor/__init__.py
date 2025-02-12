@@ -1,4 +1,5 @@
 from .extractor import PaddleLang, DocExtractor
+from .clipper import clip, clip_from_image
 from .plot import plot
 from .types import OCRFragment, LayoutClass, Layout
 from .rectangle import Point, Rectangle

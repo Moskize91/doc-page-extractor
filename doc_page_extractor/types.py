@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
+from PIL.Image import Image
 from PIL.ImageFile import ImageFile
 from .rectangle import Rectangle
 
@@ -33,4 +34,4 @@ class ExtractedResult:
   rotation: float
   layouts: list[Layout]
   extracted_image: ImageFile
-  adjusted_image: ImageFile | None
+  adjusted_image: Image | None

@@ -2,13 +2,13 @@ import os
 
 from PIL import Image
 from PIL.ImageFile import ImageFile
-from doc_page_extractor import plot, DocExtractor
+from doc_page_extractor import plot, clip, DocExtractor
 
 
 def main():
   project_path = os.path.dirname(__file__)
   model_path = os.path.join(project_path, "model")
-  plot_path = os.path.join(project_path, "plot")
+  plot_path = os.path.join(project_path, "output")
   image_path = os.path.join(project_path, "images", "to-rotation.png")
   os.makedirs(model_path, exist_ok=True)
   os.makedirs(plot_path, exist_ok=True)
@@ -24,7 +24,9 @@ def main():
       plot_image = result.adjusted_image
 
     plot(plot_image, result.layouts)
-    plot_image.save(os.path.join(plot_path, "output.png"))
+    clip_image = clip(result, result.layouts[3])
+    plot_image.save(os.path.join(plot_path, "plot.png"))
+    clip_image.save(os.path.join(plot_path, "clip.png"))
 
     for layout in result.layouts:
       print("\n", layout.cls)

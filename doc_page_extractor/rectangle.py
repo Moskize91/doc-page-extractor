@@ -18,6 +18,13 @@ class Rectangle:
     yield self.rb
     yield self.rt
 
+  @property
+  def segments(self) -> Generator[tuple[Point, Point], None, None]:
+    yield (self.lt, self.lb)
+    yield (self.lb, self.rb)
+    yield (self.rb, self.rt)
+    yield (self.rt, self.lt)
+
 def intersection_area(rect1: Rectangle, rect2: Rectangle) -> float:
   poly1 = Polygon(rect1)
   poly2 = Polygon(rect2)

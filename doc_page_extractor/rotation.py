@@ -1,6 +1,6 @@
 from math import pi, atan2, sqrt, sin, cos
-from .rectangle import Point
 from .types import OCRFragment
+from .rectangle import Point, Rectangle
 
 
 class RotationAdjuster:
@@ -52,7 +52,7 @@ def calculate_rotation(fragments: list[OCRFragment]):
   vertical_rotations: list[float] = []
 
   for fragment in fragments:
-    result = _rotation_with(fragment)
+    result = _rotation_with(fragment.rect)
     if result is not None:
       horizontal_rotations.extend(result[0])
       vertical_rotations.extend(result[1])
@@ -60,21 +60,30 @@ def calculate_rotation(fragments: list[OCRFragment]):
   if len(horizontal_rotations) == 0 or len(vertical_rotations) == 0:
     return 0.0
 
-  # [0, pi) --> [-pi/2, pi/2)
-  for i, rotation in enumerate(horizontal_rotations):
-    if rotation > 0.5 * pi:
-      horizontal_rotations[i] = rotation - pi
-
+  horizontal_rotations = _normal_horizontal_rotations(horizontal_rotations)
   horizontal_rotation = _find_median(horizontal_rotations)
   vertical_rotation = _find_median(vertical_rotations)
 
   return (vertical_rotation - 0.5 * pi + horizontal_rotation) / 2.0
 
-def _rotation_with(fragment: OCRFragment):
+# @return horizontal [-pi/2, pi/2), vertical [0, pi)
+def calculate_rotation_with_rect(rect: Rectangle) -> tuple[float, float]:
+  result = _rotation_with(rect)
+  if result is None:
+    return 0.0, 0.5 * pi
+
+  horizontal_rotations, vertical_rotations = result
+  horizontal_rotations = _normal_horizontal_rotations(horizontal_rotations)
+  horizontal_rotation = _find_mean(horizontal_rotations)
+  vertical_rotation = _find_mean(vertical_rotations)
+
+  return horizontal_rotation, vertical_rotation
+
+def _rotation_with(rect: Rectangle):
   rotations0: list[float] = []
   rotations1: list[float] = []
 
-  for i, (p1, p2) in enumerate(_iter_fragment_segment(fragment)):
+  for i, (p1, p2) in enumerate(rect.segments):
     dx = p2[0] - p1[0]
     dy = p2[1] - p1[1]
     if dx == 0.0 and dy == 0.0:
@@ -92,6 +101,13 @@ def _rotation_with(fragment: OCRFragment):
   else:
     return rotations0, rotations1
 
+# [0, pi) --> [-pi/2, pi/2)
+def _normal_horizontal_rotations(rotations: list[float]) -> list[float]:
+  for i, rotation in enumerate(rotations):
+    if rotation > 0.5 * pi:
+      rotations[i] = rotation - pi
+  return rotations
+
 def _find_median(rotations: list[float]):
   rotations.sort()
   n = len(rotations)
@@ -102,6 +118,9 @@ def _find_median(rotations: list[float]):
     mid1 = rotations[n // 2 - 1]
     mid2 = rotations[n // 2]
     return (mid1 + mid2) / 2
+
+def _find_mean(rotations: list[float]):
+  return sum(rotations) / len(rotations)
 
 # rotation is in [0, pi)
 def _is_vertical(rotations: list[float]):
@@ -125,10 +144,3 @@ def _is_vertical(rotations: list[float]):
     return vertical_delta < horizontal_delta
   else:
     return vertical_count > horizontal_count
-
-def _iter_fragment_segment(fragment: OCRFragment):
-  rect = fragment.rect
-  yield (rect.lt, rect.lb)
-  yield (rect.lb, rect.rb)
-  yield (rect.rb, rect.rt)
-  yield (rect.rt, rect.lt)
