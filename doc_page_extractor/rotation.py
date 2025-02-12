@@ -47,6 +47,16 @@ class RotationAdjuster:
 
     return x, y
 
+# to [0, pi)
+def normal_vertical_rotation(rotation: float) -> float:
+  while rotation >= 2 * pi:
+    rotation -= 2 * pi
+  while rotation <= - 2 * pi:
+    rotation += 2 * pi
+  if rotation < 0.0:
+    rotation += pi
+  return rotation
+
 def calculate_rotation(fragments: list[OCRFragment]):
   horizontal_rotations: list[float] = []
   vertical_rotations: list[float] = []
