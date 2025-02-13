@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
 from PIL.Image import Image
-from PIL.Image import Image
 from .rectangle import Rectangle
 
 @dataclass
