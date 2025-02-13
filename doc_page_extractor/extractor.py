@@ -25,9 +25,11 @@ class DocExtractor:
       self,
       model_dir_path: str,
       device: Literal["cpu", "cuda"] = "cpu",
+      order_by_layoutreader: bool = True,
     ):
     self._model_dir_path: str = model_dir_path
     self._device: Literal["cpu", "cuda"] = device
+    self._order_by_layoutreader: bool = order_by_layoutreader
     self._ocr_and_lan: tuple[PaddleOCR, PaddleLang] | None = None
     self._yolo: YOLOv10 | None = None
     self._layout: LayoutLMv3ForTokenClassification | None = None
@@ -43,8 +45,10 @@ class DocExtractor:
     fragments = list(self._search_orc_fragments(raw_optimizer.image_np, lang))
     raw_optimizer.receive_raw_fragments(fragments)
 
-    width, height = raw_optimizer.image.size
-    self._order_fragments(width, height, fragments)
+    if self._order_by_layoutreader:
+      width, height = raw_optimizer.image.size
+      self._order_fragments(width, height, fragments)
+
     layouts = self._get_layouts(raw_optimizer.image)
     layouts = self._layouts_matched_by_fragments(fragments, layouts)
     raw_optimizer.receive_raw_layouts(layouts)
@@ -58,6 +62,7 @@ class DocExtractor:
 
   # https://paddlepaddle.github.io/PaddleOCR/latest/quick_start.html#_2
   def _search_orc_fragments(self, image: np.ndarray, lang: PaddleLang) -> Generator[OCRFragment, None, None]:
+    index: int = 0
     # about img parameter to see
     # https://github.com/PaddlePaddle/PaddleOCR/blob/2c0c4beb0606819735a16083cdebf652939c781a/paddleocr.py#L582-L619
     for item in self._get_ocr(lang).ocr(img=image, cls=True):
@@ -65,7 +70,7 @@ class DocExtractor:
         react: list[list[float]] = line[0]
         text, rank = line[1]
         yield OCRFragment(
-          order=0,
+          order=index,
           text=text,
           rank=rank,
           rect=Rectangle(
@@ -75,6 +80,7 @@ class DocExtractor:
             lb=(react[3][0], react[3][1]),
           ),
         )
+        index += 1
 
   def _order_fragments(self, width: int, height: int, fragments: list[OCRFragment]):
     layout_model = self._get_layout()
