@@ -7,18 +7,15 @@ from pathlib import Path
 from PIL.Image import Image
 from transformers import LayoutLMv3ForTokenClassification
 from doclayout_yolo import YOLOv10
-from paddleocr import PaddleOCR
 
 from .layoutreader import prepare_inputs, boxes2inputs, parse_logits
+from .ocr import OCR, PaddleLang
 from .raw_optimizer import RawOptimizer
 from .rectangle import intersection_area, Rectangle
 from .types import ExtractedResult, OCRFragment, LayoutClass, Layout
 from .downloader import download
 from .utils import ensure_dir, is_space_text
 
-
-# https://github.com/PaddlePaddle/PaddleOCR/blob/2c0c4beb0606819735a16083cdebf652939c781a/paddleocr.py#L108-L157
-PaddleLang = Literal["ch", "en", "korean", "japan", "chinese_cht", "ta", "te", "ka", "latin", "arabic", "cyrillic", "devanagari"]
 
 class DocExtractor:
   def __init__(
@@ -30,7 +27,7 @@ class DocExtractor:
     self._model_dir_path: str = model_dir_path
     self._device: Literal["cpu", "cuda"] = device
     self._order_by_layoutreader: bool = order_by_layoutreader
-    self._ocr_and_lan: tuple[PaddleOCR, PaddleLang] | None = None
+    self._ocr: OCR = OCR(device, os.path.join(model_dir_path, "paddle"))
     self._yolo: YOLOv10 | None = None
     self._layout: LayoutLMv3ForTokenClassification | None = None
 
@@ -60,12 +57,9 @@ class DocExtractor:
       adjusted_image=raw_optimizer.adjusted_image,
     )
 
-  # https://paddlepaddle.github.io/PaddleOCR/latest/quick_start.html#_2
   def _search_orc_fragments(self, image: np.ndarray, lang: PaddleLang) -> Generator[OCRFragment, None, None]:
     index: int = 0
-    # about img parameter to see
-    # https://github.com/PaddlePaddle/PaddleOCR/blob/2c0c4beb0606819735a16083cdebf652939c781a/paddleocr.py#L582-L619
-    for item in self._get_ocr(lang).ocr(img=image, cls=True):
+    for item in self._ocr.do(lang, image):
       for line in item:
         react: list[list[float]] = line[0]
         text, rank = line[1]
@@ -203,29 +197,6 @@ class DocExtractor:
       return sys.maxsize
     else:
       return fragments[0].order
-
-  def _get_ocr(self, lang: PaddleLang) -> PaddleOCR:
-    if self._ocr_and_lan is not None:
-      ocr, origin_lang = self._ocr_and_lan
-      if lang == origin_lang:
-        return ocr
-
-    ocr = PaddleOCR(
-      lang=lang,
-      use_angle_cls=True,
-      use_gpu=self._device.startswith("cuda"),
-      det_model_dir=ensure_dir(
-        os.path.join(self._model_dir_path, "paddle", "det"),
-      ),
-      rec_model_dir=ensure_dir(
-        os.path.join(self._model_dir_path, "paddle", "rec"),
-      ),
-      cls_model_dir=ensure_dir(
-        os.path.join(self._model_dir_path, "paddle", "cls"),
-      ),
-    )
-    self._ocr_and_lan = (ocr, lang)
-    return ocr
 
   def _get_yolo(self) -> YOLOv10:
     if self._yolo is None:
