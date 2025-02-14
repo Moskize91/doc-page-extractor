@@ -25,6 +25,10 @@ class Rectangle:
     yield (self.rb, self.rt)
     yield (self.rt, self.lt)
 
+  @property
+  def area(self) -> float:
+    return Polygon(self).area
+
 def intersection_area(rect1: Rectangle, rect2: Rectangle) -> float:
   poly1 = Polygon(rect1)
   poly2 = Polygon(rect2)

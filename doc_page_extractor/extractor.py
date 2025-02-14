@@ -144,15 +144,26 @@ class DocExtractor:
     return layouts
 
   def _layouts_matched_by_fragments(self, fragments: list[OCRFragment], layouts: list[Layout]):
+    layout_areas: list[float] = [
+      layout.rect.area
+      for layout in layouts
+    ]
     for fragment in fragments:
-      max_area: float = 0.0
-      max_layout_index: int = 0
+      fragment_area = fragment.rect.area
+      min_layout_area: float = float("inf")
+      min_layout_area_index: int = -1
+
       for i, layout in enumerate(layouts):
-        area = intersection_area(fragment.rect, layout.rect)
-        if area > max_area:
-          max_area = area
-          max_layout_index = i
-      layouts[max_layout_index].fragments.append(fragment)
+        area_rate = intersection_area(fragment.rect, layout.rect) / fragment_area
+        if area_rate < 0.95:
+          continue
+        layout_area = layout_areas[i]
+        if layout_area < min_layout_area:
+          min_layout_area = layout_area
+          min_layout_area_index = i
+
+      if min_layout_area_index != -1:
+        layouts[min_layout_area_index].fragments.append(fragment)
 
     for layout in layouts:
       layout.fragments.sort(key=lambda x: x.order)
