@@ -14,7 +14,7 @@ from .raw_optimizer import RawOptimizer
 from .rectangle import intersection_area, Rectangle
 from .types import ExtractedResult, OCRFragment, LayoutClass, Layout
 from .downloader import download
-from .utils import ensure_dir
+from .utils import ensure_dir, is_space_text
 
 
 # https://github.com/PaddlePaddle/PaddleOCR/blob/2c0c4beb0606819735a16083cdebf652939c781a/paddleocr.py#L108-L157
@@ -69,6 +69,8 @@ class DocExtractor:
       for line in item:
         react: list[list[float]] = line[0]
         text, rank = line[1]
+        if is_space_text(text):
+          continue
         yield OCRFragment(
           order=index,
           text=text,
@@ -155,7 +157,9 @@ class DocExtractor:
     for layout in layouts:
       layout.fragments.sort(key=lambda x: x.order)
 
+    layouts = [layout for layout in layouts if self._should_keep_layout(layout)]
     layouts.sort(key=self._layout_order)
+
     return layouts
 
   def _split_layouts_by_group(self, layouts: list[Layout]):
@@ -244,6 +248,16 @@ class DocExtractor:
         local_files_only=os.path.exists(os.path.join(cache_dir, "models--hantian--layoutreader")),
       )
     return self._layout
+
+  def _should_keep_layout(self, layout: Layout) -> bool:
+    if len(layout.fragments) > 0:
+      return True
+    cls = layout.cls
+    return (
+      cls == LayoutClass.FIGURE or
+      cls == LayoutClass.TABLE or
+      cls == LayoutClass.ISOLATE_FORMULA
+    )
 
   def _collect_rate_boxes(self, fragments: list[OCRFragment]):
     boxes = self._get_boxes(fragments)
