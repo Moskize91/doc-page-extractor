@@ -2,7 +2,7 @@ import os
 import numpy as np
 import cv2
 
-from typing import cast, Literal, Any
+from typing import Literal, Any
 from paddleocr import PaddleOCR
 from .utils import ensure_dir
 
