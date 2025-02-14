@@ -1,5 +1,6 @@
 [MAIN]
 py-version=3.12
+extension-pkg-whitelist=cv2
 
 [MESSAGES CONTROL]
 disable=

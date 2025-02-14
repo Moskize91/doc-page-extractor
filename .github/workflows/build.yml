@@ -25,4 +25,4 @@ jobs:
       - name: Lint
         run: |
           pip install pylint==3.2.3
-          pylint ./**/*.py
+          pylint ./**/*.py --generate-members
