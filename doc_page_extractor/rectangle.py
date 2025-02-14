@@ -1,5 +1,6 @@
 from typing import Generator
 from dataclasses import dataclass
+from math import sqrt
 from shapely.geometry import Polygon
 
 
@@ -28,6 +29,20 @@ class Rectangle:
   @property
   def area(self) -> float:
     return Polygon(self).area
+
+  @property
+  def size(self) -> tuple[float, float]:
+    width: float = 0.0
+    height: float = 0.0
+    for i, (p1, p2) in enumerate(self.segments):
+      dx = p1[0] - p2[0]
+      dy = p1[1] - p2[1]
+      distance = sqrt(dx * dx + dy * dy)
+      if i % 2 == 0:
+        height += distance
+      else:
+        width += distance
+    return width / 2, height / 2
 
 def intersection_area(rect1: Rectangle, rect2: Rectangle) -> float:
   poly1 = Polygon(rect1)
