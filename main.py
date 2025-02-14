@@ -24,7 +24,7 @@ def main():
       plot_image = result.adjusted_image
 
     plot(plot_image, result.layouts)
-    clip_image = clip(result, result.layouts[3], 120.0, 240.0)
+    clip_image = clip(result, result.layouts[2], 120.0, 240.0)
     plot_image.save(os.path.join(plot_path, "plot.png"))
     clip_image.save(os.path.join(plot_path, "clip.png"))
 

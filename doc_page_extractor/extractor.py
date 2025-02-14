@@ -144,33 +144,54 @@ class DocExtractor:
     return layouts
 
   def _layouts_matched_by_fragments(self, fragments: list[OCRFragment], layouts: list[Layout]):
-    layout_areas: list[float] = [
-      layout.rect.area
-      for layout in layouts
-    ]
+    layouts_group = self._split_layouts_by_group(layouts)
     for fragment in fragments:
-      fragment_area = fragment.rect.area
-      min_layout_area: float = float("inf")
-      min_layout_area_index: int = -1
-
-      for i, layout in enumerate(layouts):
-        area_rate = intersection_area(fragment.rect, layout.rect) / fragment_area
-        if area_rate < 0.95:
-          continue
-        layout_area = layout_areas[i]
-        if layout_area < min_layout_area:
-          min_layout_area = layout_area
-          min_layout_area_index = i
-
-      if min_layout_area_index != -1:
-        layouts[min_layout_area_index].fragments.append(fragment)
+      for sub_layouts in layouts_group:
+        layout, area_rate = self._find_matched_layout(fragment, sub_layouts)
+        if area_rate >= 0.95 and layout is not None:
+          layout.fragments.append(fragment)
+          break
 
     for layout in layouts:
       layout.fragments.sort(key=lambda x: x.order)
 
     layouts.sort(key=self._layout_order)
-
     return layouts
+
+  def _split_layouts_by_group(self, layouts: list[Layout]):
+    texts_layouts: list[Layout] = []
+    abandon_layouts: list[Layout] = []
+
+    for layout in layouts:
+      cls = layout.cls
+      if cls == LayoutClass.TITLE or \
+         cls == LayoutClass.PLAIN_TEXT or \
+         cls == LayoutClass.FIGURE_CAPTION or \
+         cls == LayoutClass.TABLE_CAPTION or \
+         cls == LayoutClass.TABLE_FOOTNOTE or \
+         cls == LayoutClass.FORMULA_CAPTION:
+        texts_layouts.append(layout)
+      elif cls == LayoutClass.ABANDON:
+        abandon_layouts.append(layout)
+
+    return texts_layouts, abandon_layouts
+
+  def _find_matched_layout(self, fragment: OCRFragment, layouts: list[Layout]) -> tuple[Layout | None, float]:
+    if len(layouts) == 0:
+      return None, 0.0
+
+    max_area: float = float("-inf")
+    max_layout_index: int = -1
+    for i, layout in enumerate(layouts):
+      area = intersection_area(fragment.rect, layout.rect)
+      if area > max_area:
+        max_area = area
+        max_layout_index = i
+
+    layout = layouts[max_layout_index]
+    area_rate = max_area / fragment.rect.area
+
+    return layout, area_rate
 
   def _layout_order(self, layout: Layout) -> int:
     fragments = layout.fragments
