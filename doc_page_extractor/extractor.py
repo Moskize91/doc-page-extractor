@@ -158,8 +158,8 @@ class DocExtractor:
     layouts_group = self._split_layouts_by_group(layouts)
     for fragment in fragments:
       for sub_layouts in layouts_group:
-        layout, area_rate = self._find_matched_layout(fragment, sub_layouts)
-        if area_rate >= 0.95 and layout is not None:
+        layout = self._find_matched_layout(fragment, sub_layouts)
+        if layout is not None:
           layout.fragments.append(fragment)
           break
 
@@ -189,22 +189,22 @@ class DocExtractor:
 
     return texts_layouts, abandon_layouts
 
-  def _find_matched_layout(self, fragment: OCRFragment, layouts: list[Layout]) -> tuple[Layout | None, float]:
-    if len(layouts) == 0:
-      return None, 0.0
-
-    max_area: float = float("-inf")
-    max_layout_index: int = -1
-    for i, layout in enumerate(layouts):
+  def _find_matched_layout(self, fragment: OCRFragment, layouts: list[Layout]) -> Layout | None:
+    primary_layouts: list[(Layout, float)] = []
+    for layout in layouts:
       area = intersection_area(fragment.rect, layout.rect)
-      if area > max_area:
-        max_area = area
-        max_layout_index = i
+      if area > 0.85:
+        primary_layouts.append((layout, layout.rect.area))
 
-    layout = layouts[max_layout_index]
-    area_rate = max_area / fragment.rect.area
+    min_area: float = float("inf")
+    min_layout: Layout | None = None
 
-    return layout, area_rate
+    for layout, area in primary_layouts:
+      if area < min_area:
+        min_area = area
+        min_layout = layout
+
+    return min_layout
 
   def _layout_order(self, layout: Layout) -> int:
     fragments = layout.fragments
