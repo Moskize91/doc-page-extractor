@@ -12,7 +12,7 @@ from .layoutreader import prepare_inputs, boxes2inputs, parse_logits
 from .ocr import OCR, PaddleLang
 from .raw_optimizer import RawOptimizer
 from .rectangle import intersection_area, Rectangle
-from .types import ExtractedResult, OCRFragment, LayoutClass, Layout
+from .types import ExtractedResult, OCRFragment, PreOCRFragment, LayoutClass, Layout
 from .downloader import download
 from .utils import ensure_dir, is_space_text
 
@@ -35,13 +35,25 @@ class DocExtractor:
       self,
       image: Image,
       lang: PaddleLang,
+      pre_fragments: list[PreOCRFragment] | None = None,
       adjust_points: bool = False,
       adjust_rotation: bool = False,
     ) -> ExtractedResult:
 
-    raw_optimizer = RawOptimizer(image, adjust_points, adjust_rotation)
-    fragments = list(self._search_orc_fragments(raw_optimizer.image_np, lang))
-    raw_optimizer.receive_raw_fragments(fragments)
+    raw_optimizer = RawOptimizer(image, adjust_points)
+    orc_fragments: list[OCRFragment] | None = None
+    fragments: list[OCRFragment]
+
+    if adjust_rotation or pre_fragments is None:
+      orc_fragments = list(self._search_orc_fragments(raw_optimizer.image_np, lang))
+
+    if pre_fragments:
+      fragments = self._to_ocr_fragments(pre_fragments)
+    else:
+      fragments = orc_fragments
+
+    if adjust_rotation:
+      raw_optimizer.receive_raw_fragments(fragments, orc_fragments)
 
     if self._order_by_layoutreader:
       width, height = raw_optimizer.image.size
@@ -49,7 +61,9 @@ class DocExtractor:
 
     layouts = self._get_layouts(raw_optimizer.image)
     layouts = self._layouts_matched_by_fragments(fragments, layouts)
-    raw_optimizer.receive_raw_layouts(layouts)
+
+    if adjust_rotation:
+      raw_optimizer.receive_raw_layouts(layouts)
 
     return ExtractedResult(
       rotation=raw_optimizer.rotation,
@@ -269,3 +283,14 @@ class DocExtractor:
         bottom = max(bottom, y)
       boxes.append((left, top, right, bottom))
     return boxes
+
+  def _to_ocr_fragments(self, fragments: list[PreOCRFragment]) -> list[OCRFragment]:
+    return [
+      OCRFragment(
+        order=index,
+        rank=1.0,
+        text=fragment.text,
+        rect=fragment.rect,
+      )
+      for index, fragment in enumerate(fragments)
+    ]
