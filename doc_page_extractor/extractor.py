@@ -190,10 +190,11 @@ class DocExtractor:
     return texts_layouts, abandon_layouts
 
   def _find_matched_layout(self, fragment: OCRFragment, layouts: list[Layout]) -> Layout | None:
+    fragment_area = fragment.rect.area
     primary_layouts: list[(Layout, float)] = []
     for layout in layouts:
       area = intersection_area(fragment.rect, layout.rect)
-      if area > 0.85:
+      if area / fragment_area > 0.85:
         primary_layouts.append((layout, layout.rect.area))
 
     min_area: float = float("inf")
