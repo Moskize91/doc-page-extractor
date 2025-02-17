@@ -36,9 +36,10 @@ class DocExtractor:
       image: Image,
       lang: PaddleLang,
       adjust_points: bool = False,
+      adjust_rotation: bool = False,
     ) -> ExtractedResult:
 
-    raw_optimizer = RawOptimizer(image, adjust_points)
+    raw_optimizer = RawOptimizer(image, adjust_points, adjust_rotation)
     fragments = list(self._search_orc_fragments(raw_optimizer.image_np, lang))
     raw_optimizer.receive_raw_fragments(fragments)
 

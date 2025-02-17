@@ -16,7 +16,7 @@ def main():
   extractor = DocExtractor(model_path, "cpu")
 
   with Image.open(image_path) as image:
-    result = extractor.extract(image, "ch")
+    result = extractor.extract(image, "ch", adjust_rotation=True)
     plot_image: ImageFile
     if result.adjusted_image is None:
       plot_image = image.copy()
