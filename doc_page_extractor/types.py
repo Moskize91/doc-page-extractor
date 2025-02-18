@@ -3,12 +3,6 @@ from enum import Enum
 from PIL.Image import Image
 from .rectangle import Rectangle
 
-
-@dataclass
-class PreOCRFragment:
-  text: str
-  rect: Rectangle
-
 @dataclass
 class OCRFragment:
   order: int
