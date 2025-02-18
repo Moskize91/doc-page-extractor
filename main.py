@@ -1,7 +1,6 @@
 import os
 
 from PIL import Image
-from PIL.ImageFile import ImageFile
 from doc_page_extractor import plot, clip, DocExtractor
 
 
@@ -17,7 +16,7 @@ def main():
 
   with Image.open(image_path) as image:
     result = extractor.extract(image, "ch")
-    plot_image: ImageFile
+    plot_image: Image
     if result.adjusted_image is None:
       plot_image = image.copy()
     else:
