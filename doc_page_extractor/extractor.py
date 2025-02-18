@@ -1,5 +1,6 @@
 import os
 import sys
+import torch
 import numpy as np
 
 from typing import Literal, Generator
@@ -30,6 +31,10 @@ class DocExtractor:
     self._ocr: OCR = OCR(device, os.path.join(model_dir_path, "paddle"))
     self._yolo: YOLOv10 | None = None
     self._layout: LayoutLMv3ForTokenClassification | None = None
+
+    if self._device.startswith("cuda") and not torch.cuda.is_available():
+      self._device = "cpu"
+      print("Warn: cuda is not available, use cpu instead")
 
   def extract(
       self,
