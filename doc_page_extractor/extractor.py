@@ -152,7 +152,7 @@ class DocExtractor:
       layout.fragments.sort(key=lambda x: x.order)
 
     layouts = [layout for layout in layouts if self._should_keep_layout(layout)]
-    layouts.sort(key=self._layout_order)
+    layouts = self._sort_layouts(layouts)
 
     return layouts
 
@@ -230,6 +230,36 @@ class DocExtractor:
       cls == LayoutClass.TABLE or
       cls == LayoutClass.ISOLATE_FORMULA
     )
+
+  def _sort_layouts(self, layouts: list[Layout]) -> list[Layout]:
+    sorted_layouts: list[tuple[int, Layout]] = []
+    empty_layouts: list[tuple[int, Layout]] = []
+
+    for i, layout in enumerate(layouts):
+      if len(layout.fragments) > 0:
+        sorted_layouts.append((i, layout))
+      else:
+        empty_layouts.append((i, layout))
+
+    sorted_layouts.sort(key=lambda x: x[1].fragments[0].order)
+
+    # try to maintain the order of empty layouts and other layouts as much as possible
+    for i, layout in empty_layouts:
+      max_less_index: int = len(layouts)
+      max_less_layout: Layout | None = None
+      max_less_index_in_enumerated: int = -1
+      for j, (k, sorted_layout) in enumerate(sorted_layouts):
+        if k < i and k > max_less_index:
+          max_less_index = k
+          max_less_layout = sorted_layout
+          max_less_index_in_enumerated = j
+
+      if max_less_layout is None:
+        sorted_layouts.insert(0, (i, layout))
+      else:
+        sorted_layouts.insert(max_less_index_in_enumerated + 1, (i, layout))
+
+    return [layout for _, layout in sorted_layouts]
 
   def _collect_rate_boxes(self, fragments: list[OCRFragment]):
     boxes = self._get_boxes(fragments)
