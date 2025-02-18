@@ -30,7 +30,9 @@ class OCR:
     image = self._preprocess_image(image)
     # about img parameter to see
     # https://github.com/PaddlePaddle/PaddleOCR/blob/2c0c4beb0606819735a16083cdebf652939c781a/paddleocr.py#L582-L619
-    return ocr.ocr(img=image, cls=True)
+    ocr_list = ocr.ocr(img=image, cls=True)
+    # there will be some None
+    return [e for e in ocr_list if e is not None]
 
   def _get_ocr(self, lang: PaddleLang) -> PaddleOCR:
     if self._ocr_and_lan is not None:
