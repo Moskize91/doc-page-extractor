@@ -12,6 +12,7 @@
     "layoutreader",
     "ndarray",
     "paddleocr",
+    "paddlepaddle",
     "xyxy"
   ],
   "pylint.args": [
