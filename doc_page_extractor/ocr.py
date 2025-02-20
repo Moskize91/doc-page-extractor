@@ -16,7 +16,7 @@ class OCR:
       self,
       device: Literal["cpu", "cuda"],
       model_dir_path: str,
-      bin: bool = True,
+      bin: bool = False,
       inv: bool = False,
     ):
     self._device: Literal["cpu", "cuda"] = device
