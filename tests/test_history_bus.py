@@ -32,9 +32,12 @@ class TestGroup(unittest.TestCase):
         "的差距显然拉大了。",
       ]),
       (LayoutClass.FIGURE, []),
-      (LayoutClass.FIGURE, []),
       (LayoutClass.FIGURE_CAPTION, [
         "西晋陶水田犁耙模型（广东连县出土）"
+      ]),
+      (LayoutClass.FIGURE, []),
+      (LayoutClass.FIGURE_CAPTION, [
+        "南朝陶耙田模型 （广西苍梧倒水出土）"
       ]),
       (LayoutClass.PLAIN_TEXT, [
         "①据赵文林、谢淑君：《中国人口史》（人民出版社1988年）有关资料统计。",
@@ -42,9 +45,6 @@ class TestGroup(unittest.TestCase):
       ]),
       (LayoutClass.ABANDON, [
         "136"
-      ]),
-      (LayoutClass.FIGURE_CAPTION, [
-        "南朝陶耙田模型 （广西苍梧倒水出土）"
       ]),
     ])
 

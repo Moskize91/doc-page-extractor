@@ -237,6 +237,8 @@ class DocExtractor:
     )
 
   def _sort_layouts(self, layouts: list[Layout]) -> list[Layout]:
+    layouts.sort(key=lambda layout: layout.rect.lt[1] + layout.rect.rt[1])
+
     sorted_layouts: list[tuple[int, Layout]] = []
     empty_layouts: list[tuple[int, Layout]] = []
 
@@ -245,8 +247,6 @@ class DocExtractor:
         sorted_layouts.append((i, layout))
       else:
         empty_layouts.append((i, layout))
-
-    sorted_layouts.sort(key=lambda x: x[1].fragments[0].order)
 
     # try to maintain the order of empty layouts and other layouts as much as possible
     for i, layout in empty_layouts:
