@@ -1,6 +1,7 @@
 .DS_Store
 /model
 /output
+/test/output
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
