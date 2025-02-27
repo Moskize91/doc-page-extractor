@@ -26,3 +26,7 @@ jobs:
         run: |
           pip install pylint==3.3.4
           pylint --generated-member=cv2 ./**/*.py
+
+      # TODO: Github Action cannot run AI
+      # - name: Run unit tests
+      #   run: python test.py
