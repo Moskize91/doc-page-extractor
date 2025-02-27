@@ -250,7 +250,7 @@ class DocExtractor:
 
     # try to maintain the order of empty layouts and other layouts as much as possible
     for i, layout in empty_layouts:
-      max_less_index: int = len(layouts)
+      max_less_index: int = -1
       max_less_layout: Layout | None = None
       max_less_index_in_enumerated: int = -1
       for j, (k, sorted_layout) in enumerate(sorted_layouts):
