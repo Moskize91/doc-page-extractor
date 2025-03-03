@@ -11,6 +11,7 @@ from doclayout_yolo import YOLOv10
 
 from .layoutreader import prepare_inputs, boxes2inputs, parse_logits
 from .ocr import OCR, PaddleLang
+from .ocr_corrector import correct_ocr
 from .raw_optimizer import RawOptimizer
 from .rectangle import intersection_area, Rectangle
 from .types import ExtractedResult, OCRFragment, LayoutClass, Layout
@@ -59,6 +60,7 @@ class DocExtractor:
     if self._ocr_for_each_layouts:
       self._correct_fragments_by_ocr_layouts(raw_optimizer.image, layouts, lang)
 
+    layouts = self._sort_fragments_and_layouts(layouts)
     raw_optimizer.receive_raw_layouts(layouts)
 
     return ExtractedResult(
@@ -150,6 +152,16 @@ class DocExtractor:
 
     return layouts
 
+  def _layouts_matched_by_fragments(self, fragments: list[OCRFragment], layouts: list[Layout]):
+    layouts_group = self._split_layouts_by_group(layouts)
+    for fragment in fragments:
+      for sub_layouts in layouts_group:
+        layout = self._find_matched_layout(fragment, sub_layouts)
+        if layout is not None:
+          layout.fragments.append(fragment)
+          break
+    return [layout for layout in layouts if self._should_keep_layout(layout)]
+
   def _correct_fragments_by_ocr_layouts(self, source: Image, layouts: list[Layout], lang: PaddleLang):
     for layout in layouts:
       x1: float = float("inf")
@@ -166,24 +178,17 @@ class DocExtractor:
         round(x1), round(y1),
         round(x2), round(y2),
       ))
-      fragments = list(self._search_orc_fragments(np.array(image), lang))
+      image_np = np.array(image)
+      layout.fragments = correct_ocr(
+        layout,
+        layout.fragments,
+        self._search_orc_fragments(image_np, lang),
+      )
 
-  def _layouts_matched_by_fragments(self, fragments: list[OCRFragment], layouts: list[Layout]):
-    layouts_group = self._split_layouts_by_group(layouts)
-    for fragment in fragments:
-      for sub_layouts in layouts_group:
-        layout = self._find_matched_layout(fragment, sub_layouts)
-        if layout is not None:
-          layout.fragments.append(fragment)
-          break
-
+  def _sort_fragments_and_layouts(self, layouts: list[Layout]) -> list[Layout]:
     for layout in layouts:
       layout.fragments.sort(key=lambda x: x.order)
-
-    layouts = [layout for layout in layouts if self._should_keep_layout(layout)]
-    layouts = self._sort_layouts(layouts)
-
-    return layouts
+    return self._sort_layouts(layouts)
 
   def _split_layouts_by_group(self, layouts: list[Layout]):
     texts_layouts: list[Layout] = []
