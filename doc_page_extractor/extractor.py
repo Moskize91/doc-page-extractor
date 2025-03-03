@@ -23,10 +23,12 @@ class DocExtractor:
       self,
       model_dir_path: str,
       device: Literal["cpu", "cuda"] = "cpu",
+      ocr_for_each_layouts: bool = True,
       order_by_layoutreader: bool = True,
     ):
     self._model_dir_path: str = model_dir_path
     self._device: Literal["cpu", "cuda"] = device
+    self._ocr_for_each_layouts: bool = ocr_for_each_layouts
     self._order_by_layoutreader: bool = order_by_layoutreader
     self._ocr: OCR = OCR(device, os.path.join(model_dir_path, "paddle"))
     self._yolo: YOLOv10 | None = None
@@ -53,6 +55,10 @@ class DocExtractor:
 
     layouts = self._get_layouts(raw_optimizer.image)
     layouts = self._layouts_matched_by_fragments(fragments, layouts)
+
+    if self._ocr_for_each_layouts:
+      self._correct_fragments_by_ocr_layouts(raw_optimizer.image, layouts, lang)
+
     raw_optimizer.receive_raw_layouts(layouts)
 
     return ExtractedResult(
@@ -143,6 +149,24 @@ class DocExtractor:
       layouts.append(Layout(cls, rect, []))
 
     return layouts
+
+  def _correct_fragments_by_ocr_layouts(self, source: Image, layouts: list[Layout], lang: PaddleLang):
+    for layout in layouts:
+      x1: float = float("inf")
+      y1: float = float("inf")
+      x2: float = float("-inf")
+      y2: float = float("-inf")
+      for x, y in layout.rect:
+        x1 = min(x1, x)
+        y1 = min(y1, y)
+        x2 = max(x2, x)
+        y2 = max(y2, y)
+
+      image: Image = source.crop((
+        round(x1), round(y1),
+        round(x2), round(y2),
+      ))
+      fragments = list(self._search_orc_fragments(np.array(image), lang))
 
   def _layouts_matched_by_fragments(self, fragments: list[OCRFragment], layouts: list[Layout]):
     layouts_group = self._split_layouts_by_group(layouts)
