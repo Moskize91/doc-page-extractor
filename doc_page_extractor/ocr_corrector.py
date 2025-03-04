@@ -19,17 +19,16 @@ def correct_fragments(ocr: OCR, source: Image, layout: Layout, lang: PaddleLang)
   ))
   image, dx, dy, scale = _adjust_image(image)
   image_np = np.array(image)
-
-  layout_fragments = layout.fragments
-  cropped_fragments = [
-    _apply_fragment(f, layout, dx, dy, scale)
-    for f in ocr.search_fragments(image_np, lang)
-  ]
+  ocr_fragments = list(ocr.search_fragments(image_np, lang))
   corrected_fragments: list[OCRFragment] = []
+
+  for fragment in ocr_fragments:
+    _apply_fragment(fragment.rect, layout, dx, dy, scale)
+
   matched_fragments, not_matched_fragments = _match_fragments(
     zone_rect=layout.rect,
-    fragments1=layout_fragments,
-    fragments2=cropped_fragments,
+    fragments1=layout.fragments,
+    fragments2=ocr_fragments,
   )
   for fragment1, fragment2 in matched_fragments:
     if fragment1.rank > fragment2.rank:
@@ -72,20 +71,11 @@ def _adjust_image(image: Image) -> tuple[Image, int, int, float]:
 
   return new_image, dx, dy, scale
 
-def _apply_fragment(fragment: OCRFragment, layout: Layout, dx: int, dy: int, scale: float) -> OCRFragment:
-  rect = fragment.rect
-  rect = Rectangle(
-    lt=_apply_point(rect.lt, layout, dx, dy, scale),
-    lb=_apply_point(rect.lb, layout, dx, dy, scale),
-    rb=_apply_point(rect.rb, layout, dx, dy, scale),
-    rt=_apply_point(rect.rt, layout, dx, dy, scale),
-  )
-  return OCRFragment(
-    order=fragment.order,
-    text=fragment.text,
-    rank=fragment.rank,
-    rect=rect,
-  )
+def _apply_fragment(rect: Rectangle, layout: Layout, dx: int, dy: int, scale: float):
+  rect.lt = _apply_point(rect.lt, layout, dx, dy, scale)
+  rect.lb = _apply_point(rect.lb, layout, dx, dy, scale)
+  rect.rb = _apply_point(rect.rb, layout, dx, dy, scale)
+  rect.rt = _apply_point(rect.rt, layout, dx, dy, scale)
 
 def _apply_point(point: Point, layout: Layout, dx: int, dy: int, scale: float) -> Point:
   x, y = point

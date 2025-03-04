@@ -12,7 +12,7 @@ def plot(image: Image, layouts: Iterable[Layout]):
 
   for layout in layouts:
     for fragments in layout.fragments:
-      draw.polygon([p for p in fragments.rect], outline=_FRAGMENT_COLOR, width=2)
+      draw.polygon([p for p in fragments.rect], outline=_FRAGMENT_COLOR, width=3)
 
 def _layout_color(layout: Layout) -> tuple[int, int, int]:
   cls = layout.cls
