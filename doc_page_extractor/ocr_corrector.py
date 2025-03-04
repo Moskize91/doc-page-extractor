@@ -5,8 +5,8 @@ from shapely.geometry import Polygon
 from PIL.Image import new, Image, Resampling
 from .types import Layout, OCRFragment
 from .ocr import OCR, PaddleLang
+from .overlap import overlap_rate
 from .rectangle import Point, Rectangle
-from .utils import overlap_rate
 
 
 _MIN_RATE = 0.5
