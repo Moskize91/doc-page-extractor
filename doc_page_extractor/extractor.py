@@ -164,16 +164,7 @@ class DocExtractor:
 
   def _correct_fragments_by_ocr_layouts(self, source: Image, layouts: list[Layout], lang: PaddleLang):
     for layout in layouts:
-      x1: float = float("inf")
-      y1: float = float("inf")
-      x2: float = float("-inf")
-      y2: float = float("-inf")
-      for x, y in layout.rect:
-        x1 = min(x1, x)
-        y1 = min(y1, y)
-        x2 = max(x2, x)
-        y2 = max(y2, y)
-
+      x1, y1, x2, y2 = layout.rect.wrapper
       image: Image = source.crop((
         round(x1), round(y1),
         round(x2), round(y2),

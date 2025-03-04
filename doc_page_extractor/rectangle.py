@@ -44,6 +44,19 @@ class Rectangle:
         width += distance
     return width / 2, height / 2
 
+  @property
+  def wrapper(self) -> tuple[float, float, float, float]:
+    x1: float = float("inf")
+    y1: float = float("inf")
+    x2: float = float("-inf")
+    y2: float = float("-inf")
+    for x, y in self:
+      x1 = min(x1, x)
+      y1 = min(y1, y)
+      x2 = max(x2, x)
+      y2 = max(y2, y)
+    return x1, y1, x2, y2
+
 def intersection_area(rect1: Rectangle, rect2: Rectangle) -> float:
   poly1 = Polygon(rect1)
   poly2 = Polygon(rect2)
