@@ -59,8 +59,8 @@ class DocExtractor:
 
     if self._ocr_for_each_layouts:
       self._correct_fragments_by_ocr_layouts(raw_optimizer.image, layouts, lang)
-      layouts = [layout for layout in layouts if self._should_keep_layout(layout)]
 
+    layouts = [layout for layout in layouts if self._should_keep_layout(layout)]
     layouts = self._sort_fragments_and_layouts(layouts)
     raw_optimizer.receive_raw_layouts(layouts)
 
@@ -161,7 +161,7 @@ class DocExtractor:
         if layout is not None:
           layout.fragments.append(fragment)
           break
-    return [layout for layout in layouts if self._should_keep_layout(layout)]
+    return layouts
 
   def _correct_fragments_by_ocr_layouts(self, source: Image, layouts: list[Layout], lang: PaddleLang):
     for layout in layouts:
