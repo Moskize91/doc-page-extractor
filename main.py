@@ -30,7 +30,7 @@ def main():
     for layout in result.layouts:
       print("\n", layout.cls)
       for fragment in layout.fragments:
-        print(fragment.rect, fragment.text)
+        print(fragment.text, fragment.rect.wrapper)
 
 if __name__ == "__main__":
   main()
