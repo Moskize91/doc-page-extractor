@@ -50,8 +50,8 @@ class DocExtractor:
     raw_optimizer.receive_raw_fragments(fragments)
 
     layouts = self._get_layouts(raw_optimizer.image)
-    layouts = self._remove_overlap_layouts(layouts)
     layouts = self._layouts_matched_by_fragments(fragments, layouts)
+    layouts = self._remove_overlap_layouts(layouts)
 
     if self._ocr_for_each_layouts:
       self._correct_fragments_by_ocr_layouts(raw_optimizer.image, layouts, lang)
@@ -108,27 +108,43 @@ class DocExtractor:
     return layouts
 
   def _remove_overlap_layouts(self, layouts: list[Layout]) -> list[Layout]:
-    overlap_layouts: list[Layout] = []
-    not_overlap_layouts: list[Layout] = []
+    includes_min_rate = 0.99
+    removed_indexes: set[int] = set()
 
-    for layout1 in layouts:
+    for i, layout1 in enumerate(layouts):
+      if i in removed_indexes:
+        continue
+
+      polygon1 = Polygon(layout1.rect)
       rates: list[float] = []
-      for layout2 in layouts:
-        if layout1 == layout2 or layout2 in overlap_layouts:
+      includes_layouts: list[Layout] = []
+      includes_layout_indexes: list[int] = []
+
+      for j, layout2 in enumerate(layouts):
+        if layout1 == layout2 or j in removed_indexes:
           continue
         rate = overlap_rate(
-          polygon1=Polygon(layout1.rect),
+          polygon1=polygon1,
           polygon2=Polygon(layout2.rect),
         )
         if rate > 0.0:
           rates.append(rate)
-      if len(rates) > 0 and all(x > 0.99 for x in rates):
-        # all overlap layouts is belongs to it
-        overlap_layouts.append(layout1)
-      else:
-        not_overlap_layouts.append(layout1)
+          includes_layouts.append(layout2)
+          includes_layout_indexes.append(j)
 
-    return not_overlap_layouts
+      if len(rates) == 0 or not all(x > includes_min_rate for x in rates):
+        pass
+
+      elif len(layout1.fragments) == 0:
+        removed_indexes.add(i)
+      else:
+        layout1.fragments.extend(self._iter_fragments(includes_layouts))
+        removed_indexes.update(includes_layout_indexes)
+
+    return [
+      layout for i, layout in enumerate(layouts)
+      if i not in removed_indexes
+    ]
 
   def _layouts_matched_by_fragments(self, fragments: list[OCRFragment], layouts: list[Layout]):
     layouts_group = self._split_layouts_by_group(layouts)
