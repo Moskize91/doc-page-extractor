@@ -16,7 +16,7 @@ def main():
 
   with Image.open(image_path) as image:
     result = extractor.extract(image, "ch")
-    plot_image: Image
+    plot_image: Image.Image
     if result.adjusted_image is None:
       plot_image = image.copy()
     else:
