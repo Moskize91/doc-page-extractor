@@ -2,9 +2,11 @@ import os
 import numpy as np
 import cv2
 
-from typing import Literal, Any
+from typing import Any, Literal, Generator
 from paddleocr import PaddleOCR
-from .utils import ensure_dir
+from .types import OCRFragment
+from .rectangle import Rectangle
+from .utils import is_space_text, ensure_dir
 
 
 # https://github.com/PaddlePaddle/PaddleOCR/blob/2c0c4beb0606819735a16083cdebf652939c781a/paddleocr.py#L108-L157
@@ -16,16 +18,33 @@ class OCR:
       self,
       device: Literal["cpu", "cuda"],
       model_dir_path: str,
-      bin: bool = False,
-      inv: bool = False,
     ):
     self._device: Literal["cpu", "cuda"] = device
     self._model_dir_path: str = model_dir_path
     self._ocr_and_lan: tuple[PaddleOCR, PaddleLang] | None = None
-    self._bin: bool = bin
-    self._inv: bool = inv
 
-  def do(self, lang: PaddleLang, image: np.ndarray) -> list[Any]:
+  def search_fragments(self, image: np.ndarray, lang: PaddleLang) -> Generator[OCRFragment, None, None]:
+    index: int = 0
+    for item in self._handle(lang, image):
+      for line in item:
+        react: list[list[float]] = line[0]
+        text, rank = line[1]
+        if is_space_text(text):
+          continue
+        yield OCRFragment(
+          order=index,
+          text=text,
+          rank=rank,
+          rect=Rectangle(
+            lt=(react[0][0], react[0][1]),
+            rt=(react[1][0], react[1][1]),
+            rb=(react[2][0], react[2][1]),
+            lb=(react[3][0], react[3][1]),
+          ),
+        )
+        index += 1
+
+  def _handle(self, lang: PaddleLang, image: np.ndarray) -> list[Any]:
     ocr = self._get_ocr(lang)
     image = self._preprocess_image(image)
     # about img parameter to see
@@ -59,10 +78,24 @@ class OCR:
 
   def _preprocess_image(self, image: np.ndarray) -> np.ndarray:
     image = self._alpha_to_color(image, (255, 255, 255))
-    if self._inv:
-      image = cv2.bitwise_not(image)
-    if self._bin:
-      image = self._binarize_img(image)
+    # image = cv2.bitwise_not(image) # inv
+    # image = self._binarize_img(image) # bin
+    image = cv2.normalize(
+      src=image,
+      dst=np.zeros((image.shape[0], image.shape[1])),
+      alpha=0,
+      beta=255,
+      norm_type=cv2.NORM_MINMAX,
+    )
+    image = cv2.fastNlMeansDenoisingColored(
+      src=image,
+      dst=None,
+      h=10,
+      hColor=10,
+      templateWindowSize=7,
+      searchWindowSize=15,
+    )
+    # image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) # image to gray
     return image
 
   def _alpha_to_color(self, image: np.ndarray, alpha_color: tuple[float, float, float]) -> np.ndarray:

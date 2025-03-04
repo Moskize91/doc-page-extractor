@@ -1,9 +1,8 @@
 import os
 import sys
 import torch
-import numpy as np
 
-from typing import Literal, Generator
+from typing import Literal
 from pathlib import Path
 from PIL.Image import Image
 from transformers import LayoutLMv3ForTokenClassification
@@ -11,12 +10,12 @@ from doclayout_yolo import YOLOv10
 
 from .layoutreader import prepare_inputs, boxes2inputs, parse_logits
 from .ocr import OCR, PaddleLang
-from .ocr_corrector import correct_ocr
+from .ocr_corrector import correct_fragments
 from .raw_optimizer import RawOptimizer
 from .rectangle import intersection_area, Rectangle
 from .types import ExtractedResult, OCRFragment, LayoutClass, Layout
 from .downloader import download
-from .utils import ensure_dir, is_space_text
+from .utils import ensure_dir
 
 
 class DocExtractor:
@@ -47,7 +46,7 @@ class DocExtractor:
     ) -> ExtractedResult:
 
     raw_optimizer = RawOptimizer(image, adjust_points)
-    fragments = list(self._search_orc_fragments(raw_optimizer.image_np, lang))
+    fragments = list(self._ocr.search_fragments(raw_optimizer.image_np, lang))
     raw_optimizer.receive_raw_fragments(fragments)
 
     if self._order_by_layoutreader:
@@ -70,27 +69,6 @@ class DocExtractor:
       extracted_image=image,
       adjusted_image=raw_optimizer.adjusted_image,
     )
-
-  def _search_orc_fragments(self, image: np.ndarray, lang: PaddleLang) -> Generator[OCRFragment, None, None]:
-    index: int = 0
-    for item in self._ocr.do(lang, image):
-      for line in item:
-        react: list[list[float]] = line[0]
-        text, rank = line[1]
-        if is_space_text(text):
-          continue
-        yield OCRFragment(
-          order=index,
-          text=text,
-          rank=rank,
-          rect=Rectangle(
-            lt=(react[0][0], react[0][1]),
-            rt=(react[1][0], react[1][1]),
-            rb=(react[2][0], react[2][1]),
-            lb=(react[3][0], react[3][1]),
-          ),
-        )
-        index += 1
 
   def _order_fragments(self, width: int, height: int, fragments: list[OCRFragment]):
     layout_model = self._get_layout()
@@ -165,17 +143,7 @@ class DocExtractor:
 
   def _correct_fragments_by_ocr_layouts(self, source: Image, layouts: list[Layout], lang: PaddleLang):
     for layout in layouts:
-      x1, y1, x2, y2 = layout.rect.wrapper
-      image: Image = source.crop((
-        round(x1), round(y1),
-        round(x2), round(y2),
-      ))
-      image_np = np.array(image)
-      layout.fragments = correct_ocr(
-        layout,
-        layout.fragments,
-        self._search_orc_fragments(image_np, lang),
-      )
+      correct_fragments(self._ocr, source, layout, lang)
 
   def _sort_fragments_and_layouts(self, layouts: list[Layout]) -> list[Layout]:
     for layout in layouts:
