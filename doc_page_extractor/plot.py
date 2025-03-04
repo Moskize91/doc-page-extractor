@@ -8,11 +8,11 @@ _FRAGMENT_COLOR = (0x49, 0xCF, 0xCB) # Light Green
 def plot(image: Image, layouts: Iterable[Layout]):
   draw = ImageDraw.Draw(image, mode="RGBA")
   for layout in layouts:
-    draw.polygon([p for p in layout.rect], outline=_layout_color(layout), width=3)
+    draw.polygon([p for p in layout.rect], outline=_layout_color(layout), width=5)
 
   for layout in layouts:
     for fragments in layout.fragments:
-      draw.polygon([p for p in fragments.rect], outline=_FRAGMENT_COLOR, width=1)
+      draw.polygon([p for p in fragments.rect], outline=_FRAGMENT_COLOR, width=2)
 
 def _layout_color(layout: Layout) -> tuple[int, int, int]:
   cls = layout.cls

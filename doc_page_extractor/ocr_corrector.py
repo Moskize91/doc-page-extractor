@@ -6,6 +6,7 @@ from PIL.Image import new, Image, Resampling
 from .types import Layout, OCRFragment
 from .ocr import OCR, PaddleLang
 from .rectangle import Point, Rectangle
+from .utils import overlap_rate
 
 
 _MIN_RATE = 0.5
@@ -92,25 +93,6 @@ def _apply_point(point: Point, layout: Layout, dx: int, dy: int, scale: float) -
   y = (y - dy) / scale + layout.rect.lt[1]
   return x, y
 
-def _relative_layout(layout: Layout, fragment: OCRFragment, addition: bool) -> OCRFragment:
-  dx, dy = layout.rect.lt
-  if not addition:
-    dx, dy = -dx, -dy
-
-  rect = fragment.rect
-  rect = Rectangle(
-    lt=(rect.lt[0] + dx, rect.lt[1] + dy),
-    rt=(rect.rt[0] + dx, rect.rt[1] + dy),
-    lb=(rect.lb[0] + dx, rect.lb[1] + dy),
-    rb=(rect.rb[0] + dx, rect.rb[1] + dy),
-  )
-  return OCRFragment(
-    order=fragment.order,
-    text=fragment.text,
-    rank=fragment.rank,
-    rect=rect,
-  )
-
 def _match_fragments(
     zone_rect: Rectangle,
     fragments1: Iterable[OCRFragment],
@@ -133,11 +115,7 @@ def _match_fragments(
 
     for j, fragment2 in enumerate(fragments2):
       polygon2 = Polygon(fragment2.rect)
-      intersection = polygon2.intersection(polygon1)
-      intersection_area = 0.0
-      if not intersection.is_empty:
-        intersection_area = intersection.area
-      rate = intersection_area / polygon1.area
+      rate = overlap_rate(polygon1, polygon2)
       if rate < _MIN_RATE:
         continue
 

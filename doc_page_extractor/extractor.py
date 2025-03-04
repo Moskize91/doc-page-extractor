@@ -6,6 +6,7 @@ from typing import Literal
 from pathlib import Path
 from PIL.Image import Image
 from transformers import LayoutLMv3ForTokenClassification
+from shapely.geometry import Polygon
 from doclayout_yolo import YOLOv10
 
 from .layoutreader import prepare_inputs, boxes2inputs, parse_logits
@@ -141,7 +142,10 @@ class DocExtractor:
       for layout2 in layouts:
         if layout1 == layout2 or layout2 in overlap_layouts:
           continue
-        rate = overlap_rate(layout2.rect, layout1.rect)
+        rate = overlap_rate(
+          polygon1=Polygon(layout1.rect),
+          polygon2=Polygon(layout2.rect),
+        )
         if rate > 0.0:
           rates.append(rate)
       if len(rates) > 0 and all(x > 0.99 for x in rates):
