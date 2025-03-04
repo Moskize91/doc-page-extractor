@@ -14,7 +14,7 @@ from .raw_optimizer import RawOptimizer
 from .rectangle import intersection_area, Rectangle
 from .types import ExtractedResult, OCRFragment, LayoutClass, Layout
 from .downloader import download
-from .overlap import remove_overlap_layouts
+from .overlap import regroup_lines, remove_overlap_layouts
 from .utils import ensure_dir
 
 
@@ -64,6 +64,7 @@ class DocExtractor:
 
     layouts = [layout for layout in layouts if self._should_keep_layout(layout)]
     for layout in layouts:
+      layout.fragments = regroup_lines(layout.fragments)
       layout.fragments.sort(key=lambda fragment: fragment.order)
 
     layouts = self._sort_layouts(layouts)
