@@ -3,45 +3,54 @@ from shapely.geometry import Polygon
 from .types import Layout, OCRFragment
 from .rectangle import Rectangle
 
-def remove_overlap_layouts(layouts: list[Layout]) -> list[Layout]:
-  includes_min_rate = 0.99
-  removed_indexes: set[int] = set()
 
-  for i, layout1 in enumerate(layouts):
-    if i in removed_indexes:
+_INCLUDES_MIN_RATE = 0.99
+
+def remove_overlap_layouts(layouts: list[Layout]) -> list[Layout]:
+  removed_indexes: set[int] = set()
+  rates_matrix = _rate_matrix(layouts)
+
+  for i, layout in enumerate(layouts):
+    if i in removed_indexes or all(
+      rate == 0.0 or rate > _INCLUDES_MIN_RATE
+      for rate in _rates_with_other(rates_matrix, i)
+    ):
       continue
 
-    polygon1 = Polygon(layout1.rect)
-    rates: list[float] = []
-    includes_layouts: list[Layout] = []
-    includes_layout_indexes: list[int] = []
-
-    for j, layout2 in enumerate(layouts):
-      if layout1 == layout2 or j in removed_indexes:
-        continue
-      rate = overlap_rate(
-        polygon1=polygon1,
-        polygon2=Polygon(layout2.rect),
-      )
-      if rate > 0.0:
-        rates.append(rate)
-        includes_layouts.append(layout2)
-        includes_layout_indexes.append(j)
-
-    if len(rates) == 0 or not all(x > includes_min_rate for x in rates):
-      pass
-
-    elif len(layout1.fragments) == 0:
+    if len(layout.fragments) == 0:
       removed_indexes.add(i)
     else:
-      removed_indexes.update(includes_layout_indexes)
-      for layout in includes_layouts:
-        layout1.fragments.extend(layout.fragments)
+      for j in _search_includes_indexes(rates_matrix, i):
+        removed_indexes.add(j)
+        layout.fragments.extend(layouts[j].fragments)
 
   return [
     layout for i, layout in enumerate(layouts)
     if i not in removed_indexes
   ]
+
+def _rate_matrix(layouts: list[Layout]) -> list[list[float]]:
+  length: int = len(layouts)
+  polygons: list[Polygon] = [Polygon(layout.rect) for layout in layouts]
+  rate_matrix: list[list[float]] = [[1.0 for _ in range(length)] for _ in range(length)]
+  for i in range(length):
+    polygon1 = polygons[i]
+    rates = rate_matrix[i]
+    for j in range(length):
+      if i != j:
+        polygon2 = polygons[j]
+        rates[j] = overlap_rate(polygon1, polygon2)
+  return rate_matrix
+
+def _rates_with_other(rates_matrix: list[list[float]], index: int):
+  for i, rate in enumerate(rates_matrix[index]):
+    if i != index:
+      yield rate
+
+def _search_includes_indexes(layout_matrix: list[list[float]], index: int):
+  for i, rate in enumerate(layout_matrix[index]):
+    if i != index and rate >= _INCLUDES_MIN_RATE:
+      yield i
 
 def regroup_lines(origin_fragments: list[OCRFragment]) -> list[OCRFragment]:
   fragments: list[OCRFragment] = []
