@@ -7,14 +7,8 @@ from . import predict_cls
 from . import predict_rec
 from .utils import get_rotate_crop_image, get_minarea_rect_crop
 
-class DictToObject:
-  def __init__(self, dictionary: dict):
-    for key, value in dictionary.items():
-      setattr(self, key, value)
-
 class TextSystem:
   def __init__(self, args):
-    args = DictToObject(args)
     self.text_detector = predict_det.TextDetector(args)
     self.text_recognizer = predict_rec.TextRecognizer(args)
     self.use_angle_cls = True

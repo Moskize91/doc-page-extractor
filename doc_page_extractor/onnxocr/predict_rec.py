@@ -10,7 +10,7 @@ from .predict_base import PredictBase
 
 class TextRecognizer(PredictBase):
   def __init__(self, args):
-    self.rec_image_shape = [int(v) for v in args.rec_image_shape.split(",")]
+    self.rec_image_shape = args.rec_image_shape
     self.rec_batch_num = args.rec_batch_num
     self.rec_algorithm = args.rec_algorithm
     self.postprocess_op = CTCLabelDecode(

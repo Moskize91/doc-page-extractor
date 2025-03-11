@@ -1,8 +1,10 @@
 import numpy as np
 import cv2
+import os
 
-from typing import Any, Literal, Generator
-from .onnxocr import ONNXPaddleOcr
+from typing import Literal, Generator
+from dataclasses import dataclass
+from .onnxocr import TextSystem
 from .types import OCRFragment
 from .rectangle import Rectangle
 from .utils import is_space_text
@@ -11,45 +13,94 @@ from .utils import is_space_text
 # https://github.com/PaddlePaddle/PaddleOCR/blob/2c0c4beb0606819735a16083cdebf652939c781a/paddleocr.py#L108-L157
 PaddleLang = Literal["ch", "en", "korean", "japan", "chinese_cht", "ta", "te", "ka", "latin", "arabic", "cyrillic", "devanagari"]
 
-# https://paddlepaddle.github.io/PaddleOCR/latest/quick_start.html#_2
+@dataclass
+class _OONXParams:
+  use_angle_cls: bool
+  use_gpu: bool
+  rec_image_shape: tuple[int, int, int]
+  cls_image_shape: tuple[int, int, int]
+  cls_batch_num: int
+  cls_thresh: float
+  label_list: list[str]
+
+  det_algorithm: str
+  det_limit_side_len: int
+  det_limit_type: str
+  det_db_thresh: float
+  det_db_box_thresh: float
+  det_db_unclip_ratio: float
+  use_dilation: bool
+  det_db_score_mode: str
+  det_box_type: str
+  rec_batch_num: int
+  drop_score: float
+  save_crop_res: bool
+  rec_algorithm: str
+  use_space_char: bool
+  rec_model_dir: str
+  cls_model_dir: str
+  det_model_dir: str
+  rec_char_dict_path: str
+
 class OCR:
   def __init__(
       self,
       device: Literal["cpu", "cuda"],
       model_dir_path: str,
     ):
-    self._device: Literal["cpu", "cuda"] = device
     self._model_dir_path: str = model_dir_path
-    self._onn_ocr: ONNXPaddleOcr = ONNXPaddleOcr(model_dir_path)
+    self._text_system: TextSystem = TextSystem(_OONXParams(
+      use_angle_cls=True,
+      use_gpu=(device != "cpu"),
+      rec_image_shape=(3, 48, 320),
+      cls_image_shape=(3, 48, 192),
+      cls_batch_num=6,
+      cls_thresh=0.9,
+      label_list=["0", "180"],
+      det_algorithm="DB",
+      det_limit_side_len=960,
+      det_limit_type="max",
+      det_db_thresh=0.3,
+      det_db_box_thresh=0.6,
+      det_db_unclip_ratio=1.5,
+      use_dilation=False,
+      det_db_score_mode="fast",
+      det_box_type="quad",
+      rec_batch_num=6,
+      drop_score=0.5,
+      save_crop_res=False,
+      rec_algorithm="SVTR_LCNet",
+      use_space_char=True,
+      rec_model_dir=os.path.join(model_dir_path, "ppocrv4", "rec", "rec.onnx"),
+      cls_model_dir=os.path.join(model_dir_path, "ppocrv4", "cls", "cls.onnx"),
+      det_model_dir=os.path.join(model_dir_path, "ppocrv4", "det", "det.onnx"),
+      rec_char_dict_path=os.path.join(model_dir_path, "ch_ppocr_server_v2.0", "ppocr_keys_v1.txt"),
+    ))
 
   def search_fragments(self, image: np.ndarray, lang: PaddleLang) -> Generator[OCRFragment, None, None]:
     index: int = 0
-    for item in self._handle(lang, image):
-      for line in item:
-        react: list[list[float]] = line[0]
-        text, rank = line[1]
-        if is_space_text(text):
-          continue
-        yield OCRFragment(
-          order=index,
-          text=text,
-          rank=rank,
-          rect=Rectangle(
-            lt=(react[0][0], react[0][1]),
-            rt=(react[1][0], react[1][1]),
-            rb=(react[2][0], react[2][1]),
-            lb=(react[3][0], react[3][1]),
-          ),
-        )
-        index += 1
+    for box, res in self._ocr(image):
+      text, rank = res
+      if is_space_text(text):
+        continue
+      yield OCRFragment(
+        order=index,
+        text=text,
+        rank=rank,
+        rect=Rectangle(
+          lt=(box[0][0], box[0][1]),
+          rt=(box[1][0], box[1][1]),
+          rb=(box[2][0], box[2][1]),
+          lb=(box[3][0], box[3][1]),
+        ),
+      )
+      index += 1
 
-  def _handle(self, lang: PaddleLang, image: np.ndarray) -> list[Any]:
+  def _ocr(self, image: np.ndarray) -> Generator[tuple[list[list[float]], tuple[str, float]], None, None]:
     image = self._preprocess_image(image)
-    # about img parameter to see
-    # https://github.com/PaddlePaddle/PaddleOCR/blob/2c0c4beb0606819735a16083cdebf652939c781a/paddleocr.py#L582-L619
-    ocr_list = self._onn_ocr.ocr(img=image, cls=True)
-    # there will be some None
-    return [e for e in ocr_list if e is not None]
+    dt_boxes, rec_res = self._text_system(image)
+    for box, res in zip(dt_boxes, rec_res):
+      yield box.tolist(), res
 
   def _preprocess_image(self, image: np.ndarray) -> np.ndarray:
     image = self._alpha_to_color(image, (255, 255, 255))

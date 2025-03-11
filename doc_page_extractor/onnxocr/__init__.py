@@ -1,1 +1,1 @@
-from .onnx_paddleocr import ONNXPaddleOcr
+from .predict_system import TextSystem

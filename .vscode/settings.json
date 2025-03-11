@@ -12,8 +12,10 @@
     "layoutreader",
     "ndarray",
     "onnxocr",
+    "OONX",
     "paddleocr",
     "paddlepaddle",
+    "unclip",
     "xyxy"
   ],
   "pylint.args": [
