@@ -1,5 +1,6 @@
 opencv-python==4.11.0.86
 pillow==10.3.0
+numpy==1.25.2
 shapely==2.0.6
 transformers==4.48.2
 doclayout_yolo==0.0.3
