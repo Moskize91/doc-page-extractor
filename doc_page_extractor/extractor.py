@@ -30,7 +30,7 @@ class DocExtractor:
     self._device: Literal["cpu", "cuda"] = device
     self._ocr_for_each_layouts: bool = ocr_for_each_layouts
     self._order_by_layoutreader: bool = order_by_layoutreader
-    self._ocr: OCR = OCR(device, os.path.join(model_dir_path, "paddle"))
+    self._ocr: OCR = OCR(device, model_dir_path)
     self._yolo: YOLOv10 | None = None
     self._layout: LayoutLMv3ForTokenClassification | None = None
 

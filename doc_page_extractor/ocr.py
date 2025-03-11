@@ -1,12 +1,11 @@
-import os
 import numpy as np
 import cv2
 
 from typing import Any, Literal, Generator
-from paddleocr import PaddleOCR
+from .onnxocr import ONNXPaddleOcr
 from .types import OCRFragment
 from .rectangle import Rectangle
-from .utils import is_space_text, ensure_dir
+from .utils import is_space_text
 
 
 # https://github.com/PaddlePaddle/PaddleOCR/blob/2c0c4beb0606819735a16083cdebf652939c781a/paddleocr.py#L108-L157
@@ -21,7 +20,7 @@ class OCR:
     ):
     self._device: Literal["cpu", "cuda"] = device
     self._model_dir_path: str = model_dir_path
-    self._ocr_and_lan: tuple[PaddleOCR, PaddleLang] | None = None
+    self._onn_ocr: ONNXPaddleOcr = ONNXPaddleOcr(model_dir_path)
 
   def search_fragments(self, image: np.ndarray, lang: PaddleLang) -> Generator[OCRFragment, None, None]:
     index: int = 0
@@ -45,36 +44,12 @@ class OCR:
         index += 1
 
   def _handle(self, lang: PaddleLang, image: np.ndarray) -> list[Any]:
-    ocr = self._get_ocr(lang)
     image = self._preprocess_image(image)
     # about img parameter to see
     # https://github.com/PaddlePaddle/PaddleOCR/blob/2c0c4beb0606819735a16083cdebf652939c781a/paddleocr.py#L582-L619
-    ocr_list = ocr.ocr(img=image, cls=True)
+    ocr_list = self._onn_ocr.ocr(img=image, cls=True)
     # there will be some None
     return [e for e in ocr_list if e is not None]
-
-  def _get_ocr(self, lang: PaddleLang) -> PaddleOCR:
-    if self._ocr_and_lan is not None:
-      ocr, origin_lang = self._ocr_and_lan
-      if lang == origin_lang:
-        return ocr
-
-    ocr = PaddleOCR(
-      lang=lang,
-      use_angle_cls=True,
-      use_gpu=self._device.startswith("cuda"),
-      det_model_dir=ensure_dir(
-        os.path.join(self._model_dir_path, "det"),
-      ),
-      rec_model_dir=ensure_dir(
-        os.path.join(self._model_dir_path, "rec"),
-      ),
-      cls_model_dir=ensure_dir(
-        os.path.join(self._model_dir_path, "cls"),
-      ),
-    )
-    self._ocr_and_lan = (ocr, lang)
-    return ocr
 
   def _preprocess_image(self, image: np.ndarray) -> np.ndarray:
     image = self._alpha_to_color(image, (255, 255, 255))

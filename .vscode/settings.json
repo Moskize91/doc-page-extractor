@@ -11,6 +11,7 @@
     "imgsz",
     "layoutreader",
     "ndarray",
+    "onnxocr",
     "paddleocr",
     "paddlepaddle",
     "xyxy"
