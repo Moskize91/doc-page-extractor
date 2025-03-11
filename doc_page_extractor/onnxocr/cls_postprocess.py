@@ -1,4 +1,4 @@
-class ClsPostProcess(object):
+class ClsPostProcess  (object):
   """ Convert between text-label and text-index """
 
   def __init__(self, label_list=None, key=None, **kwargs):

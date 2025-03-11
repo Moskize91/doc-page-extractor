@@ -77,7 +77,7 @@ class OCR:
       rec_char_dict_path=os.path.join(model_dir_path, "ch_ppocr_server_v2.0", "ppocr_keys_v1.txt"),
     ))
 
-  def search_fragments(self, image: np.ndarray, lang: PaddleLang) -> Generator[OCRFragment, None, None]:
+  def search_fragments(self, image: np.ndarray, _: PaddleLang) -> Generator[OCRFragment, None, None]:
     index: int = 0
     for box, res in self._ocr(image):
       text, rank = res

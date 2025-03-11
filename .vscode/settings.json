@@ -19,6 +19,6 @@
     "xyxy"
   ],
   "pylint.args": [
-    "--generate-members"
-  ]
+    "--generated-member=cv2"
+  ],
 }

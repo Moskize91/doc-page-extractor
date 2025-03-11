@@ -1,6 +1,7 @@
 [MAIN]
 py-version=3.12
 extension-pkg-whitelist=cv2
+ignore-paths=^doc_page_extractor/onnxocr/.*$
 
 [MESSAGES CONTROL]
 disable=
