@@ -4,14 +4,14 @@ from typing import Iterable
 from shapely.geometry import Polygon
 from PIL.Image import new, Image, Resampling
 from .types import Layout, OCRFragment
-from .ocr import OCR, PaddleLang
+from .ocr import OCR
 from .overlap import overlap_rate
 from .rectangle import Point, Rectangle
 
 
 _MIN_RATE = 0.5
 
-def correct_fragments(ocr: OCR, source: Image, layout: Layout, lang: PaddleLang):
+def correct_fragments(ocr: OCR, source: Image, layout: Layout):
   x1, y1, x2, y2 = layout.rect.wrapper
   image: Image = source.crop((
     round(x1), round(y1),
@@ -19,7 +19,7 @@ def correct_fragments(ocr: OCR, source: Image, layout: Layout, lang: PaddleLang)
   ))
   image, dx, dy, scale = _adjust_image(image)
   image_np = np.array(image)
-  ocr_fragments = list(ocr.search_fragments(image_np, lang))
+  ocr_fragments = list(ocr.search_fragments(image_np))
   corrected_fragments: list[OCRFragment] = []
 
   for fragment in ocr_fragments:

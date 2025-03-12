@@ -11,9 +11,6 @@ from .downloader import download
 from .utils import is_space_text
 
 
-# https://github.com/PaddlePaddle/PaddleOCR/blob/2c0c4beb0606819735a16083cdebf652939c781a/paddleocr.py#L108-L157
-PaddleLang = Literal["ch", "en", "korean", "japan", "chinese_cht", "ta", "te", "ka", "latin", "arabic", "cyrillic", "devanagari"]
-
 _MODELS = (
   ("ppocrv4", "rec", "rec.onnx"),
   ("ppocrv4", "cls", "cls.onnx"),
@@ -60,7 +57,7 @@ class OCR:
     self._model_dir_path: str = model_dir_path
     self._text_system: TextSystem | None = None
 
-  def search_fragments(self, image: np.ndarray, _: PaddleLang) -> Generator[OCRFragment, None, None]:
+  def search_fragments(self, image: np.ndarray) -> Generator[OCRFragment, None, None]:
     index: int = 0
     for box, res in self._ocr(image):
       text, rank = res

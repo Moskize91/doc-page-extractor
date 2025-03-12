@@ -8,7 +8,7 @@ from transformers import LayoutLMv3ForTokenClassification
 from doclayout_yolo import YOLOv10
 
 from .layoutreader import prepare_inputs, boxes2inputs, parse_logits
-from .ocr import OCR, PaddleLang
+from .ocr import OCR
 from .ocr_corrector import correct_fragments
 from .raw_optimizer import RawOptimizer
 from .rectangle import intersection_area, Rectangle
@@ -41,12 +41,11 @@ class DocExtractor:
   def extract(
       self,
       image: Image,
-      lang: PaddleLang,
       adjust_points: bool = False,
     ) -> ExtractedResult:
 
     raw_optimizer = RawOptimizer(image, adjust_points)
-    fragments = list(self._ocr.search_fragments(raw_optimizer.image_np, lang))
+    fragments = list(self._ocr.search_fragments(raw_optimizer.image_np))
     raw_optimizer.receive_raw_fragments(fragments)
 
     layouts = self._get_layouts(raw_optimizer.image)
@@ -54,7 +53,7 @@ class DocExtractor:
     layouts = remove_overlap_layouts(layouts)
 
     if self._ocr_for_each_layouts:
-      self._correct_fragments_by_ocr_layouts(raw_optimizer.image, layouts, lang)
+      self._correct_fragments_by_ocr_layouts(raw_optimizer.image, layouts)
 
     if self._order_by_layoutreader:
       width, height = raw_optimizer.image.size
@@ -118,9 +117,9 @@ class DocExtractor:
           break
     return layouts
 
-  def _correct_fragments_by_ocr_layouts(self, source: Image, layouts: list[Layout], lang: PaddleLang):
+  def _correct_fragments_by_ocr_layouts(self, source: Image, layouts: list[Layout]):
     for layout in layouts:
-      correct_fragments(self._ocr, source, layout, lang)
+      correct_fragments(self._ocr, source, layout)
 
   def _split_layouts_by_group(self, layouts: list[Layout]):
     texts_layouts: list[Layout] = []
