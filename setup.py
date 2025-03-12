@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
   name="doc-page-extractor",
-  version="0.0.5",
+  version="0.0.6",
   author="Tao Zeyu",
   author_email="i@taozeyu.com",
   url="https://github.com/Moskize91/doc-page-extractor",
@@ -13,10 +13,11 @@ setup(
   install_requires=[
     "opencv-python>=4.11.0,<5.0",
     "pillow>=10.3,<11.0",
-    "numpy>=1.24.0,<1.26", # 1.25.2 is worked but 1.25 not worked on Windows 11
+    "pyclipper>=1.2.0,<2.0",
+    "onnxruntime>=1.19.0,<2.0",
+    "numpy>=1.24.0,<2.0",
     "shapely>=2.0.0,<3.0",
     "transformers>=4.48.0,<5.0",
     "doclayout_yolo>=0.0.3",
-    "paddleocr==2.9.0", # https://github.com/Moskize91/doc-page-extractor/issues/3
   ],
 )
