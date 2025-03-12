@@ -39,6 +39,8 @@ with Image.open("/path/to/your/image.png") as image:
 
 ## 致谢
 
+本 repo 中 `doc_page_extractor/onnxocr` 的代码来自 [OnnxOCR](https://github.com/jingsongliujing/OnnxOCR)。
+
 - [DocLayout-YOLO](https://github.com/opendatalab/DocLayout-YOLO)
-- [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR)
+- [OnnxOCR](https://github.com/jingsongliujing/OnnxOCR)
 - [layoutreader](https://github.com/ppaanngggg/layoutreader)

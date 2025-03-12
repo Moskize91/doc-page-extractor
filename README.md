@@ -38,6 +38,8 @@ for layout in result.layouts:
 
 ## Acknowledgements
 
+The code of `doc_page_extractor/onnxocr` in this repo comes from [OnnxOCR](https://github.com/jingsongliujing/OnnxOCR).
+
 - [DocLayout-YOLO](https://github.com/opendatalab/DocLayout-YOLO)
-- [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR)
+- [OnnxOCR](https://github.com/jingsongliujing/OnnxOCR)
 - [layoutreader](https://github.com/ppaanngggg/layoutreader)
