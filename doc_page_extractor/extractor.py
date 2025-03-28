@@ -1,5 +1,4 @@
 import os
-import torch
 
 from typing import Literal, Iterable
 from pathlib import Path
@@ -33,10 +32,6 @@ class DocExtractor:
     self._ocr: OCR = OCR(device, model_dir_path)
     self._yolo: YOLOv10 | None = None
     self._layout: LayoutLMv3ForTokenClassification | None = None
-
-    if self._device.startswith("cuda") and not torch.cuda.is_available():
-      self._device = "cpu"
-      print("Warn: cuda is not available, use cpu instead")
 
   def extract(
       self,
@@ -83,7 +78,7 @@ class DocExtractor:
       source=source,
       imgsz=1024,
       conf=0.2,
-      device=self._device    # Device to use (e.g., "cuda:0" or "cpu")
+      device=self._device    # Device to use (e.g., "cuda" or "cpu")
     )
     boxes = det_res[0].__dict__["boxes"]
     layouts: list[Layout] = []

@@ -34,7 +34,7 @@ from doc_page_extractor import DocExtractor
 
 extractor = DocExtractor(
   model_dir_path=model_path, # Folder address where AI model is downloaded and installed
-  device="cpu", # If you want to use CUDA, please change to device="cuda:0".
+  device="cpu", # If you want to use CUDA, please change to device="cuda".
 )
 with Image.open("/path/to/your/image.png") as image:
   result = extractor.extract(
