@@ -12,6 +12,7 @@
     "layoutreader",
     "ndarray",
     "onnxocr",
+    "onnxruntime",
     "OONX",
     "paddleocr",
     "paddlepaddle",

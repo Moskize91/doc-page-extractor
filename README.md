@@ -12,9 +12,19 @@ doc page extractor can identify text and format in images and return structured 
 pip install doc-page-extractor
 ```
 
+```shell
+pip install onnxruntime==1.21.0
+```
+
 ## Using CUDA
 
 Please refer to the introduction of [PyTorch](https://pytorch.org/get-started/locally/) and select the appropriate command to install according to your operating system.
+
+In addition, replace the command to install `onnxruntime` in the previous article with the following:
+
+```shell
+pip install onnxruntime-gpu==1.21.0
+```
 
 ## Example
 
