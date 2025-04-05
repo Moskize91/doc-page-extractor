@@ -88,6 +88,9 @@ def regroup_lines(origin_fragments: list[OCRFragment]) -> list[OCRFragment]:
         x2 = max(x2, x)
         y2 = max(y2, y)
 
+    if len(proto_texts_len) == 0:
+      continue
+
     fragments.append(OCRFragment(
       order=min_order,
       text=" ".join(texts),
@@ -115,13 +118,14 @@ def _split_fragments_into_groups(fragments: list[OCRFragment]) -> Generator[list
     if len(group) > 0:
       next_mean_median = (sum_median + median) / (len(group) + 1)
       next_mean_height = (sum_height + height) / (len(group) + 1)
-      deviation_rate = abs(median - next_mean_median) / next_mean_height
 
-      if deviation_rate > max_deviation_rate:
-        yield group
-        group = []
-        sum_height = 0.0
-        sum_median = 0.0
+      if next_mean_height > 0:
+        deviation_rate = abs(median - next_mean_median) / next_mean_height
+        if deviation_rate > max_deviation_rate:
+          yield group
+          group = []
+          sum_height = 0.0
+          sum_median = 0.0
 
     group.append(fragment)
     sum_height += height
@@ -141,7 +145,12 @@ def overlap_rate(polygon1: Polygon, polygon2: Polygon) -> float:
   else:
     overlay_width, overlay_height = _polygon_size(intersection)
     polygon2_width, polygon2_height = _polygon_size(polygon2)
-    return (overlay_width / polygon2_width + overlay_height / polygon2_height) / 2.0
+    if polygon2_width == 0.0 or polygon2_height == 0.0:
+      return 0.0
+    return (
+      overlay_width / polygon2_width +
+      overlay_height / polygon2_height
+    ) / 2.0
 
 def _polygon_size(polygon: Polygon) -> tuple[float, float]:
   x1: float = float("inf")

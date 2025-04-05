@@ -73,6 +73,9 @@ def _size_and_wrapper(rect: Rectangle):
     else:
       widths.append(distance)
 
+  if len(widths) == 0 and len(heights) == 0:
+    return 0.0, 0.0, 0.0, 0.0
+
   width: float = sum(widths) / len(widths)
   height: float = sum(heights) / len(heights)
   max_width: float = width

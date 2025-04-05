@@ -63,6 +63,8 @@ class OCR:
       text, rank = res
       if is_space_text(text):
         continue
+
+      # TODO: check rect is 0 area
       yield OCRFragment(
         order=index,
         text=text,

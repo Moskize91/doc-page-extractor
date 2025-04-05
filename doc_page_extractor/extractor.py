@@ -137,6 +137,10 @@ class DocExtractor:
   def _find_matched_layout(self, fragment: OCRFragment, layouts: list[Layout]) -> Layout | None:
     fragment_area = fragment.rect.area
     primary_layouts: list[(Layout, float)] = []
+
+    if fragment_area == 0.0:
+      return None
+
     for layout in layouts:
       area = intersection_area(fragment.rect, layout.rect)
       if area / fragment_area > 0.85:
@@ -169,6 +173,9 @@ class DocExtractor:
       fragment.order = i
 
   def _order_fragments_by_ai(self, width: int, height: int, layouts: list[Layout]):
+    if width == 0 or height == 0:
+      return
+
     layout_model = self._get_layout()
     boxes: list[list[int]] = []
     steps: float = 1000.0 # max value of layoutreader
@@ -267,6 +274,9 @@ class DocExtractor:
 
     width = right - left
     height = bottom - top
+
+    if width == 0 or height == 0:
+      return
 
     for _left, _top, _right, _bottom in boxes:
       yield (

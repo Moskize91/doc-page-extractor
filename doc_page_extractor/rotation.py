@@ -129,7 +129,9 @@ def _find_median(rotations: list[float]):
     mid2 = rotations[n // 2]
     return (mid1 + mid2) / 2
 
-def _find_mean(rotations: list[float]):
+def _find_mean(rotations: list[float]) -> float:
+  if len(rotations) == 0:
+    return 0.0
   return sum(rotations) / len(rotations)
 
 # rotation is in [0, pi)
