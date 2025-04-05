@@ -64,17 +64,20 @@ class OCR:
       if is_space_text(text):
         continue
 
-      # TODO: check rect is 0 area
+      rect = Rectangle(
+        lt=(box[0][0], box[0][1]),
+        rt=(box[1][0], box[1][1]),
+        rb=(box[2][0], box[2][1]),
+        lb=(box[3][0], box[3][1]),
+      )
+      if rect.area == 0.0:
+        continue
+
       yield OCRFragment(
         order=index,
         text=text,
         rank=rank,
-        rect=Rectangle(
-          lt=(box[0][0], box[0][1]),
-          rt=(box[1][0], box[1][1]),
-          rb=(box[2][0], box[2][1]),
-          lb=(box[3][0], box[3][1]),
-        ),
+        rect=rect,
       )
       index += 1
 
