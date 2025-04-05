@@ -115,17 +115,19 @@ def _split_fragments_into_groups(fragments: list[OCRFragment]) -> Generator[list
     height = y2 - y1
     median = (y1 + y2) / 2.0
 
+    if height == 0:
+      continue
+
     if len(group) > 0:
       next_mean_median = (sum_median + median) / (len(group) + 1)
       next_mean_height = (sum_height + height) / (len(group) + 1)
 
-      if next_mean_height > 0:
-        deviation_rate = abs(median - next_mean_median) / next_mean_height
-        if deviation_rate > max_deviation_rate:
-          yield group
-          group = []
-          sum_height = 0.0
-          sum_median = 0.0
+      deviation_rate = abs(median - next_mean_median) / next_mean_height
+      if deviation_rate > max_deviation_rate:
+        yield group
+        group = []
+        sum_height = 0.0
+        sum_median = 0.0
 
     group.append(fragment)
     sum_height += height
