@@ -88,7 +88,7 @@ def regroup_lines(origin_fragments: list[OCRFragment]) -> list[OCRFragment]:
         x2 = max(x2, x)
         y2 = max(y2, y)
 
-    if len(proto_texts_len) == 0:
+    if proto_texts_len == 0:
       continue
 
     fragments.append(OCRFragment(
