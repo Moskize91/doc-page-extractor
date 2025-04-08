@@ -15,7 +15,7 @@ class OrderAI:
 def order_layouts_and_fragments(layouts: list[Layout], order_ai: OrderAI | None) -> list[Layout]:
   _order_by_primitive_layouts(layouts)
   if order_ai is not None:
-    _order_fragments_by_ai(layouts, order_ai)
+    order_fragments_by_ai(layouts, order_ai)
   return _sort_layouts(layouts)
 
 def _order_by_primitive_layouts(layouts: list[Layout]):
@@ -26,7 +26,8 @@ def _order_by_primitive_layouts(layouts: list[Layout]):
       fragment.order = order
       order += 1
 
-def _order_fragments_by_ai(layouts: list[Layout], order_ai: OrderAI):
+def order_fragments_by_ai(fragments: list[OCRFragment], order_ai: OrderAI):
+  print(">>>", len(fragments))
   width = order_ai.width
   height = order_ai.height
 
@@ -36,32 +37,24 @@ def _order_fragments_by_ai(layouts: list[Layout], order_ai: OrderAI):
   layoutreader_model = order_ai.model
   boxes: list[list[int]] = []
   steps: float = 1000.0 # max value of layoutreader
-  x_rate: float = 1.0
-  y_rate: float = 1.0
-  x_offset: float = 0.0
-  y_offset: float = 0.0
-  if width > height:
-    y_rate = height / width
-    y_offset = (1.0 - y_rate) / 2.0
-  else:
-    x_rate = width / height
-    x_offset = (1.0 - x_rate) / 2.0
+  x_scale = steps / width
+  y_scale = steps / height
 
-  for left, top, right, bottom in _collect_rate_boxes(
-    fragments=_iter_fragments(layouts),
-  ):
+  for fragment in fragments:
+    left, top, right, bottom = fragment.rect.wrapper
     boxes.append([
-      round((left * x_rate + x_offset) * steps),
-      round((top * y_rate + y_offset) * steps),
-      round((right * x_rate + x_offset) * steps),
-      round((bottom * y_rate + y_offset) * steps),
+      round(left * x_scale),
+      round(top * y_scale),
+      round(right * x_scale),
+      round(bottom * y_scale),
     ])
+
   inputs = boxes2inputs(boxes)
   inputs = prepare_inputs(inputs, layoutreader_model)
   logits = layoutreader_model(**inputs).logits.cpu().squeeze(0)
   orders: list[int] = parse_logits(logits, len(boxes))
 
-  for order, fragment in zip(orders, _iter_fragments(layouts)):
+  for order, fragment in zip(orders, fragments):
     fragment.order = order
 
 def _sort_layouts(layouts: list[Layout]) -> list[Layout]:

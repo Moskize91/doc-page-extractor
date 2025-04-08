@@ -13,7 +13,7 @@ from .rectangle import intersection_area, Rectangle
 from .types import ExtractedResult, OCRFragment, LayoutClass, Layout
 from .downloader import download
 from .overlap import merge_fragments_as_line, remove_overlap_layouts
-from .order import order_layouts_and_fragments, OrderAI
+from .order2 import order_layouts_and_fragments, order_fragments_by_ai, OrderAI
 from .utils import ensure_dir
 
 
@@ -43,6 +43,16 @@ class DocExtractor:
     fragments = list(self._ocr.search_fragments(raw_optimizer.image_np))
     raw_optimizer.receive_raw_fragments(fragments)
 
+    order_ai: OrderAI | None = None
+    if self._order_by_layoutreader:
+      width, height = raw_optimizer.image.size
+      order_ai = OrderAI(
+        width=width,
+        height=height,
+        model=self._get_layoutreader(),
+      )
+      order_fragments_by_ai(fragments, order_ai)
+
     layouts = self._get_layouts(raw_optimizer.image)
     layouts = self._layouts_matched_by_fragments(fragments, layouts)
     layouts = remove_overlap_layouts(layouts)
@@ -54,15 +64,7 @@ class DocExtractor:
     for layout in layouts:
       layout.fragments = merge_fragments_as_line(layout.fragments)
 
-    order_ai: OrderAI | None = None
-    if self._order_by_layoutreader:
-      width, height = raw_optimizer.image.size
-      order_ai = OrderAI(
-        width=width,
-        height=height,
-        model=self._get_layoutreader(),
-      )
-    layouts = order_layouts_and_fragments(layouts, order_ai)
+    # layouts = order_layouts_and_fragments(layouts, order_ai)
     raw_optimizer.receive_raw_layouts(layouts)
 
     return ExtractedResult(
