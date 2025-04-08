@@ -1,20 +1,73 @@
 from typing import Iterable
 from PIL import ImageDraw
+from PIL.ImageFont import load_default, FreeTypeFont
 from PIL.Image import Image
 from .types import Layout, LayoutClass
+from .rectangle import Point
 
 _FRAGMENT_COLOR = (0x49, 0xCF, 0xCB) # Light Green
+_Color = tuple[int, int, int]
 
-def plot(image: Image, layouts: Iterable[Layout]):
+def plot(image: Image, layouts: Iterable[Layout]) -> None:
+  layout_font = load_default(size=35)
+  fragment_font = load_default(size=25)
   draw = ImageDraw.Draw(image, mode="RGBA")
-  for layout in layouts:
-    draw.polygon([p for p in layout.rect], outline=_layout_color(layout), width=5)
+
+  def _draw_number(position: Point, number: int, font: FreeTypeFont, bold: bool, color: _Color) -> None:
+    nonlocal draw
+    x, y = position
+    text = str(object=number)
+    width = len(text) * font.size
+    offset = round(font.size * 0.15)
+
+    for dx, dy in _generate_delta(bold):
+      draw.text(
+        xy=(x + dx - width - offset, y + dy),
+        text=text,
+        font=font,
+        fill=color,
+      )
 
   for layout in layouts:
-    for fragments in layout.fragments:
-      draw.polygon([p for p in fragments.rect], outline=_FRAGMENT_COLOR, width=3)
+    draw.polygon(
+      xy=[p for p in layout.rect],
+      outline=_layout_color(layout),
+      width=5,
+    )
 
-def _layout_color(layout: Layout) -> tuple[int, int, int]:
+  for layout in layouts:
+    for fragment in layout.fragments:
+      draw.polygon(
+        xy=[p for p in fragment.rect],
+        outline=_FRAGMENT_COLOR,
+        width=3,
+      )
+      _draw_number(
+        position=fragment.rect.lt,
+        number=fragment.order + 1,
+        font=fragment_font,
+        bold=False,
+        color=_FRAGMENT_COLOR,
+      )
+
+  for i, layout in enumerate(layouts):
+    _draw_number(
+      position=layout.rect.lt,
+      number=i + 1,
+      font=layout_font,
+      bold=True,
+      color=_layout_color(layout),
+    )
+
+def _generate_delta(bold: bool):
+  if bold:
+    for dx in range(-1, 2):
+      for dy in range(-1, 2):
+        yield dx, dy
+  else:
+    yield 0, 0
+
+def _layout_color(layout: Layout) -> _Color:
   cls = layout.cls
   if cls == LayoutClass.TITLE:
     return (0x0A, 0x12, 0x2C) # Dark
