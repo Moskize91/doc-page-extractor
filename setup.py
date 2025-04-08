@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
   name="doc-page-extractor",
-  version="0.0.8",
+  version="0.0.9",
   author="Tao Zeyu",
   author_email="i@taozeyu.com",
   url="https://github.com/Moskize91/doc-page-extractor",
