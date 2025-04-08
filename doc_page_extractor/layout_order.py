@@ -1,4 +1,5 @@
 import os
+import torch
 
 from typing import Generator
 from transformers import LayoutLMv3ForTokenClassification
@@ -41,11 +42,13 @@ class LayoutOrder:
     for i, orders in enumerate(layout_orders):
       layout = layouts[i]
       mean_order = 0.0
-      if len(orders) > 0:
+      if len(orders) == 0:
+        empty_layouts.append((i, layout))
+      else:
         sorted_layouts.append((i, layout))
         mean_order = self._median(orders)
-      else:
-        empty_layouts.append((i, layout))
+        for order, fragment in zip(orders, layout.fragments):
+          fragment.order = order
       mean_orders.append(mean_order)
 
     sorted_layouts.sort(key=lambda x: mean_orders[x[0]])
@@ -103,12 +106,13 @@ class LayoutOrder:
       bbox_list[i] = (index, (x0, y0, x1, y1))
 
     model = self._get_model()
-    inputs = boxes2inputs([list(bbox) for _, bbox in bbox_list])
-    inputs = prepare_inputs(inputs, model)
-    logits = model(**inputs).logits.cpu().squeeze(0)
-    orders = parse_logits(logits, len(bbox_list))
-    layout_orders: list[list[float]] = [[] for _ in range(len(layouts))]
+    with torch.no_grad():
+      inputs = boxes2inputs([list(bbox) for _, bbox in bbox_list])
+      inputs = prepare_inputs(inputs, model)
+      logits = model(**inputs).logits.cpu().squeeze(0)
+      orders = parse_logits(logits, len(bbox_list))
 
+    layout_orders: list[list[float]] = [[] for _ in range(len(layouts))]
     for order, (index, _) in zip(orders, bbox_list):
       layout_orders[index].append(order)
 

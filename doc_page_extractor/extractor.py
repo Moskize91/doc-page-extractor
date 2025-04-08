@@ -44,13 +44,18 @@ class DocExtractor:
     raw_optimizer.receive_raw_fragments(fragments)
     layouts = self._get_layouts(raw_optimizer.image)
     layouts = self._layouts_matched_by_fragments(fragments, layouts)
-    layouts = self._layout_order.sort(layouts, raw_optimizer.image.size)
     layouts = remove_overlap_layouts(layouts)
 
     if self._ocr_for_each_layouts:
       self._correct_fragments_by_ocr_layouts(raw_optimizer.image, layouts)
 
-    layouts = [layout for layout in layouts if self._should_keep_layout(layout)]
+    layouts = [
+      layout for layout in self._layout_order.sort(
+        layouts=layouts,
+        size=raw_optimizer.image.size,
+      )
+      if self._should_keep_layout(layout)
+    ]
     for layout in layouts:
       layout.fragments = merge_fragments_as_line(layout.fragments)
 
