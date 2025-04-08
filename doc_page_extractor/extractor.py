@@ -176,7 +176,7 @@ class DocExtractor:
     if width == 0 or height == 0:
       return
 
-    layout_model = self._get_layout()
+    layoutreader_model = self._get_layoutreader()
     boxes: list[list[int]] = []
     steps: float = 1000.0 # max value of layoutreader
     x_rate: float = 1.0
@@ -200,14 +200,14 @@ class DocExtractor:
         round((bottom * y_rate + y_offset) * steps),
       ])
     inputs = boxes2inputs(boxes)
-    inputs = prepare_inputs(inputs, layout_model)
-    logits = layout_model(**inputs).logits.cpu().squeeze(0)
+    inputs = prepare_inputs(inputs, layoutreader_model)
+    logits = layoutreader_model(**inputs).logits.cpu().squeeze(0)
     orders: list[int] = parse_logits(logits, len(boxes))
 
     for order, fragment in zip(orders, self._iter_fragments(layouts)):
       fragment.order = order
 
-  def _get_layout(self) -> LayoutLMv3ForTokenClassification:
+  def _get_layoutreader(self) -> LayoutLMv3ForTokenClassification:
     if self._layout is None:
       cache_dir = ensure_dir(
         os.path.join(self._model_dir_path, "layoutreader"),
