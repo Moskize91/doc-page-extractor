@@ -3,7 +3,6 @@ import os
 from typing import Literal
 from pathlib import Path
 from PIL.Image import Image
-from transformers import LayoutLMv3ForTokenClassification
 from doclayout_yolo import YOLOv10
 
 from .ocr import OCR
@@ -12,9 +11,8 @@ from .raw_optimizer import RawOptimizer
 from .rectangle import intersection_area, Rectangle
 from .types import ExtractedResult, OCRFragment, LayoutClass, Layout
 from .downloader import download
+from .layout_order import LayoutOrder
 from .overlap import merge_fragments_as_line, remove_overlap_layouts
-from .order2 import order_layouts_and_fragments, order_fragments_by_ai, OrderAI
-from .utils import ensure_dir
 
 
 class DocExtractor:
@@ -31,7 +29,9 @@ class DocExtractor:
     self._order_by_layoutreader: bool = order_by_layoutreader
     self._ocr: OCR = OCR(device, model_dir_path)
     self._yolo: YOLOv10 | None = None
-    self._layout: LayoutLMv3ForTokenClassification | None = None
+    self._layout_order: LayoutOrder = LayoutOrder(
+      model_path=os.path.join(model_dir_path, "layoutreader"),
+    )
 
   def extract(
       self,
@@ -42,19 +42,9 @@ class DocExtractor:
     raw_optimizer = RawOptimizer(image, adjust_points)
     fragments = list(self._ocr.search_fragments(raw_optimizer.image_np))
     raw_optimizer.receive_raw_fragments(fragments)
-
-    order_ai: OrderAI | None = None
-    if self._order_by_layoutreader:
-      width, height = raw_optimizer.image.size
-      order_ai = OrderAI(
-        width=width,
-        height=height,
-        model=self._get_layoutreader(),
-      )
-      order_fragments_by_ai(fragments, order_ai)
-
     layouts = self._get_layouts(raw_optimizer.image)
     layouts = self._layouts_matched_by_fragments(fragments, layouts)
+    layouts = self._layout_order.sort(layouts, raw_optimizer.image.size)
     layouts = remove_overlap_layouts(layouts)
 
     if self._ocr_for_each_layouts:
@@ -64,7 +54,6 @@ class DocExtractor:
     for layout in layouts:
       layout.fragments = merge_fragments_as_line(layout.fragments)
 
-    # layouts = order_layouts_and_fragments(layouts, order_ai)
     raw_optimizer.receive_raw_layouts(layouts)
 
     return ExtractedResult(
@@ -179,14 +168,3 @@ class DocExtractor:
       cls == LayoutClass.ISOLATE_FORMULA
     )
 
-  def _get_layoutreader(self) -> LayoutLMv3ForTokenClassification:
-    if self._layout is None:
-      cache_dir = ensure_dir(
-        os.path.join(self._model_dir_path, "layoutreader"),
-      )
-      self._layout = LayoutLMv3ForTokenClassification.from_pretrained(
-        pretrained_model_name_or_path="hantian/layoutreader",
-        cache_dir=cache_dir,
-        local_files_only=os.path.exists(os.path.join(cache_dir, "models--hantian--layoutreader")),
-      )
-    return self._layout
