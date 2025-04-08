@@ -60,7 +60,7 @@ class _OverlapMatrixContext:
          rate >= _INCLUDES_MIN_RATE:
         yield i
 
-def regroup_lines(origin_fragments: list[OCRFragment]) -> list[OCRFragment]:
+def merge_fragments_as_line(origin_fragments: list[OCRFragment]) -> list[OCRFragment]:
   fragments: list[OCRFragment] = []
   for group in _split_fragments_into_groups(origin_fragments):
     if len(group) == 1:

@@ -1,19 +1,19 @@
 import os
 
-from typing import Literal, Iterable
+from typing import Literal
 from pathlib import Path
 from PIL.Image import Image
 from transformers import LayoutLMv3ForTokenClassification
 from doclayout_yolo import YOLOv10
 
-from .layoutreader import prepare_inputs, boxes2inputs, parse_logits
 from .ocr import OCR
 from .ocr_corrector import correct_fragments
 from .raw_optimizer import RawOptimizer
 from .rectangle import intersection_area, Rectangle
 from .types import ExtractedResult, OCRFragment, LayoutClass, Layout
 from .downloader import download
-from .overlap import regroup_lines, remove_overlap_layouts
+from .overlap import merge_fragments_as_line, remove_overlap_layouts
+from .order import order_layouts_and_fragments, OrderAI
 from .utils import ensure_dir
 
 
@@ -50,18 +50,19 @@ class DocExtractor:
     if self._ocr_for_each_layouts:
       self._correct_fragments_by_ocr_layouts(raw_optimizer.image, layouts)
 
-    if self._order_by_layoutreader:
-      width, height = raw_optimizer.image.size
-      self._order_fragments_by_ai(width, height, layouts)
-    else:
-      self._order_fragments_by_y(layouts)
-
     layouts = [layout for layout in layouts if self._should_keep_layout(layout)]
     for layout in layouts:
-      layout.fragments = regroup_lines(layout.fragments)
-      layout.fragments.sort(key=lambda fragment: fragment.order)
+      layout.fragments = merge_fragments_as_line(layout.fragments)
 
-    layouts = self._sort_layouts(layouts)
+    order_ai: OrderAI | None = None
+    if self._order_by_layoutreader:
+      width, height = raw_optimizer.image.size
+      order_ai = OrderAI(
+        width=width,
+        height=height,
+        model=self._get_layoutreader(),
+      )
+    layouts = order_layouts_and_fragments(layouts, order_ai)
     raw_optimizer.receive_raw_layouts(layouts)
 
     return ExtractedResult(
@@ -166,46 +167,15 @@ class DocExtractor:
       self._yolo = YOLOv10(str(yolo_model_path))
     return self._yolo
 
-  def _order_fragments_by_y(self, layouts: list[Layout]):
-    fragments = list(self._iter_fragments(layouts))
-    fragments.sort(key=lambda f: f.rect.lt[1] + f.rect.rt[1])
-    for i, fragment in enumerate(fragments):
-      fragment.order = i
-
-  def _order_fragments_by_ai(self, width: int, height: int, layouts: list[Layout]):
-    if width == 0 or height == 0:
-      return
-
-    layoutreader_model = self._get_layoutreader()
-    boxes: list[list[int]] = []
-    steps: float = 1000.0 # max value of layoutreader
-    x_rate: float = 1.0
-    y_rate: float = 1.0
-    x_offset: float = 0.0
-    y_offset: float = 0.0
-    if width > height:
-      y_rate = height / width
-      y_offset = (1.0 - y_rate) / 2.0
-    else:
-      x_rate = width / height
-      x_offset = (1.0 - x_rate) / 2.0
-
-    for left, top, right, bottom in self._collect_rate_boxes(
-      fragments=self._iter_fragments(layouts),
-    ):
-      boxes.append([
-        round((left * x_rate + x_offset) * steps),
-        round((top * y_rate + y_offset) * steps),
-        round((right * x_rate + x_offset) * steps),
-        round((bottom * y_rate + y_offset) * steps),
-      ])
-    inputs = boxes2inputs(boxes)
-    inputs = prepare_inputs(inputs, layoutreader_model)
-    logits = layoutreader_model(**inputs).logits.cpu().squeeze(0)
-    orders: list[int] = parse_logits(logits, len(boxes))
-
-    for order, fragment in zip(orders, self._iter_fragments(layouts)):
-      fragment.order = order
+  def _should_keep_layout(self, layout: Layout) -> bool:
+    if len(layout.fragments) > 0:
+      return True
+    cls = layout.cls
+    return (
+      cls == LayoutClass.FIGURE or
+      cls == LayoutClass.TABLE or
+      cls == LayoutClass.ISOLATE_FORMULA
+    )
 
   def _get_layoutreader(self) -> LayoutLMv3ForTokenClassification:
     if self._layout is None:
@@ -218,89 +188,3 @@ class DocExtractor:
         local_files_only=os.path.exists(os.path.join(cache_dir, "models--hantian--layoutreader")),
       )
     return self._layout
-
-  def _should_keep_layout(self, layout: Layout) -> bool:
-    if len(layout.fragments) > 0:
-      return True
-    cls = layout.cls
-    return (
-      cls == LayoutClass.FIGURE or
-      cls == LayoutClass.TABLE or
-      cls == LayoutClass.ISOLATE_FORMULA
-    )
-
-  def _sort_layouts(self, layouts: list[Layout]) -> list[Layout]:
-    layouts.sort(key=lambda layout: layout.rect.lt[1] + layout.rect.rt[1])
-
-    sorted_layouts: list[tuple[int, Layout]] = []
-    empty_layouts: list[tuple[int, Layout]] = []
-
-    for i, layout in enumerate(layouts):
-      if len(layout.fragments) > 0:
-        sorted_layouts.append((i, layout))
-      else:
-        empty_layouts.append((i, layout))
-
-    # try to maintain the order of empty layouts and other layouts as much as possible
-    for i, layout in empty_layouts:
-      max_less_index: int = -1
-      max_less_layout: Layout | None = None
-      max_less_index_in_enumerated: int = -1
-      for j, (k, sorted_layout) in enumerate(sorted_layouts):
-        if k < i and k > max_less_index:
-          max_less_index = k
-          max_less_layout = sorted_layout
-          max_less_index_in_enumerated = j
-
-      if max_less_layout is None:
-        sorted_layouts.insert(0, (i, layout))
-      else:
-        sorted_layouts.insert(max_less_index_in_enumerated + 1, (i, layout))
-
-    return [layout for _, layout in sorted_layouts]
-
-  def _collect_rate_boxes(self, fragments: Iterable[OCRFragment]):
-    boxes = self._get_boxes(fragments)
-    left = float("inf")
-    top = float("inf")
-    right = float("-inf")
-    bottom = float("-inf")
-
-    for _left, _top, _right, _bottom in boxes:
-      left = min(left, _left)
-      top = min(top, _top)
-      right = max(right, _right)
-      bottom = max(bottom, _bottom)
-
-    width = right - left
-    height = bottom - top
-
-    if width == 0 or height == 0:
-      return
-
-    for _left, _top, _right, _bottom in boxes:
-      yield (
-        (_left - left) / width,
-        (_top - top) / height,
-        (_right - left) / width,
-        (_bottom - top) / height,
-      )
-
-  def _get_boxes(self, fragments: Iterable[OCRFragment]):
-    boxes: list[tuple[float, float, float, float]] = []
-    for fragment in fragments:
-      left: float = float("inf")
-      top: float = float("inf")
-      right: float = float("-inf")
-      bottom: float = float("-inf")
-      for x, y in fragment.rect:
-        left = min(left, x)
-        top = min(top, y)
-        right = max(right, x)
-        bottom = max(bottom, y)
-      boxes.append((left, top, right, bottom))
-    return boxes
-
-  def _iter_fragments(self, layouts: list[Layout]):
-    for layout in layouts:
-      yield from layout.fragments
