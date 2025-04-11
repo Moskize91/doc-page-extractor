@@ -14,7 +14,7 @@ class LaTeX:
     self._model: LatexOCR | None = None
 
   def extract(self, image: Image) -> str | None:
-    image = self._expend_image(image, 0.1) # 添加边缘提高识别准确率
+    image = self._expand_image(image, 0.1) # 添加边缘提高识别准确率
     return self._get_model()(image)
 
   def _get_model(self) -> LatexOCR:
@@ -54,7 +54,7 @@ class LaTeX:
           os.remove(file_path)
         raise e
 
-  def _expend_image(self, image: Image, percent: float):
+  def _expand_image(self, image: Image, percent: float):
     width, height = image.size
     border_width = ceil(width * percent)
     border_height = ceil(height * percent)
