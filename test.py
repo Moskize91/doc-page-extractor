@@ -4,6 +4,7 @@ try:
   loader = unittest.TestLoader()
   suite = loader.discover(
     start_dir="tests",
+    # pattern="test_formula.py",
   )
   runner = unittest.TextTestRunner()
   result = runner.run(suite)

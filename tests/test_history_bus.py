@@ -3,12 +3,13 @@ import unittest
 
 from PIL import Image
 from doc_page_extractor import DocExtractor, Layout, LayoutClass
+from tests.utils import path_from_root
 
 
 class TestGroup(unittest.TestCase):
   def test_history_bugs(self):
-    model_path = os.path.join(self._project_path(), "model")
-    image_path = os.path.join(self._project_path(), "tests", "images", "figure.png")
+    model_path = path_from_root("model")
+    image_path = path_from_root("tests", "images", "figure.png")
     os.makedirs(model_path, exist_ok=True)
 
     extractor = DocExtractor(model_path, "cpu")
@@ -50,6 +51,3 @@ class TestGroup(unittest.TestCase):
 
   def _format_Layout(self, layout: Layout) -> tuple[LayoutClass, list[str]]:
     return layout.cls, [f.text.strip() for f in layout.fragments]
-
-  def _project_path(self) -> str:
-    return os.path.abspath(os.path.join(__file__, "..", ".."))
