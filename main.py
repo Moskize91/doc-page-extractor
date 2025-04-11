@@ -15,7 +15,6 @@ def main():
   extractor = DocExtractor(
     model_dir_path=model_path,
     device="cpu",
-    order_by_layoutreader=True,
   )
 
   with Image.open(image_path) as image:

@@ -21,12 +21,10 @@ class DocExtractor:
       model_dir_path: str,
       device: Literal["cpu", "cuda"] = "cpu",
       ocr_for_each_layouts: bool = True,
-      order_by_layoutreader: bool = False,
     ):
     self._model_dir_path: str = model_dir_path
     self._device: Literal["cpu", "cuda"] = device
     self._ocr_for_each_layouts: bool = ocr_for_each_layouts
-    self._order_by_layoutreader: bool = order_by_layoutreader
     self._ocr: OCR = OCR(device, model_dir_path)
     self._yolo: YOLOv10 | None = None
     self._layout_order: LayoutOrder = LayoutOrder(
