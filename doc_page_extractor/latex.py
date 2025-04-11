@@ -2,8 +2,10 @@ import os
 import requests
 
 from munch import Munch
+from math import ceil
 from pix2tex.cli import LatexOCR
 from PIL.Image import Image
+from PIL.ImageOps import expand
 
 
 class LaTeX:
@@ -11,7 +13,8 @@ class LaTeX:
     self._model_path: str = model_path
     self._model: LatexOCR | None = None
 
-  def transform(self, image: Image) -> str:
+  def extract(self, image: Image) -> str | None:
+    image = self._expend_image(image, 0.1) # 添加边缘提高识别准确率
     return self._get_model()(image)
 
   def _get_model(self) -> LatexOCR:
@@ -50,3 +53,20 @@ class LaTeX:
         if os.path.exists(file_path):
           os.remove(file_path)
         raise e
+
+  def _expend_image(self, image: Image, percent: float):
+    width, height = image.size
+    border_width = ceil(width * percent)
+    border_height = ceil(height * percent)
+    fill_color: tuple[int, ...]
+
+    if image.mode == "RGBA":
+      fill_color = (255, 255, 255, 255)
+    else:
+      fill_color = (255, 255, 255)
+
+    return expand(
+      image=image,
+      border=(border_width, border_height),
+      fill=fill_color,
+    )

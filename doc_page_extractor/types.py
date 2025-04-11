@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Literal
 from enum import Enum
 from PIL.Image import Image
 from .rectangle import Rectangle
@@ -23,10 +24,30 @@ class LayoutClass(Enum):
   FORMULA_CAPTION = 9
 
 @dataclass
-class Layout:
-  cls: LayoutClass
+class BaseLayout:
   rect: Rectangle
   fragments: list[OCRFragment]
+
+@dataclass
+class PlainLayout(BaseLayout):
+  cls: Literal[
+    LayoutClass.TITLE,
+    LayoutClass.PLAIN_TEXT,
+    LayoutClass.ABANDON,
+    LayoutClass.FIGURE,
+    LayoutClass.FIGURE_CAPTION,
+    LayoutClass.TABLE,
+    LayoutClass.TABLE_CAPTION,
+    LayoutClass.TABLE_FOOTNOTE,
+    LayoutClass.FORMULA_CAPTION,
+  ]
+
+@dataclass
+class FormulaLayout(BaseLayout):
+  latex: str | None
+  cls: LayoutClass.ISOLATE_FORMULA
+
+Layout = PlainLayout | FormulaLayout
 
 @dataclass
 class ExtractedResult:

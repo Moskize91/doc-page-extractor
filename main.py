@@ -1,7 +1,7 @@
 import os
 
 from PIL import Image
-from doc_page_extractor import plot, clip, DocExtractor
+from doc_page_extractor import plot, clip, DocExtractor, FormulaLayout
 
 
 def main():
@@ -32,8 +32,11 @@ def main():
 
     for layout in result.layouts:
       print("\n", layout.cls)
-      for fragment in layout.fragments:
-        print(fragment.text, fragment.rect.wrapper)
+      if isinstance(layout, FormulaLayout):
+        print("LaTeX:", layout.latex)
+      else:
+        for fragment in layout.fragments:
+          print(fragment.text, fragment.rect.wrapper)
 
 if __name__ == "__main__":
   main()

@@ -1,6 +1,6 @@
 import os
 
-from typing import Literal
+from typing import Literal, Generator
 from pathlib import Path
 from PIL.Image import Image
 from doclayout_yolo import YOLOv10
@@ -9,10 +9,12 @@ from .ocr import OCR
 from .ocr_corrector import correct_fragments
 from .raw_optimizer import RawOptimizer
 from .rectangle import intersection_area, Rectangle
-from .types import ExtractedResult, OCRFragment, LayoutClass, Layout
+from .types import ExtractedResult, OCRFragment, Layout, LayoutClass, PlainLayout, FormulaLayout
 from .downloader import download
+from .latex import LaTeX
 from .layout_order import LayoutOrder
 from .overlap import merge_fragments_as_line, remove_overlap_layouts
+from .clipper import clip_from_image
 
 
 class DocExtractor:
@@ -21,12 +23,17 @@ class DocExtractor:
       model_dir_path: str,
       device: Literal["cpu", "cuda"] = "cpu",
       ocr_for_each_layouts: bool = True,
+      extract_formula: bool = True,
     ):
     self._model_dir_path: str = model_dir_path
     self._device: Literal["cpu", "cuda"] = device
     self._ocr_for_each_layouts: bool = ocr_for_each_layouts
+    self._extract_formula: bool = extract_formula
     self._ocr: OCR = OCR(device, model_dir_path)
     self._yolo: YOLOv10 | None = None
+    self._latex: LaTeX = LaTeX(
+      model_path=os.path.join(model_dir_path, "latex"),
+    )
     self._layout_order: LayoutOrder = LayoutOrder(
       model_path=os.path.join(model_dir_path, "layoutreader"),
     )
@@ -40,7 +47,7 @@ class DocExtractor:
     raw_optimizer = RawOptimizer(image, adjust_points)
     fragments = list(self._ocr.search_fragments(raw_optimizer.image_np))
     raw_optimizer.receive_raw_fragments(fragments)
-    layouts = self._get_layouts(raw_optimizer.image)
+    layouts = list(self._yolo_extract_layouts(raw_optimizer.image))
     layouts = self._layouts_matched_by_fragments(fragments, layouts)
     layouts = remove_overlap_layouts(layouts)
 
@@ -49,6 +56,9 @@ class DocExtractor:
 
     layouts = self._layout_order.sort(layouts, raw_optimizer.image.size)
     layouts = [layout for layout in layouts if self._should_keep_layout(layout)]
+
+    if self._extract_formula:
+      self._extract_formula_from_layouts(layouts, raw_optimizer)
 
     for layout in layouts:
       layout.fragments = merge_fragments_as_line(layout.fragments)
@@ -62,7 +72,7 @@ class DocExtractor:
       adjusted_image=raw_optimizer.adjusted_image,
     )
 
-  def _get_layouts(self, source: Image) -> list[Layout]:
+  def _yolo_extract_layouts(self, source: Image) -> Generator[Layout, None, None]:
     # about source parameter to see:
     # https://github.com/opendatalab/DocLayout-YOLO/blob/7c4be36bc61f11b67cf4a44ee47f3c41e9800a91/doclayout_yolo/data/build.py#L157-L175
     det_res = self._get_yolo().predict(
@@ -72,7 +82,6 @@ class DocExtractor:
       device=self._device    # Device to use (e.g., "cuda" or "cpu")
     )
     boxes = det_res[0].__dict__["boxes"]
-    layouts: list[Layout] = []
 
     for cls_id, rect in zip(boxes.cls, boxes.xyxy):
       cls_id = cls_id.item()
@@ -89,9 +98,10 @@ class DocExtractor:
         lb=(x1, y2),
         rb=(x2, y2),
       )
-      layouts.append(Layout(cls, rect, []))
-
-    return layouts
+      if cls == LayoutClass.ISOLATE_FORMULA:
+        yield FormulaLayout(cls=cls, rect=rect, fragments=[], latex=None)
+      else:
+        yield PlainLayout(cls=cls, rect=rect, fragments=[])
 
   def _layouts_matched_by_fragments(self, fragments: list[OCRFragment], layouts: list[Layout]):
     layouts_group = self._split_layouts_by_group(layouts)
@@ -106,6 +116,13 @@ class DocExtractor:
   def _correct_fragments_by_ocr_layouts(self, source: Image, layouts: list[Layout]):
     for layout in layouts:
       correct_fragments(self._ocr, source, layout)
+
+  def _extract_formula_from_layouts(self, layouts: list[Layout], raw_optimizer: RawOptimizer):
+    for layout in layouts:
+      if not isinstance(layout, FormulaLayout):
+        continue
+      image = clip_from_image(raw_optimizer.image, layout.rect)
+      layout.latex = self._latex.extract(image)
 
   def _split_layouts_by_group(self, layouts: list[Layout]):
     texts_layouts: list[Layout] = []
