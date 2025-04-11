@@ -1,4 +1,5 @@
 import os
+import torch
 import requests
 
 from munch import Munch
@@ -15,7 +16,9 @@ class LaTeX:
 
   def extract(self, image: Image) -> str | None:
     image = self._expand_image(image, 0.1) # 添加边缘提高识别准确率
-    return self._get_model()(image)
+    model = self._get_model()
+    with torch.no_grad():
+      return model(image)
 
   def _get_model(self) -> LatexOCR:
     if self._model is None:
