@@ -18,5 +18,6 @@ setup(
     "shapely>=2.0.0,<3.0",
     "transformers>=4.48.0,<5.0",
     "doclayout_yolo>=0.0.3",
+    "pix2tex>=0.1.4<=0.2.0",
   ],
 )
