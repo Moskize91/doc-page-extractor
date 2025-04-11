@@ -2,6 +2,7 @@ import os
 import torch
 
 from typing import Generator
+from dataclasses import dataclass
 from transformers import LayoutLMv3ForTokenClassification
 
 from .types import Layout, LayoutClass
@@ -9,7 +10,12 @@ from .layoutreader import prepare_inputs, boxes2inputs, parse_logits
 from .utils import ensure_dir
 
 
-_BBox = tuple[float, float, float, float]
+@dataclass
+class _BBox:
+  layout_index: int
+  fragment_index: int
+  virtual: bool
+  value: tuple[float, float, float, float]
 
 class LayoutOrder:
   def __init__(self, model_path: str):
@@ -73,21 +79,28 @@ class LayoutOrder:
 
   def _layout_orders(self, layouts: list[Layout], width: int, height: int) -> list[list[float]] | None:
     line_height = self._line_height(layouts)
-    bbox_list: list[tuple[int, _BBox]] = []
+    bbox_list: list[_BBox] = []
 
-    for index, layout in enumerate(layouts):
+    for i, layout in enumerate(layouts):
       if layout.cls == LayoutClass.PLAIN_TEXT and \
          len(layout.fragments) > 0:
-        for fragment in layout.fragments:
-          bbox_list.append((index, fragment.rect.wrapper))
+        for j, fragment in enumerate(layout.fragments):
+          bbox_list.append(_BBox(
+            layout_index=i,
+            fragment_index=j,
+            virtual=False,
+            value=fragment.rect.wrapper,
+          ))
       else:
-        for bbox in self._generate_virtual_lines(
-          layout=layout,
-          line_height=line_height,
-          width=width,
-          height=height,
-        ):
-          bbox_list.append((index, bbox))
+        bbox_list.extend(
+          self._generate_virtual_lines(
+            layout=layout,
+            layout_index=i,
+            line_height=line_height,
+            width=width,
+            height=height,
+          ),
+        )
 
     if len(bbox_list) > 200:
       # https://github.com/opendatalab/MinerU/blob/980f5c8cd70f22f8c0c9b7b40eaff6f4804e6524/magic_pdf/pdf_parse_union_core_v2.py#L522
@@ -97,24 +110,26 @@ class LayoutOrder:
     x_scale = layoutreader_size / float(width)
     y_scale = layoutreader_size / float(height)
 
-    for i, (index, bbox) in enumerate(bbox_list):
-      x0, y0, x1, y1 = self._squeeze(bbox, width, height)
+    for bbox in bbox_list:
+      x0, y0, x1, y1 = self._squeeze(bbox.value, width, height)
       x0 = round(x0 * x_scale)
       y0 = round(y0 * y_scale)
       x1 = round(x1 * x_scale)
       y1 = round(y1 * y_scale)
-      bbox_list[i] = (index, (x0, y0, x1, y1))
+      bbox.value = (x0, y0, x1, y1)
 
+    bbox_list.sort(key=lambda b: b.value)
     model = self._get_model()
+
     with torch.no_grad():
-      inputs = boxes2inputs([list(bbox) for _, bbox in bbox_list])
+      inputs = boxes2inputs([list(bbox.value) for bbox in bbox_list])
       inputs = prepare_inputs(inputs, model)
       logits = model(**inputs).logits.cpu().squeeze(0)
       orders = parse_logits(logits, len(bbox_list))
 
     layout_orders: list[list[float]] = [[] for _ in range(len(layouts))]
-    for order, (index, _) in zip(orders, bbox_list):
-      layout_orders[index].append(order)
+    for order, bbox in zip(orders, bbox_list):
+      layout_orders[bbox.layout_index].append(order)
 
     return layout_orders
 
@@ -133,6 +148,7 @@ class LayoutOrder:
   def _generate_virtual_lines(
         self,
         layout: Layout,
+        layout_index: int,
         line_height: float,
         width: int,
         height: int,
@@ -145,7 +161,12 @@ class LayoutOrder:
     lines = int(layout_height / line_height)
 
     if layout_height <= line_height * 2:
-      yield x0, y0, x1, y1
+      yield _BBox(
+        layout_index=layout_index,
+        fragment_index=0,
+        virtual=True,
+        value=(x0, y0, x1, y1),
+      )
       return
 
     elif layout_height <= height * 0.25 or \
@@ -155,7 +176,12 @@ class LayoutOrder:
         lines = 3
       elif layout_weight <= width * 0.25:
         if layout_height / layout_weight > 1.2:  # 细长的不分
-          yield x0, y0, x1, y1
+          yield _BBox(
+            layout_index=layout_index,
+            fragment_index=0,
+            virtual=True,
+            value=(x0, y0, x1, y1),
+          )
           return
         else:  # 不细长的还是分成两行
           lines = 2
@@ -163,8 +189,13 @@ class LayoutOrder:
     line_height = (y1 - y0) / lines
     current_y = y0
 
-    for _ in range(lines):
-      yield x0, current_y, x1, current_y + line_height
+    for i in range(lines):
+      yield _BBox(
+        layout_index=layout_index,
+        fragment_index=i,
+        virtual=True,
+        value=(x0, current_y, x1, current_y + line_height),
+      )
       current_y += line_height
 
   def _median(self, numbers: list[int]) -> float:
