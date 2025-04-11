@@ -6,6 +6,7 @@
     "binarize",
     "CUDA",
     "doclayout",
+    "eqtable",
     "hantian",
     "idxes",
     "imgsz",

@@ -19,5 +19,6 @@ setup(
     "transformers>=4.48.0,<5.0",
     "doclayout_yolo>=0.0.3",
     "pix2tex>=0.1.4,<=0.2.0",
+    "struct-eqtable>=0.3.3,<0.4",
   ],
 )
