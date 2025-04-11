@@ -15,6 +15,7 @@ class _BBox:
   layout_index: int
   fragment_index: int
   virtual: bool
+  order: int
   value: tuple[float, float, float, float]
 
 class LayoutOrder:
@@ -37,47 +38,36 @@ class LayoutOrder:
     if width == 0 or height == 0:
       return layouts
 
-    layout_orders = self._layout_orders(layouts, width, height)
-    if layout_orders is None:
+    bbox_list = self._order_and_get_bbox_list(
+      layouts=layouts,
+      width=width,
+      height=height,
+    )
+    if bbox_list is None:
       return layouts
 
-    mean_orders: list[float] = []
-    sorted_layouts: list[tuple[int, Layout]] = []
-    empty_layouts: list[tuple[int, Layout]] = []
+    layout_bbox_list: list[list[_BBox]] = [[] for _ in range(len(layouts))]
+    for bbox in bbox_list:
+      layout_bbox_list[bbox.layout_index].append(bbox)
 
-    for i, orders in enumerate(layout_orders):
-      layout = layouts[i]
-      mean_order = 0.0
-      if len(orders) == 0:
-        empty_layouts.append((i, layout))
-      else:
-        sorted_layouts.append((i, layout))
-        mean_order = self._median(orders)
-        for order, fragment in zip(orders, layout.fragments):
-          fragment.order = order
-      mean_orders.append(mean_order)
+    layouts_with_median_order: list[tuple[Layout, float]] = []
+    for layout_index, bbox_list in enumerate(layout_bbox_list):
+      layout = layouts[layout_index]
+      orders = [b.order for b in bbox_list] # virtual bbox 保证了 orders 不可能为空
+      median_order = self._median(orders)
+      layouts_with_median_order.append((layout, median_order))
 
-    sorted_layouts.sort(key=lambda x: mean_orders[x[0]])
+    layouts_with_median_order.sort(key=lambda x: x[1])
 
-    # try to maintain the order of empty layouts and other layouts as much as possible
-    for i, layout in empty_layouts:
-      max_less_index: int = -1
-      max_less_layout: Layout | None = None
-      max_less_index_in_enumerated: int = -1
-      for j, (k, sorted_layout) in enumerate(sorted_layouts):
-        if k < i and k > max_less_index:
-          max_less_index = k
-          max_less_layout = sorted_layout
-          max_less_index_in_enumerated = j
+    return [layout for layout, _ in layouts_with_median_order]
 
-      if max_less_layout is None:
-        sorted_layouts.insert(0, (i, layout))
-      else:
-        sorted_layouts.insert(max_less_index_in_enumerated + 1, (i, layout))
+  def _order_and_get_bbox_list(
+      self,
+      layouts: list[Layout],
+      width: int,
+      height: int,
+    ) -> list[_BBox] | None:
 
-    return [layout for _, layout in sorted_layouts]
-
-  def _layout_orders(self, layouts: list[Layout], width: int, height: int) -> list[list[float]] | None:
     line_height = self._line_height(layouts)
     bbox_list: list[_BBox] = []
 
@@ -89,6 +79,7 @@ class LayoutOrder:
             layout_index=i,
             fragment_index=j,
             virtual=False,
+            order=0,
             value=fragment.rect.wrapper,
           ))
       else:
@@ -118,7 +109,7 @@ class LayoutOrder:
       y1 = round(y1 * y_scale)
       bbox.value = (x0, y0, x1, y1)
 
-    bbox_list.sort(key=lambda b: b.value)
+    bbox_list.sort(key=lambda b: b.value) # 必须排序，乱序传入 layoutreader 会令它无法识别正确顺序
     model = self._get_model()
 
     with torch.no_grad():
@@ -127,11 +118,11 @@ class LayoutOrder:
       logits = model(**inputs).logits.cpu().squeeze(0)
       orders = parse_logits(logits, len(bbox_list))
 
-    layout_orders: list[list[float]] = [[] for _ in range(len(layouts))]
-    for order, bbox in zip(orders, bbox_list):
-      layout_orders[bbox.layout_index].append(order)
+    sorted_bbox_list = [bbox_list[i] for i in orders]
+    for i, bbox in enumerate(sorted_bbox_list):
+      bbox.order = i
 
-    return layout_orders
+    return sorted_bbox_list
 
   def _line_height(self, layouts: list[Layout]) -> float:
     line_height: float = 0.0
@@ -165,6 +156,7 @@ class LayoutOrder:
         layout_index=layout_index,
         fragment_index=0,
         virtual=True,
+        order=0,
         value=(x0, y0, x1, y1),
       )
       return
@@ -180,12 +172,14 @@ class LayoutOrder:
             layout_index=layout_index,
             fragment_index=0,
             virtual=True,
+            order=0,
             value=(x0, y0, x1, y1),
           )
           return
         else:  # 不细长的还是分成两行
           lines = 2
 
+    lines = max(1, lines)
     line_height = (y1 - y0) / lines
     current_y = y0
 
@@ -194,6 +188,7 @@ class LayoutOrder:
         layout_index=layout_index,
         fragment_index=i,
         virtual=True,
+        order=0,
         value=(x0, current_y, x1, current_y + line_height),
       )
       current_y += line_height
