@@ -54,3 +54,4 @@ with Image.open("/path/to/your/image.png") as image:
 - [DocLayout-YOLO](https://github.com/opendatalab/DocLayout-YOLO)
 - [OnnxOCR](https://github.com/jingsongliujing/OnnxOCR)
 - [layoutreader](https://github.com/ppaanngggg/layoutreader)
+- [LaTeX-OCR](https://github.com/lukas-blecher/LaTeX-OCR)
