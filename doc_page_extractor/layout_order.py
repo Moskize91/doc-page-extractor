@@ -46,20 +46,7 @@ class LayoutOrder:
     if bbox_list is None:
       return layouts
 
-    layout_bbox_list: list[list[_BBox]] = [[] for _ in range(len(layouts))]
-    for bbox in bbox_list:
-      layout_bbox_list[bbox.layout_index].append(bbox)
-
-    layouts_with_median_order: list[tuple[Layout, float]] = []
-    for layout_index, bbox_list in enumerate(layout_bbox_list):
-      layout = layouts[layout_index]
-      orders = [b.order for b in bbox_list] # virtual bbox 保证了 orders 不可能为空
-      median_order = self._median(orders)
-      layouts_with_median_order.append((layout, median_order))
-
-    layouts_with_median_order.sort(key=lambda x: x[1])
-
-    return [layout for layout, _ in layouts_with_median_order]
+    return self._sort_layouts_and_fragments(layouts, bbox_list)
 
   def _order_and_get_bbox_list(
       self,
@@ -123,6 +110,36 @@ class LayoutOrder:
       bbox.order = i
 
     return sorted_bbox_list
+
+  def _sort_layouts_and_fragments(self, layouts: list[Layout], bbox_list: list[_BBox]):
+    layout_bbox_list: list[list[_BBox]] = [[] for _ in range(len(layouts))]
+    for bbox in bbox_list:
+      layout_bbox_list[bbox.layout_index].append(bbox)
+
+    layouts_with_median_order: list[tuple[Layout, float]] = []
+    for layout_index, bbox_list in enumerate(layout_bbox_list):
+      layout = layouts[layout_index]
+      orders = [b.order for b in bbox_list] # virtual bbox 保证了 orders 不可能为空
+      median_order = self._median(orders)
+      layouts_with_median_order.append((layout, median_order))
+
+    for layout, bbox_list in zip(layouts, layout_bbox_list):
+      for bbox in bbox_list:
+        if not bbox.virtual:
+          layout.fragments[bbox.fragment_index].order = bbox.order
+      if all(not bbox.virtual for bbox in bbox_list):
+        layout.fragments.sort(key=lambda f: f.order)
+
+    layouts_with_median_order.sort(key=lambda x: x[1])
+    layouts = [layout for layout, _ in layouts_with_median_order]
+    next_fragment_order: int = 0
+
+    for layout in layouts:
+      for fragment in layout.fragments:
+        fragment.order = next_fragment_order
+        next_fragment_order += 1
+
+    return layouts
 
   def _line_height(self, layouts: list[Layout]) -> float:
     line_height: float = 0.0
