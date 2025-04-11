@@ -35,7 +35,6 @@ def correct_fragments(ocr: OCR, source: Image, layout: Layout):
       corrected_fragments.append(fragment1)
     else:
       corrected_fragments.append(fragment2)
-      fragment2.order = fragment1.order
 
   corrected_fragments.extend(not_matched_fragments)
   layout.fragments = corrected_fragments

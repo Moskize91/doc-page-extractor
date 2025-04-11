@@ -58,7 +58,6 @@ class OCR:
     self._text_system: TextSystem | None = None
 
   def search_fragments(self, image: np.ndarray) -> Generator[OCRFragment, None, None]:
-    index: int = 0
     for box, res in self._ocr(image):
       text, rank = res
       if is_space_text(text):
@@ -74,12 +73,11 @@ class OCR:
         continue
 
       yield OCRFragment(
-        order=index,
+        order=0,
         text=text,
         rank=rank,
         rect=rect,
       )
-      index += 1
 
   def _ocr(self, image: np.ndarray) -> Generator[tuple[list[list[float]], tuple[str, float]], None, None]:
     text_system = self._get_text_system()
