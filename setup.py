@@ -16,7 +16,7 @@ setup(
     "pyclipper>=1.2.0,<2.0",
     "numpy>=1.24.0,<2.0",
     "shapely>=2.0.0,<3.0",
-    "transformers>=4.48.0,<5.0",
+    "transformers>=4.42.4,<5.0",
     "doclayout_yolo>=0.0.3",
   ],
 )
