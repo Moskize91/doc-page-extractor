@@ -31,7 +31,10 @@ class Table:
       raise ValueError(f"Table format {format} is not supported.")
 
     image = expand_image(image, 0.1)
-    results = self._get_model()([image], output_format=output_format)
+    model = self._get_model()
+
+    with torch.no_grad():
+      results = model([image], output_format=output_format)
 
     if len(results) == 0:
       return None

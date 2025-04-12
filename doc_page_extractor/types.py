@@ -4,6 +4,7 @@ from enum import auto, Enum
 from PIL.Image import Image
 from .rectangle import Rectangle
 
+
 @dataclass
 class OCRFragment:
   order: int
