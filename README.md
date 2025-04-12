@@ -53,4 +53,5 @@ The code of `doc_page_extractor/onnxocr` in this repo comes from [OnnxOCR](https
 - [DocLayout-YOLO](https://github.com/opendatalab/DocLayout-YOLO)
 - [OnnxOCR](https://github.com/jingsongliujing/OnnxOCR)
 - [layoutreader](https://github.com/ppaanngggg/layoutreader)
+- [StructEqTable](https://github.com/Alpha-Innovator/StructEqTable-Deploy)
 - [LaTeX-OCR](https://github.com/lukas-blecher/LaTeX-OCR)
