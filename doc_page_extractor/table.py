@@ -9,11 +9,14 @@ from .utils import expand_image
 OutputFormat = Literal["latex", "markdown", "html"]
 
 class Table:
-  def __init__(self):
+  def __init__(self, device: Literal["cpu", "cuda"]):
     self._model: Any | None = None
+    self._ban: bool = False
+    if device == "cpu" or not torch.cuda.is_available():
+      self._ban = True
 
   def predict(self, image: Image, format: TableLayoutParsedFormat) -> str | None:
-    if not torch.cuda.is_available():
+    if self._ban:
       print("CUDA is not available. You cannot parse table from image.")
       return None
 
