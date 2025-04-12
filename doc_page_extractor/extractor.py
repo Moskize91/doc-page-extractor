@@ -41,8 +41,11 @@ class DocExtractor:
     self._ocr_for_each_layouts: bool = ocr_for_each_layouts
     self._extract_formula: bool = extract_formula
     self._extract_table_format: TableLayoutParsedFormat | None = extract_table_format
-    self._ocr: OCR = OCR(device, model_dir_path)
     self._yolo: YOLOv10 | None = None
+    self._ocr: OCR = OCR(
+      device=device,
+      model_dir_path=os.path.join(model_dir_path, "onnx_ocr"),
+    )
     self._table: Table = Table(
       device=device,
       model_path=os.path.join(model_dir_path, "struct_eqtable"),
@@ -187,9 +190,11 @@ class DocExtractor:
 
   def _get_yolo(self) -> YOLOv10:
     if self._yolo is None:
+      base_path = os.path.join(self._model_dir_path, "yolo")
+      os.makedirs(base_path, exist_ok=True)
       yolo_model_url = "https://huggingface.co/opendatalab/PDF-Extract-Kit-1.0/resolve/main/models/Layout/YOLO/doclayout_yolo_ft.pt"
       yolo_model_name = "doclayout_yolo_ft.pt"
-      yolo_model_path = Path(os.path.join(self._model_dir_path, yolo_model_name))
+      yolo_model_path = Path(os.path.join(base_path, yolo_model_name))
       if not yolo_model_path.exists():
         download(yolo_model_url, yolo_model_path)
       self._yolo = YOLOv10(str(yolo_model_path))
