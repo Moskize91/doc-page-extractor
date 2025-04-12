@@ -12,16 +12,16 @@ class OCRFragment:
   rect: Rectangle
 
 class LayoutClass(Enum):
-  TITLE = auto()
-  PLAIN_TEXT = auto()
-  ABANDON = auto()
-  FIGURE = auto()
-  FIGURE_CAPTION = auto()
-  TABLE = auto()
-  TABLE_CAPTION = auto()
-  TABLE_FOOTNOTE = auto()
-  ISOLATE_FORMULA = auto()
-  FORMULA_CAPTION = auto()
+  TITLE = 0
+  PLAIN_TEXT = 1
+  ABANDON = 2
+  FIGURE = 3
+  FIGURE_CAPTION = 4
+  TABLE = 5
+  TABLE_CAPTION = 6
+  TABLE_FOOTNOTE = 7
+  ISOLATE_FORMULA = 8
+  FORMULA_CAPTION = 9
 
 class TableLayoutParsedFormat(Enum):
   LATEX = auto()

@@ -14,7 +14,7 @@ def main():
 
   extractor = DocExtractor(
     model_dir_path=model_path,
-    device="cuda",
+    device="cpu",
     extract_formula=True,
   )
 
