@@ -17,6 +17,9 @@ jobs:
           python-version: "3.12.7"
           cache: "pip"
 
+      - name: Install bsdtar
+        run: sudo apt-get update && sudo apt-get install -y libarchive-tools
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -31,7 +34,7 @@ jobs:
             rm -rf "$TARGET"
           fi
           mkdir -p $TARGET
-          curl -sL "https://github.com/Moskize91/StructEqTable/releases/download/$TAG/struct_eqtable.zip" | tar -xz -C $TARGET
+          curl -sL "https://github.com/Moskize91/StructEqTable/releases/download/$TAG/struct_eqtable.zip" | bsdtar -xzf - -C "$TARGET"
 
       - name: Lint
         run: |
