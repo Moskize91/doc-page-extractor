@@ -1,7 +1,7 @@
 import os
 
 from PIL import Image
-from doc_page_extractor import plot, clip, DocExtractor, FormulaLayout
+from doc_page_extractor import plot, clip, DocExtractor, TableLayout, FormulaLayout
 
 
 def main():
@@ -34,6 +34,12 @@ def main():
       print("\n", layout.cls)
       if isinstance(layout, FormulaLayout):
         print("LaTeX:", layout.latex)
+      elif isinstance(layout, TableLayout):
+        parsed = layout.parsed
+        if parsed is not None:
+          print("Table:", parsed[1].name, parsed[0])
+        else:
+          print("Table:")
       else:
         for fragment in layout.fragments:
           print(fragment.text, fragment.rect.wrapper)

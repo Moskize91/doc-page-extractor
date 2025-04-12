@@ -11,6 +11,7 @@
     "idxes",
     "imgsz",
     "layoutreader",
+    "lmdeploy",
     "ndarray",
     "onnxocr",
     "onnxruntime",

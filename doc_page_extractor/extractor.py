@@ -9,12 +9,22 @@ from .ocr import OCR
 from .ocr_corrector import correct_fragments
 from .raw_optimizer import RawOptimizer
 from .rectangle import intersection_area, Rectangle
-from .types import ExtractedResult, OCRFragment, Layout, LayoutClass, PlainLayout, FormulaLayout
 from .downloader import download
+from .table import Table
 from .latex import LaTeX
 from .layout_order import LayoutOrder
 from .overlap import merge_fragments_as_line, remove_overlap_layouts
 from .clipper import clip_from_image
+from .types import (
+  ExtractedResult,
+  OCRFragment,
+  TableLayoutParsedFormat,
+  Layout,
+  LayoutClass,
+  PlainLayout,
+  TableLayout,
+  FormulaLayout,
+)
 
 
 class DocExtractor:
@@ -24,13 +34,16 @@ class DocExtractor:
       device: Literal["cpu", "cuda"] = "cpu",
       ocr_for_each_layouts: bool = True,
       extract_formula: bool = True,
+      extract_table_format: TableLayoutParsedFormat | None = None,
     ):
     self._model_dir_path: str = model_dir_path
     self._device: Literal["cpu", "cuda"] = device
     self._ocr_for_each_layouts: bool = ocr_for_each_layouts
     self._extract_formula: bool = extract_formula
+    self._extract_table_format: TableLayoutParsedFormat | None = extract_table_format
     self._ocr: OCR = OCR(device, model_dir_path)
     self._yolo: YOLOv10 | None = None
+    self._table: Table = Table()
     self._latex: LaTeX = LaTeX(
       model_path=os.path.join(model_dir_path, "latex"),
     )
@@ -57,8 +70,7 @@ class DocExtractor:
     layouts = self._layout_order.sort(layouts, raw_optimizer.image.size)
     layouts = [layout for layout in layouts if self._should_keep_layout(layout)]
 
-    if self._extract_formula:
-      self._extract_formula_from_layouts(layouts, raw_optimizer)
+    self._parse_table_and_formula_layouts(layouts, raw_optimizer)
 
     for layout in layouts:
       layout.fragments = merge_fragments_as_line(layout.fragments)
@@ -98,7 +110,9 @@ class DocExtractor:
         lb=(x1, y2),
         rb=(x2, y2),
       )
-      if cls == LayoutClass.ISOLATE_FORMULA:
+      if cls == LayoutClass.TABLE:
+        yield TableLayout(cls=cls, rect=rect, fragments=[], parsed=None)
+      elif cls == LayoutClass.ISOLATE_FORMULA:
         yield FormulaLayout(cls=cls, rect=rect, fragments=[], latex=None)
       else:
         yield PlainLayout(cls=cls, rect=rect, fragments=[])
@@ -117,12 +131,16 @@ class DocExtractor:
     for layout in layouts:
       correct_fragments(self._ocr, source, layout)
 
-  def _extract_formula_from_layouts(self, layouts: list[Layout], raw_optimizer: RawOptimizer):
+  def _parse_table_and_formula_layouts(self, layouts: list[Layout], raw_optimizer: RawOptimizer):
     for layout in layouts:
-      if not isinstance(layout, FormulaLayout):
-        continue
-      image = clip_from_image(raw_optimizer.image, layout.rect)
-      layout.latex = self._latex.extract(image)
+      if isinstance(layout, FormulaLayout) and self._extract_formula:
+        image = clip_from_image(raw_optimizer.image, layout.rect)
+        layout.latex = self._latex.extract(image)
+      elif isinstance(layout, TableLayout) and self._extract_table_format is not None:
+        image = clip_from_image(raw_optimizer.image, layout.rect)
+        parsed = self._table.predict(image, self._extract_table_format)
+        if parsed is not None:
+          layout.parsed = (parsed, self._extract_table_format)
 
   def _split_layouts_by_group(self, layouts: list[Layout]):
     texts_layouts: list[Layout] = []
