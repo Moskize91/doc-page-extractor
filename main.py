@@ -14,7 +14,8 @@ def main():
 
   extractor = DocExtractor(
     model_dir_path=model_path,
-    device="cpu",
+    device="cuda",
+    extract_formula=True,
   )
 
   with Image.open(image_path) as image:

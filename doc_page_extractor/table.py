@@ -3,6 +3,7 @@ import torch
 from typing import Literal, Any
 from PIL.Image import Image
 from .types import TableLayoutParsedFormat
+from .utils import expand_image
 
 
 OutputFormat = Literal["latex", "markdown", "html"]
@@ -26,7 +27,9 @@ class Table:
     else:
       raise ValueError(f"Table format {format} is not supported.")
 
+    image = expand_image(image, 0.1)
     results = self._get_model()([image], output_format=output_format)
+
     if len(results) == 0:
       return None
 
