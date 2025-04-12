@@ -43,7 +43,10 @@ class DocExtractor:
     self._extract_table_format: TableLayoutParsedFormat | None = extract_table_format
     self._ocr: OCR = OCR(device, model_dir_path)
     self._yolo: YOLOv10 | None = None
-    self._table: Table = Table(device)
+    self._table: Table = Table(
+      device=device,
+      model_path=os.path.join(model_dir_path, "struct_eqtable"),
+    )
     self._latex: LaTeX = LaTeX(
       model_path=os.path.join(model_dir_path, "latex"),
     )

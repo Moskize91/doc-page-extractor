@@ -1,3 +1,4 @@
+import os
 import torch
 
 from typing import Literal, Any
@@ -9,8 +10,13 @@ from .utils import expand_image
 OutputFormat = Literal["latex", "markdown", "html"]
 
 class Table:
-  def __init__(self, device: Literal["cpu", "cuda"]):
+  def __init__(
+      self,
+      device: Literal["cpu", "cuda"],
+      model_path: str,
+    ):
     self._model: Any | None = None
+    self._model_path: str = model_path
     self._ban: bool = False
     if device == "cpu" or not torch.cuda.is_available():
       self._ban = True
@@ -43,6 +49,13 @@ class Table:
 
   def _get_model(self):
     if self._model is None:
+      local_files_only: bool
+      if os.path.exists(self._model_path):
+        local_files_only = True
+      else:
+        local_files_only = False
+        os.makedirs(self._model_path)
+
       from .struct_eqtable import build_model
       model = build_model(
         model_ckpt="U4R/StructTable-InternVL2-1B",
@@ -51,6 +64,8 @@ class Table:
         lmdeploy=False,
         flash_attn=True,
         batch_size=1,
+        cache_dir=self._model_path,
+        local_files_only=local_files_only,
       )
       self._model = model.cuda()
     return self._model
