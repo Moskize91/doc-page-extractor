@@ -21,8 +21,4 @@ pip install --upgrade pip
 pip install -r requirements.txt
 pip install onnxruntime==1.21.0
 
-if [ -d "./struct_eqtable" ]; then
-  rm -rf "./struct_eqtable"
-fi
-mkdir -p ./struct_eqtable
-curl -sL "https://github.com/Moskize91/StructEqTable/releases/download/v0.3.0.1/struct_eqtable.zip" | tar -xz -C ./struct_eqtable
+scripts/sync-struct-eqtable.sh

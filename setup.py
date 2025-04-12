@@ -1,8 +1,6 @@
-import re
-
 from setuptools import setup, find_packages
 
-if "struct_eqtable" not in find_packages():
+if "doc_page_extractor.struct_eqtable" not in find_packages():
   raise RuntimeError("struct_eqtable not found. Please download struct_eqtable first.")
 
 setup(
@@ -12,10 +10,7 @@ setup(
   author_email="i@taozeyu.com",
   url="https://github.com/Moskize91/doc-page-extractor",
   description="doc page extractor can identify text and format in images and return structured data.",
-  packages=[
-    pack for pack in find_packages()
-    if not re.match(r"^tests\.?", pack)
-  ],
+  packages=find_packages(),
   long_description=open("./README.md", encoding="utf8").read(),
   long_description_content_type="text/markdown",
   install_requires=[
