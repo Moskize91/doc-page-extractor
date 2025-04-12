@@ -1,4 +1,5 @@
 .DS_Store
+/struct_eqtable
 /model
 /output
 /test/output
