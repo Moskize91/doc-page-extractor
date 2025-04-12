@@ -23,7 +23,15 @@ jobs:
           pip install -r requirements.txt
 
       - name: Install struct-eqtable
-        run: scripts/sync-struct-eqtable.sh
+        env:
+          TARGET: ./doc_page_extractor/struct_eqtable
+          TAG: v0.3.0.1
+        run: |
+          if [ -d "$TARGET" ]; then
+            rm -rf "$TARGET"
+          fi
+          mkdir -p $TARGET
+          curl -sL "https://github.com/Moskize91/StructEqTable/releases/download/$TAG/struct_eqtable.zip" | tar -xz -C $TARGET
 
       - name: Lint
         run: |
