@@ -1,7 +1,7 @@
 import torch
 
 from PIL import Image
-from struct_eqtable import build_model
+from .struct_eqtable import build_model
 
 
 class TableParsingStructEqTable:
