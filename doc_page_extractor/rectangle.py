@@ -20,6 +20,10 @@ class Rectangle:
     yield self.rt
 
   @property
+  def is_valid(self) -> bool:
+    return Polygon(self).is_valid
+
+  @property
   def segments(self) -> Generator[tuple[Point, Point], None, None]:
     yield (self.lt, self.lb)
     yield (self.lb, self.rb)
@@ -60,6 +64,8 @@ class Rectangle:
 def intersection_area(rect1: Rectangle, rect2: Rectangle) -> float:
   poly1 = Polygon(rect1)
   poly2 = Polygon(rect2)
+  if not poly1.is_valid or not poly2.is_valid:
+    return 0.0
   intersection = poly1.intersection(poly2)
   if intersection.is_empty:
     return 0.0

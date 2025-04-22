@@ -116,12 +116,13 @@ class DocExtractor:
         lb=(x1, y2),
         rb=(x2, y2),
       )
-      if cls == LayoutClass.TABLE:
-        yield TableLayout(cls=cls, rect=rect, fragments=[], parsed=None)
-      elif cls == LayoutClass.ISOLATE_FORMULA:
-        yield FormulaLayout(cls=cls, rect=rect, fragments=[], latex=None)
-      else:
-        yield PlainLayout(cls=cls, rect=rect, fragments=[])
+      if rect.is_valid:
+        if cls == LayoutClass.TABLE:
+          yield TableLayout(cls=cls, rect=rect, fragments=[], parsed=None)
+        elif cls == LayoutClass.ISOLATE_FORMULA:
+          yield FormulaLayout(cls=cls, rect=rect, fragments=[], latex=None)
+        else:
+          yield PlainLayout(cls=cls, rect=rect, fragments=[])
 
   def _layouts_matched_by_fragments(self, fragments: list[OCRFragment], layouts: list[Layout]):
     layouts_group = self._split_layouts_by_group(layouts)

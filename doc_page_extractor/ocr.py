@@ -69,7 +69,7 @@ class OCR:
         rb=(box[2][0], box[2][1]),
         lb=(box[3][0], box[3][1]),
       )
-      if rect.area == 0.0:
+      if not rect.is_valid or rect.area == 0.0:
         continue
 
       yield OCRFragment(
