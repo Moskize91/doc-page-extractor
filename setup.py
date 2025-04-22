@@ -5,7 +5,7 @@ if "doc_page_extractor.struct_eqtable" not in find_packages():
 
 setup(
   name="doc-page-extractor",
-  version="0.1.0",
+  version="0.1.1",
   author="Tao Zeyu",
   author_email="i@taozeyu.com",
   url="https://github.com/Moskize91/doc-page-extractor",
