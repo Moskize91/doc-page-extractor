@@ -22,7 +22,7 @@ class LaTeX:
     if self._model is None:
       self._model = LatexOCR(Munch({
         "config": os.path.join("settings", "config.yaml"),
-        "checkpoint": os.path.join(self._model_path, "weights.pth"),
+        "checkpoint": os.path.join(self._model_path, "checkpoints", "weights.pth"),
         "no_cuda": True,
         "no_resize": False,
       }))
