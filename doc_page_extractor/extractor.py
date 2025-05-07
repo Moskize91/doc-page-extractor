@@ -2,7 +2,7 @@
 from typing import Literal, Generator
 from PIL.Image import Image
 from doclayout_yolo import YOLOv10
-from logging import Logger, getLogger, basicConfig, INFO
+from logging import Logger, getLogger
 
 from .models import HugginfaceModelsDownloader
 from .ocr import OCR
