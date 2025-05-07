@@ -89,17 +89,17 @@ class OCR:
     for box, res in zip(dt_boxes, rec_res):
       yield box.tolist(), res
 
-  def download_files(self) -> list[str]:
-    model_files = []
+  def make_model_paths(self) -> list[str]:
+    model_paths = []
     model_dir = self._get_model_dir()
     for model_path in _MODELS:
       file_name = os.path.join(*model_path)
-      model_files.append(os.path.join(model_dir, file_name))
-    return model_files
+      model_paths.append(os.path.join(model_dir, file_name))
+    return model_paths
 
   def _get_text_system(self) -> TextSystem:
     if self._text_system is None:
-      model_files = self.download_files()
+      model_paths = self.make_model_paths()
       self._text_system = TextSystem(_OONXParams(
         use_angle_cls=True,
         use_gpu=(self._device != "cpu"),
@@ -122,10 +122,10 @@ class OCR:
         save_crop_res=False,
         rec_algorithm="SVTR_LCNet",
         use_space_char=True,
-        rec_model_dir=model_files[0],
-        cls_model_dir=model_files[1],
-        det_model_dir=model_files[2],
-        rec_char_dict_path=model_files[3],
+        rec_model_dir=model_paths[0],
+        cls_model_dir=model_paths[1],
+        det_model_dir=model_paths[2],
+        rec_char_dict_path=model_paths[3],
       ))
 
     return self._text_system

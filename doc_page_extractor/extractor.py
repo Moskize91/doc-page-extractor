@@ -4,7 +4,7 @@ from PIL.Image import Image
 from doclayout_yolo import YOLOv10
 from logging import Logger, getLogger
 
-from .models import HugginfaceModelsDownloader
+from .models import HuggingfaceModelsDownloader
 from .ocr import OCR
 from .ocr_corrector import correct_fragments
 from .raw_optimizer import RawOptimizer
@@ -39,7 +39,7 @@ class DocExtractor:
       logger: Logger | None = None,
     ):
     self._logger = logger or getLogger(__name__)
-    self._models_downloader = models_downloader or HugginfaceModelsDownloader(self._logger, model_cache_dir)
+    self._models_downloader = models_downloader or HuggingfaceModelsDownloader(self._logger, model_cache_dir)
 
     self._device: Literal["cpu", "cuda"] = device
     self._ocr_for_each_layouts: bool = ocr_for_each_layouts
