@@ -14,7 +14,11 @@ class HuggingfaceModelsDownloader(ModelsDownloader):
     self._model_dir_path: str | None = model_dir_path
 
   def onnx_ocr(self) -> str:
-    repo_path = try_to_load_from_cache(repo_id="moskize/OnnxOCR", filename="README.md")
+    repo_path = try_to_load_from_cache(
+      repo_id="moskize/OnnxOCR",
+      filename="README.md",
+      cache_dir=self._model_dir_path
+    )
     if isinstance(repo_path, str):
       return os.path.dirname(repo_path)
     else:
@@ -25,7 +29,11 @@ class HuggingfaceModelsDownloader(ModelsDownloader):
       )
 
   def yolo(self) -> str:
-    yolo_file_path = try_to_load_from_cache(repo_id="opendatalab/PDF-Extract-Kit-1.0", filename="models/Layout/YOLO/doclayout_yolo_ft.pt")
+    yolo_file_path = try_to_load_from_cache(
+      repo_id="opendatalab/PDF-Extract-Kit-1.0",
+      filename="models/Layout/YOLO/doclayout_yolo_ft.pt",
+      cache_dir=self._model_dir_path
+    )
     if isinstance(yolo_file_path, str):
       return yolo_file_path
     else:
@@ -37,7 +45,11 @@ class HuggingfaceModelsDownloader(ModelsDownloader):
       )
 
   def layoutreader(self) -> str:
-    repo_path = try_to_load_from_cache(repo_id="hantian/layoutreader", filename="model.safetensors")
+    repo_path = try_to_load_from_cache(
+      repo_id="hantian/layoutreader",
+      filename="model.safetensors",
+      cache_dir=self._model_dir_path
+    )
     if isinstance(repo_path, str):
       return os.path.dirname(repo_path)
     else:
@@ -48,7 +60,11 @@ class HuggingfaceModelsDownloader(ModelsDownloader):
       )
 
   def struct_eqtable(self) -> str:
-    repo_path = try_to_load_from_cache(repo_id="U4R/StructTable-InternVL2-1B", filename="model.safetensors")
+    repo_path = try_to_load_from_cache(
+      repo_id="U4R/StructTable-InternVL2-1B",
+      filename="model.safetensors",
+      cache_dir=self._model_dir_path
+    )
     if isinstance(repo_path, str):
       return os.path.dirname(repo_path)
     else:
@@ -59,7 +75,12 @@ class HuggingfaceModelsDownloader(ModelsDownloader):
       )
 
   def latex(self):
-    repo_path = try_to_load_from_cache(repo_id="lukbl/LaTeX-OCR", filename="checkpoints/weights.pth", repo_type="space")
+    repo_path = try_to_load_from_cache(
+      repo_id="lukbl/LaTeX-OCR",
+      filename="checkpoints/weights.pth",
+      repo_type="space",
+      cache_dir=self._model_dir_path
+    )
     if isinstance(repo_path, str):
       return os.path.dirname(os.path.dirname(repo_path))
     else:
