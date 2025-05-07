@@ -1,10 +1,16 @@
-from huggingface_hub import hf_hub_download, snapshot_download, try_to_load_from_cache
 import os
 
+from logging import Logger
+from huggingface_hub import hf_hub_download, snapshot_download, try_to_load_from_cache
 from .types import ModelsDownloader
 
 class HugginfaceModelsDownloader(ModelsDownloader):
-  def __init__(self, model_dir_path: str | None):
+  def __init__(
+      self,
+      logger: Logger,
+      model_dir_path: str | None
+    ):
+    self._logger = logger
     self._model_dir_path: str | None = model_dir_path
 
   def onnx_ocr(self) -> str:
@@ -12,7 +18,7 @@ class HugginfaceModelsDownloader(ModelsDownloader):
     if isinstance(repo_path, str):
       return os.path.dirname(repo_path)
     else:
-        print("Downloading OCR model...")
+        self._logger.info("Downloading OCR model...")
         return snapshot_download(
           cache_dir=self._model_dir_path,
           repo_id="moskize/OnnxOCR",
@@ -23,7 +29,7 @@ class HugginfaceModelsDownloader(ModelsDownloader):
     if isinstance(yolo_file_path, str):
       return yolo_file_path
     else:
-      print("Downloading YOLO model...")
+      self._logger.info("Downloading YOLO model...")
       return hf_hub_download(
         cache_dir=self._model_dir_path,
         repo_id="opendatalab/PDF-Extract-Kit-1.0",
@@ -35,7 +41,7 @@ class HugginfaceModelsDownloader(ModelsDownloader):
     if isinstance(repo_path, str):
       return os.path.dirname(repo_path)
     else:
-      print("Downloading LayoutReader model...")
+      self._logger.info("Downloading LayoutReader model...")
       return snapshot_download(
         cache_dir=self._model_dir_path,
         repo_id="hantian/layoutreader",
@@ -46,7 +52,7 @@ class HugginfaceModelsDownloader(ModelsDownloader):
     if isinstance(repo_path, str):
       return os.path.dirname(repo_path)
     else:
-      print("Downloading StructEqTable model...")
+      self._logger.info("Downloading StructEqTable model...")
       return snapshot_download(
         cache_dir=self._model_dir_path,
         repo_id="U4R/StructTable-InternVL2-1B",
@@ -57,7 +63,7 @@ class HugginfaceModelsDownloader(ModelsDownloader):
     if isinstance(repo_path, str):
       return os.path.dirname(os.path.dirname(repo_path))
     else:
-      print("Downloading LaTeX model...")
+      self._logger.info("Downloading LaTeX model...")
       return snapshot_download(
         cache_dir=self._model_dir_path,
         repo_type="space",

@@ -1,9 +1,8 @@
-import os
 
 from typing import Literal, Generator
-from pathlib import Path
 from PIL.Image import Image
 from doclayout_yolo import YOLOv10
+from logging import Logger, getLogger, basicConfig, INFO
 
 from .models import HugginfaceModelsDownloader
 from .ocr import OCR
@@ -37,8 +36,10 @@ class DocExtractor:
       extract_formula: bool = True,
       extract_table_format: TableLayoutParsedFormat | None = None,
       models_downloader: ModelsDownloader | None = None,
+      logger: Logger | None = None,
     ):
-    self._models_downloader = models_downloader or HugginfaceModelsDownloader(model_cache_dir)
+    self._logger = logger or getLogger(__name__)
+    self._models_downloader = models_downloader or HugginfaceModelsDownloader(self._logger, model_cache_dir)
 
     self._device: Literal["cpu", "cuda"] = device
     self._ocr_for_each_layouts: bool = ocr_for_each_layouts

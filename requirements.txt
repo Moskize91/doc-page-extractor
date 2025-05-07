@@ -7,3 +7,4 @@ transformers==4.42.4
 doclayout_yolo==0.0.3
 pix2tex==0.1.4
 accelerate==1.6.0
+huggingface_hub==0.30.2
