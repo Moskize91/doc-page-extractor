@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, Callable, Protocol, runtime_checkable
 from enum import auto, Enum
 from PIL.Image import Image
 from .rectangle import Rectangle
@@ -65,3 +65,24 @@ class ExtractedResult:
   layouts: list[Layout]
   extracted_image: Image
   adjusted_image: Image | None
+
+GetModelDir = Callable[[], str]
+
+
+@runtime_checkable
+class ModelsDownloader(Protocol):
+
+  def onnx_ocr(self) -> str:
+    pass
+
+  def yolo(self) -> str:
+    pass
+
+  def layoutreader(self) -> str:
+    pass
+
+  def struct_eqtable(self) -> str:
+    pass
+
+  def latex(self) -> str:
+    pass

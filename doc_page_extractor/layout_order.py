@@ -5,9 +5,8 @@ from typing import Generator
 from dataclasses import dataclass
 from transformers import LayoutLMv3ForTokenClassification
 
-from .types import Layout, LayoutClass
+from .types import Layout, LayoutClass, GetModelDir
 from .layoutreader import prepare_inputs, boxes2inputs, parse_logits
-from .utils import ensure_dir
 
 
 @dataclass
@@ -19,17 +18,15 @@ class _BBox:
   value: tuple[float, float, float, float]
 
 class LayoutOrder:
-  def __init__(self, model_path: str):
-    self._model_path: str = model_path
+  def __init__(self, get_model_dir: GetModelDir):
+    self._model_path: str = get_model_dir()
     self._model: LayoutLMv3ForTokenClassification | None = None
 
   def _get_model(self) -> LayoutLMv3ForTokenClassification:
     if self._model is None:
-      model_path = ensure_dir(self._model_path)
       self._model = LayoutLMv3ForTokenClassification.from_pretrained(
-        pretrained_model_name_or_path="hantian/layoutreader",
-        cache_dir=model_path,
-        local_files_only=os.path.exists(os.path.join(model_path, "models--hantian--layoutreader")),
+        pretrained_model_name_or_path=self._model_path,
+        local_files_only=True,
       )
     return self._model
 

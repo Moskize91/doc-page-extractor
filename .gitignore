@@ -176,3 +176,5 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+doc_page_extractor_venv/

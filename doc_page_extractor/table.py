@@ -3,7 +3,7 @@ import torch
 
 from typing import Literal, Any
 from PIL.Image import Image
-from .types import TableLayoutParsedFormat
+from .types import TableLayoutParsedFormat, GetModelDir
 from .utils import expand_image
 
 
@@ -13,10 +13,10 @@ class Table:
   def __init__(
       self,
       device: Literal["cpu", "cuda"],
-      model_path: str,
+      get_model_dir: GetModelDir,
     ):
     self._model: Any | None = None
-    self._model_path: str = model_path
+    self._model_path: str = get_model_dir()
     self._ban: bool = False
     if device == "cpu" or not torch.cuda.is_available():
       self._ban = True
@@ -58,13 +58,12 @@ class Table:
 
       from .struct_eqtable import build_model
       model = build_model(
-        model_ckpt="U4R/StructTable-InternVL2-1B",
+        model_ckpt=self._model_path,
         max_new_tokens=1024,
         max_time=30,
         lmdeploy=False,
         flash_attn=True,
         batch_size=1,
-        cache_dir=self._model_path,
         local_files_only=local_files_only,
       )
       self._model = model.cuda()

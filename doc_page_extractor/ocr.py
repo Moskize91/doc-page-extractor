@@ -2,12 +2,12 @@ import numpy as np
 import cv2
 import os
 
-from typing import Literal, Generator
+from typing import Literal, Generator, Callable
 from dataclasses import dataclass
+from huggingface_hub import hf_hub_download
 from .onnxocr import TextSystem
-from .types import OCRFragment
+from .types import GetModelDir, OCRFragment
 from .rectangle import Rectangle
-from .downloader import download
 from .utils import is_space_text
 
 
@@ -47,14 +47,17 @@ class _OONXParams:
   det_model_dir: str
   rec_char_dict_path: str
 
+
+
+
 class OCR:
   def __init__(
       self,
       device: Literal["cpu", "cuda"],
-      model_dir_path: str,
+      get_model_dir: GetModelDir,
     ):
     self._device: Literal["cpu", "cuda"] = device
-    self._model_dir_path: str = model_dir_path
+    self._get_model_dir: GetModelDir = get_model_dir
     self._text_system: TextSystem | None = None
 
   def search_fragments(self, image: np.ndarray) -> Generator[OCRFragment, None, None]:
@@ -87,20 +90,17 @@ class OCR:
     for box, res in zip(dt_boxes, rec_res):
       yield box.tolist(), res
 
+  def download_files(self) -> list[str]:
+    model_files = []
+    model_dir = self._get_model_dir()
+    for model_path in _MODELS:
+      file_name = os.path.join(*model_path)
+      model_files.append(os.path.join(model_dir, file_name))
+    return model_files
+
   def _get_text_system(self) -> TextSystem:
     if self._text_system is None:
-      for model_path in _MODELS:
-        file_path = os.path.join(self._model_dir_path, *model_path)
-        if os.path.exists(file_path):
-          continue
-
-        file_dir_path = os.path.dirname(file_path)
-        os.makedirs(file_dir_path, exist_ok=True)
-
-        url_path = "/".join(model_path)
-        url = f"https://huggingface.co/moskize/OnnxOCR/resolve/main/{url_path}"
-        download(url, file_path)
-
+      model_files = self.download_files()
       self._text_system = TextSystem(_OONXParams(
         use_angle_cls=True,
         use_gpu=(self._device != "cpu"),
@@ -123,10 +123,10 @@ class OCR:
         save_crop_res=False,
         rec_algorithm="SVTR_LCNet",
         use_space_char=True,
-        rec_model_dir=os.path.join(self._model_dir_path, *_MODELS[0]),
-        cls_model_dir=os.path.join(self._model_dir_path, *_MODELS[1]),
-        det_model_dir=os.path.join(self._model_dir_path, *_MODELS[2]),
-        rec_char_dict_path=os.path.join(self._model_dir_path, *_MODELS[3]),
+        rec_model_dir=model_files[0],
+        cls_model_dir=model_files[1],
+        det_model_dir=model_files[2],
+        rec_char_dict_path=model_files[3],
       ))
 
     return self._text_system

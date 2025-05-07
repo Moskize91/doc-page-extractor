@@ -12,4 +12,5 @@ from .types import (
   PlainLayout,
   FormulaLayout,
   TableLayout,
+  ModelsDownloader
 )

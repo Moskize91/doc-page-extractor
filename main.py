@@ -13,7 +13,7 @@ def main():
   os.makedirs(plot_path, exist_ok=True)
 
   extractor = DocExtractor(
-    model_dir_path=model_path,
+    # model_dir_path=model_path,
     device="cpu",
     extract_formula=True,
   )
