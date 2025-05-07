@@ -48,17 +48,17 @@ class DocExtractor:
     self._yolo: YOLOv10 | None = None
     self._ocr: OCR = OCR(
       device=device,
-      get_model_dir=lambda: self._models_downloader.onnx_ocr(),
+      get_model_dir=self._models_downloader.onnx_ocr,
     )
     self._table: Table = Table(
       device=device,
-      get_model_dir=lambda: self._models_downloader.struct_eqtable(),
+      get_model_dir=self._models_downloader.struct_eqtable,
     )
     self._latex: LaTeX = LaTeX(
-      get_model_dir=lambda: self._models_downloader.latex(),
+      get_model_dir=self._models_downloader.latex,
     )
     self._layout_order: LayoutOrder = LayoutOrder(
-      get_model_dir=lambda: self._models_downloader.layoutreader(),
+      get_model_dir=self._models_downloader.layoutreader,
     )
 
   def extract(

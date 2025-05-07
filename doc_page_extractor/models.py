@@ -18,11 +18,11 @@ class HugginfaceModelsDownloader(ModelsDownloader):
     if isinstance(repo_path, str):
       return os.path.dirname(repo_path)
     else:
-        self._logger.info("Downloading OCR model...")
-        return snapshot_download(
-          cache_dir=self._model_dir_path,
-          repo_id="moskize/OnnxOCR",
-        )
+      self._logger.info("Downloading OCR model...")
+      return snapshot_download(
+        cache_dir=self._model_dir_path,
+        repo_id="moskize/OnnxOCR",
+      )
 
   def yolo(self) -> str:
     yolo_file_path = try_to_load_from_cache(repo_id="opendatalab/PDF-Extract-Kit-1.0", filename="models/Layout/YOLO/doclayout_yolo_ft.pt")

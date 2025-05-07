@@ -2,9 +2,8 @@ import numpy as np
 import cv2
 import os
 
-from typing import Literal, Generator, Callable
+from typing import Literal, Generator
 from dataclasses import dataclass
-from huggingface_hub import hf_hub_download
 from .onnxocr import TextSystem
 from .types import GetModelDir, OCRFragment
 from .rectangle import Rectangle
