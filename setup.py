@@ -23,5 +23,6 @@ setup(
     "doclayout_yolo>=0.0.3",
     "pix2tex>=0.1.4,<=0.2.0",
     "accelerate>=1.6.0,<2.0",
+    "huggingface_hub>=0.30.2",
   ],
 )
