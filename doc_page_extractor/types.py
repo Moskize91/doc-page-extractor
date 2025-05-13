@@ -61,13 +61,6 @@ Layout = PlainLayout | TableLayout | FormulaLayout
 
 
 @dataclass
-class ExtractParams:
-  extract_formula: bool
-  extract_table_format: TableLayoutParsedFormat | None = None
-  ocr_for_each_layouts: bool = False
-  adjust_points: bool = False
-
-@dataclass
 class ExtractedResult:
   rotation: float
   layouts: List[Layout]

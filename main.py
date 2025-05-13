@@ -19,7 +19,7 @@ def main():
   )
 
   with Image.open(image_path) as image:
-    result = extractor.extract(image, params=ExtractParams(extract_formula=True))
+    result = extractor.extract(image, extract_formula=True)
     plot_image: Image.Image
     if result.adjusted_image is None:
       plot_image = image.copy()

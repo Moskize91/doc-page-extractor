@@ -2,7 +2,7 @@ import os
 import unittest
 
 from PIL import Image
-from doc_page_extractor import DocExtractor, Layout, LayoutClass, ExtractParams
+from doc_page_extractor import DocExtractor, Layout, LayoutClass
 
 
 class TestGroup(unittest.TestCase):
@@ -15,7 +15,7 @@ class TestGroup(unittest.TestCase):
     layouts: list[tuple[LayoutClass, list[str]]]
 
     with Image.open(image_path) as image:
-      result = extractor.extract(image, params=ExtractParams(extract_formula=False))
+      result = extractor.extract(image, extract_formula=False)
       layouts = [self._format_Layout(layout) for layout in result.layouts]
 
     self.assertEqual(layouts, [

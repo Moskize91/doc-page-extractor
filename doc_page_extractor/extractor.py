@@ -15,7 +15,6 @@ from .layout_order import LayoutOrder
 from .overlap import merge_fragments_as_line, remove_overlap_layouts
 from .clipper import clip_from_image
 from .types import (
-  ExtractParams,
   ExtractedResult,
   ModelsDownloader,
   OCRFragment,
@@ -24,6 +23,7 @@ from .types import (
   PlainLayout,
   TableLayout,
   FormulaLayout,
+  TableLayoutParsedFormat
 )
 
 
@@ -59,23 +59,26 @@ class DocExtractor:
   def extract(
       self,
       image: Image,
-      params: ExtractParams,
+      extract_formula: bool,
+      extract_table_format: TableLayoutParsedFormat | None = None,
+      ocr_for_each_layouts: bool = False,
+      adjust_points: bool = False
     ) -> ExtractedResult:
 
-    raw_optimizer = RawOptimizer(image, params.adjust_points)
+    raw_optimizer = RawOptimizer(image, adjust_points)
     fragments = list(self._ocr.search_fragments(raw_optimizer.image_np))
     raw_optimizer.receive_raw_fragments(fragments)
     layouts = list(self._yolo_extract_layouts(raw_optimizer.image))
     layouts = self._layouts_matched_by_fragments(fragments, layouts)
     layouts = remove_overlap_layouts(layouts)
 
-    if params.ocr_for_each_layouts:
+    if ocr_for_each_layouts:
       self._correct_fragments_by_ocr_layouts(raw_optimizer.image, layouts)
 
     layouts = self._layout_order.sort(layouts, raw_optimizer.image.size)
     layouts = [layout for layout in layouts if self._should_keep_layout(layout)]
 
-    self._parse_table_and_formula_layouts(layouts, raw_optimizer, params)
+    self._parse_table_and_formula_layouts(layouts, raw_optimizer, extract_formula=extract_formula, extract_table_format=extract_table_format)
 
     for layout in layouts:
       layout.fragments = merge_fragments_as_line(layout.fragments)
@@ -137,16 +140,22 @@ class DocExtractor:
     for layout in layouts:
       correct_fragments(self._ocr, source, layout)
 
-  def _parse_table_and_formula_layouts(self, layouts: list[Layout], raw_optimizer: RawOptimizer, params: ExtractParams):
+  def _parse_table_and_formula_layouts(
+      self,
+      layouts: list[Layout],
+      raw_optimizer: RawOptimizer,
+      extract_formula: bool,
+      extract_table_format: TableLayoutParsedFormat | None,
+  ):
     for layout in layouts:
-      if isinstance(layout, FormulaLayout) and params.extract_formula:
+      if isinstance(layout, FormulaLayout) and extract_formula:
         image = clip_from_image(raw_optimizer.image, layout.rect)
         layout.latex = self._latex.extract(image)
-      elif isinstance(layout, TableLayout) and params.extract_table_format is not None:
+      elif isinstance(layout, TableLayout) and extract_table_format is not None:
         image = clip_from_image(raw_optimizer.image, layout.rect)
-        parsed = self._table.predict(image, params.extract_table_format)
+        parsed = self._table.predict(image, extract_table_format)
         if parsed is not None:
-          layout.parsed = (parsed, params.extract_table_format)
+          layout.parsed = (parsed, extract_table_format)
 
   def _split_layouts_by_group(self, layouts: list[Layout]):
     texts_layouts: list[Layout] = []
