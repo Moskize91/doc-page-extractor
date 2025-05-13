@@ -1,7 +1,8 @@
 import os
+import time
 
 from PIL import Image
-from doc_page_extractor import plot, clip, DocExtractor, TableLayout, FormulaLayout, ExtractParams
+from doc_page_extractor import plot, clip, DocExtractor, TableLayout, FormulaLayout
 import logging
 
 def main():
@@ -19,7 +20,11 @@ def main():
   )
 
   with Image.open(image_path) as image:
+    start_time = time.perf_counter()
     result = extractor.extract(image, extract_formula=True)
+    end_time = time.perf_counter()
+    print("extract time:", end_time - start_time)
+
     plot_image: Image.Image
     if result.adjusted_image is None:
       plot_image = image.copy()
