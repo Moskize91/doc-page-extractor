@@ -71,7 +71,7 @@ class ExtractParams:
 class ExtractedResult:
   rotation: float
   layouts: List[Layout]
-  extracted_image: Image
+  extracted_image: Image | None
   adjusted_image: Image | None
 
 GetModelDir = Callable[[], str]
