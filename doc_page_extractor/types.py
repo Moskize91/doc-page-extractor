@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Literal, Callable, Protocol, runtime_checkable
+from typing import Literal, Callable, Protocol, runtime_checkable, List
 from enum import auto, Enum
 from PIL.Image import Image
 from .rectangle import Rectangle
@@ -32,7 +32,7 @@ class TableLayoutParsedFormat(Enum):
 @dataclass
 class BaseLayout:
   rect: Rectangle
-  fragments: list[OCRFragment]
+  fragments: List[OCRFragment]
 
 @dataclass
 class PlainLayout(BaseLayout):
@@ -59,10 +59,18 @@ class FormulaLayout(BaseLayout):
 
 Layout = PlainLayout | TableLayout | FormulaLayout
 
+
+@dataclass
+class ExtractParams:
+  extract_formula: bool
+  extract_table_format: TableLayoutParsedFormat | None = None
+  ocr_for_each_layouts: bool = False
+  adjust_points: bool = False
+
 @dataclass
 class ExtractedResult:
   rotation: float
-  layouts: list[Layout]
+  layouts: List[Layout]
   extracted_image: Image
   adjusted_image: Image | None
 
@@ -86,3 +94,5 @@ class ModelsDownloader(Protocol):
 
   def latex(self) -> str:
     pass
+
+

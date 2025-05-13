@@ -15,10 +15,10 @@ from .layout_order import LayoutOrder
 from .overlap import merge_fragments_as_line, remove_overlap_layouts
 from .clipper import clip_from_image
 from .types import (
+  ExtractParams,
   ExtractedResult,
   ModelsDownloader,
   OCRFragment,
-  TableLayoutParsedFormat,
   Layout,
   LayoutClass,
   PlainLayout,
@@ -32,9 +32,6 @@ class DocExtractor:
       self,
       model_cache_dir: str | None = None,
       device: Literal["cpu", "cuda"] = "cpu",
-      ocr_for_each_layouts: bool = True,
-      extract_formula: bool = True,
-      extract_table_format: TableLayoutParsedFormat | None = None,
       models_downloader: ModelsDownloader | None = None,
       logger: Logger | None = None,
     ):
@@ -42,9 +39,6 @@ class DocExtractor:
     self._models_downloader = models_downloader or HuggingfaceModelsDownloader(self._logger, model_cache_dir)
 
     self._device: Literal["cpu", "cuda"] = device
-    self._ocr_for_each_layouts: bool = ocr_for_each_layouts
-    self._extract_formula: bool = extract_formula
-    self._extract_table_format: TableLayoutParsedFormat | None = extract_table_format
     self._yolo: YOLOv10 | None = None
     self._ocr: OCR = OCR(
       device=device,
@@ -56,6 +50,7 @@ class DocExtractor:
     )
     self._latex: LaTeX = LaTeX(
       get_model_dir=self._models_downloader.latex,
+      device=device,
     )
     self._layout_order: LayoutOrder = LayoutOrder(
       get_model_dir=self._models_downloader.layoutreader,
@@ -64,23 +59,23 @@ class DocExtractor:
   def extract(
       self,
       image: Image,
-      adjust_points: bool = False,
+      params: ExtractParams,
     ) -> ExtractedResult:
 
-    raw_optimizer = RawOptimizer(image, adjust_points)
+    raw_optimizer = RawOptimizer(image, params.adjust_points)
     fragments = list(self._ocr.search_fragments(raw_optimizer.image_np))
     raw_optimizer.receive_raw_fragments(fragments)
     layouts = list(self._yolo_extract_layouts(raw_optimizer.image))
     layouts = self._layouts_matched_by_fragments(fragments, layouts)
     layouts = remove_overlap_layouts(layouts)
 
-    if self._ocr_for_each_layouts:
+    if params.ocr_for_each_layouts:
       self._correct_fragments_by_ocr_layouts(raw_optimizer.image, layouts)
 
     layouts = self._layout_order.sort(layouts, raw_optimizer.image.size)
     layouts = [layout for layout in layouts if self._should_keep_layout(layout)]
 
-    self._parse_table_and_formula_layouts(layouts, raw_optimizer)
+    self._parse_table_and_formula_layouts(layouts, raw_optimizer, params)
 
     for layout in layouts:
       layout.fragments = merge_fragments_as_line(layout.fragments)
@@ -142,16 +137,16 @@ class DocExtractor:
     for layout in layouts:
       correct_fragments(self._ocr, source, layout)
 
-  def _parse_table_and_formula_layouts(self, layouts: list[Layout], raw_optimizer: RawOptimizer):
+  def _parse_table_and_formula_layouts(self, layouts: list[Layout], raw_optimizer: RawOptimizer, params: ExtractParams):
     for layout in layouts:
-      if isinstance(layout, FormulaLayout) and self._extract_formula:
+      if isinstance(layout, FormulaLayout) and params.extract_formula:
         image = clip_from_image(raw_optimizer.image, layout.rect)
         layout.latex = self._latex.extract(image)
-      elif isinstance(layout, TableLayout) and self._extract_table_format is not None:
+      elif isinstance(layout, TableLayout) and params.extract_table_format is not None:
         image = clip_from_image(raw_optimizer.image, layout.rect)
-        parsed = self._table.predict(image, self._extract_table_format)
+        parsed = self._table.predict(image, params.extract_table_format)
         if parsed is not None:
-          layout.parsed = (parsed, self._extract_table_format)
+          layout.parsed = (parsed, params.extract_table_format)
 
   def _split_layouts_by_group(self, layouts: list[Layout]):
     texts_layouts: list[Layout] = []

@@ -141,14 +141,40 @@ class OCR:
       beta=255,
       norm_type=cv2.NORM_MINMAX,
     )
-    image = cv2.fastNlMeansDenoisingColored(
-      src=image,
-      dst=None,
-      h=10,
-      hColor=10,
-      templateWindowSize=7,
-      searchWindowSize=15,
-    )
+    if cv2.cuda.getCudaEnabledDeviceCount() > 0:
+      gpu_frame = cv2.cuda.GpuMat()
+      gpu_frame.upload(image)
+      image = cv2.cuda.fastNlMeansDenoisingColored(
+        src=gpu_frame,
+        dst=None,
+        h_luminance=10,
+        photo_render=10,
+        search_window=15,
+        block_size=7,
+      )
+      image = gpu_frame.download()
+    elif cv2.ocl.haveOpenCL():
+      cv2.ocl.setUseOpenCL(True)
+      gpu_frame = cv2.UMat(image)
+      image = cv2.fastNlMeansDenoisingColored(
+        src=gpu_frame,
+        dst=None,
+        h=10,
+        hColor=10,
+        templateWindowSize=7,
+        searchWindowSize=15,
+      )
+      image = image.get()
+    else:
+      image = cv2.fastNlMeansDenoisingColored(
+        src=image,
+        dst=None,
+        h=10,
+        hColor=10,
+        templateWindowSize=7,
+        searchWindowSize=15,
+      )
+
     # image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) # image to gray
     return image
 

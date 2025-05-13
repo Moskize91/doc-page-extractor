@@ -6,7 +6,8 @@ from .predict_base import PredictBase
 
 class TextDetector(PredictBase):
   def __init__(self, args):
-    self.args = args
+    super().__init__()
+    self._args = args
     self.det_algorithm = args.det_algorithm
     pre_process_list = [
       {
@@ -43,9 +44,27 @@ class TextDetector(PredictBase):
     self.postprocess_op = DBPostProcess(**postprocess_params)
 
     # 初始化模型
-    self.det_onnx_session = self.get_onnx_session(args.det_model_dir, args.use_gpu)
-    self.det_input_name = self.get_input_name(self.det_onnx_session)
-    self.det_output_name = self.get_output_name(self.det_onnx_session)
+    self._det_onnx_session = None
+    self._det_input_name = None
+    self._det_output_name = None
+
+  @property
+  def det_onnx_session(self):
+    if self._det_onnx_session is None:
+      self._det_onnx_session = self.get_onnx_session(self._args.det_model_dir, self._args.use_gpu)
+    return self._det_onnx_session
+
+  @property
+  def det_input_name(self):
+    if self._det_input_name is None:
+      self._det_input_name = self.get_input_name(self.det_onnx_session)
+    return self._det_input_name
+
+  @property
+  def det_output_name(self):
+    if self._det_output_name is None:
+      self._det_output_name = self.get_output_name(self.det_onnx_session)
+    return self._det_output_name
 
   def order_points_clockwise(self, pts):
     rect = np.zeros((4, 2), dtype="float32")
@@ -112,7 +131,7 @@ class TextDetector(PredictBase):
     post_result = self.postprocess_op(preds, shape_list)
     dt_boxes = post_result[0]["points"]
 
-    if self.args.det_box_type == "poly":
+    if self._args.det_box_type == "poly":
       dt_boxes = self.filter_tag_det_res_only_clip(dt_boxes, ori_im.shape)
     else:
       dt_boxes = self.filter_tag_det_res(dt_boxes, ori_im.shape)

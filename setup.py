@@ -5,7 +5,7 @@ if "doc_page_extractor.struct_eqtable" not in find_packages():
 
 setup(
   name="doc-page-extractor",
-  version="0.1.2",
+  version="0.2.0",
   author="Tao Zeyu",
   author_email="i@taozeyu.com",
   url="https://github.com/Moskize91/doc-page-extractor",
@@ -14,7 +14,7 @@ setup(
   long_description=open("./README.md", encoding="utf8").read(),
   long_description_content_type="text/markdown",
   install_requires=[
-    "opencv-python>=4.11.0,<5.0",
+    "opencv-python>=4.10.0,<5.0",
     "pillow>=10.3,<11.0",
     "pyclipper>=1.2.0,<2.0",
     "numpy>=1.24.0,<2.0",

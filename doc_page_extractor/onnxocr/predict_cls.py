@@ -9,15 +9,35 @@ from .predict_base import PredictBase
 
 class TextClassifier(PredictBase):
   def __init__(self, args):
+    super().__init__()
     self.cls_image_shape = args.cls_image_shape
     self.cls_batch_num = args.cls_batch_num
     self.cls_thresh = args.cls_thresh
     self.postprocess_op = ClsPostProcess(label_list=args.label_list)
+    self._args = args
 
     # 初始化模型
-    self.cls_onnx_session = self.get_onnx_session(args.cls_model_dir, args.use_gpu)
-    self.cls_input_name = self.get_input_name(self.cls_onnx_session)
-    self.cls_output_name = self.get_output_name(self.cls_onnx_session)
+    self._cls_onnx_session = None
+    self._cls_input_name = None
+    self._cls_output_name = None
+
+  @property
+  def cls_onnx_session(self):
+    if self._cls_onnx_session is None:
+      self._cls_onnx_session = self.get_onnx_session(self._args.cls_model_dir, self._args.use_gpu)
+    return self._cls_onnx_session
+
+  @property
+  def cls_input_name(self):
+    if self._cls_input_name is None:
+      self._cls_input_name = self.get_input_name(self.cls_onnx_session)
+    return self._cls_input_name
+
+  @property
+  def cls_output_name(self):
+    if self._cls_output_name is None:
+      self._cls_output_name = self.get_output_name(self.cls_onnx_session)
+    return self._cls_output_name
 
   def resize_norm_img(self, img):
     imgC, imgH, imgW = self.cls_image_shape

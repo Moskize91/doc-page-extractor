@@ -4,13 +4,15 @@ import torch
 from munch import Munch
 from pix2tex.cli import LatexOCR
 from PIL.Image import Image
+from typing import Literal
 from .utils import expand_image
 from .types import GetModelDir
 
 class LaTeX:
-  def __init__(self, get_model_dir: GetModelDir):
+  def __init__(self, device: Literal["cpu", "cuda"],get_model_dir: GetModelDir):
     self._model_path: str = get_model_dir()
     self._model: LatexOCR | None = None
+    self._device: Literal["cpu", "cuda"] = device
 
   def extract(self, image: Image) -> str | None:
     image = expand_image(image, 0.1) # 添加边缘提高识别准确率
@@ -23,7 +25,7 @@ class LaTeX:
       self._model = LatexOCR(Munch({
         "config": os.path.join("settings", "config.yaml"),
         "checkpoint": os.path.join(self._model_path, "checkpoints", "weights.pth"),
-        "no_cuda": True,
+        "no_cuda": self._device == "cpu",
         "no_resize": False,
       }))
     return self._model

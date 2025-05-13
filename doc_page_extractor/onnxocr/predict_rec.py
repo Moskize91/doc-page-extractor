@@ -10,6 +10,8 @@ from .predict_base import PredictBase
 
 class TextRecognizer(PredictBase):
   def __init__(self, args):
+    super().__init__()
+    self._args = args
     self.rec_image_shape = args.rec_image_shape
     self.rec_batch_num = args.rec_batch_num
     self.rec_algorithm = args.rec_algorithm
@@ -19,9 +21,29 @@ class TextRecognizer(PredictBase):
     )
 
     # 初始化模型
-    self.rec_onnx_session = self.get_onnx_session(args.rec_model_dir, args.use_gpu)
-    self.rec_input_name = self.get_input_name(self.rec_onnx_session)
-    self.rec_output_name = self.get_output_name(self.rec_onnx_session)
+    self._rec_onnx_session = None
+    self._rec_input_name = None
+    self._rec_output_name = None
+
+  @property
+  def rec_onnx_session(self):
+    if self._rec_onnx_session is None:
+      self._rec_onnx_session = self.get_onnx_session(
+        self._args.rec_model_dir, self._args.use_gpu
+      )
+    return self._rec_onnx_session
+
+  @property
+  def rec_input_name(self):
+    if self._rec_input_name is None:
+      self._rec_input_name = self.get_input_name(self.rec_onnx_session)
+    return self._rec_input_name
+
+  @property
+  def rec_output_name(self):
+    if self._rec_output_name is None:
+      self._rec_output_name = self.get_output_name(self.rec_onnx_session)
+    return self._rec_output_name
 
   def resize_norm_img(self, img, max_wh_ratio):
     imgC, imgH, imgW = self.rec_image_shape
@@ -30,9 +52,9 @@ class TextRecognizer(PredictBase):
       # return padding_im
       image_pil = Image.fromarray(np.uint8(img))
       if self.rec_algorithm == "ViTSTR":
-        img = image_pil.resize([imgW, imgH], Image.BICUBIC)
+        img = image_pil.resize([imgW, imgH], Image.Resampling.BICUBIC)
       else:
-        img = image_pil.resize([imgW, imgH], Image.ANTIALIAS)
+        img = image_pil.resize([imgW, imgH], Image.Resampling.LANCZOS)
       img = np.array(img)
       norm_img = np.expand_dims(img, -1)
       norm_img = norm_img.transpose((2, 0, 1))
@@ -250,8 +272,9 @@ class TextRecognizer(PredictBase):
   def norm_img_can(self, img, image_shape):
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)  # CAN only predict gray scale image
 
-    if self.inverse:
-      img = 255 - img
+    # FIXME
+    # if self.inverse:
+    #   img = 255 - img
 
     if self.rec_image_shape[0] == 1:
       h, w = img.shape

@@ -1,8 +1,13 @@
-import onnxruntime
-
 class PredictBase(object):
   def __init__(self):
-    pass
+    self._onnxruntime = None
+
+  @property
+  def onnxruntime(self):
+    if self._onnxruntime is None:
+      import onnxruntime
+      self._onnxruntime = onnxruntime
+    return self._onnxruntime
 
   def get_onnx_session(self, model_dir, use_gpu):
     # 使用gpu
@@ -11,7 +16,7 @@ class PredictBase(object):
     else:
       providers = providers = ['CPUExecutionProvider']
 
-    onnx_session = onnxruntime.InferenceSession(model_dir, None,providers=providers)
+    onnx_session = self.onnxruntime.InferenceSession(model_dir, None, providers=providers)
 
     # print("providers:", onnxruntime.get_device())
     return onnx_session
