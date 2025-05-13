@@ -1,7 +1,7 @@
 import os
 
 from PIL import Image
-from doc_page_extractor import plot, clip, DocExtractor, TableLayout, FormulaLayout
+from doc_page_extractor import plot, clip, DocExtractor, TableLayout, FormulaLayout, ExtractParams
 import logging
 
 def main():
@@ -16,11 +16,10 @@ def main():
   extractor = DocExtractor(
     # model_cache_dir=model_path,
     device="cpu",
-    extract_formula=True,
   )
 
   with Image.open(image_path) as image:
-    result = extractor.extract(image)
+    result = extractor.extract(image, params=ExtractParams(extract_formula=True))
     plot_image: Image.Image
     if result.adjusted_image is None:
       plot_image = image.copy()
