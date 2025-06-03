@@ -2,6 +2,7 @@ from .extractor import DocExtractor
 from .clipper import clip, clip_from_image
 from .plot import plot
 from .rectangle import Point, Rectangle
+from .model import Model, HuggingfaceModel
 from .types import (
   ExtractedResult,
   OCRFragment,
