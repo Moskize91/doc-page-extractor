@@ -1,9 +1,11 @@
 import os
 import time
+import logging
 
+from pathlib import Path
 from PIL import Image
 from doc_page_extractor import plot, clip, DocExtractor, TableLayout, FormulaLayout
-import logging
+
 
 def main():
   logging.basicConfig(level=logging.INFO)
@@ -15,10 +17,9 @@ def main():
   os.makedirs(plot_path, exist_ok=True)
 
   extractor = DocExtractor(
-    # model_cache_dir=model_path,
     device="cpu",
+    model_cache_dir=Path(__file__).parent / "model",
   )
-
   with Image.open(image_path) as image:
     start_time = time.perf_counter()
     result = extractor.extract(image, extract_formula=True)
