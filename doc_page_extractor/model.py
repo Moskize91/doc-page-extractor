@@ -31,7 +31,7 @@ class HuggingfaceModel(Model):
   def get_onnx_ocr_path(self) -> Path:
     return self._get_model_path(
       repo_id="moskize/OnnxOCR",
-      filename="README.md",
+      filename=None,
       repo_type=None,
       is_snapshot=True
     )
@@ -47,7 +47,7 @@ class HuggingfaceModel(Model):
   def get_layoutreader_path(self) -> Path:
     return self._get_model_path(
       repo_id="hantian/layoutreader",
-      filename="model.safetensors",
+      filename=None,
       repo_type=None,
       is_snapshot=True,
     )
@@ -68,24 +68,36 @@ class HuggingfaceModel(Model):
       is_snapshot=True,
     )
 
-  def _get_model_path(self, repo_id: str, filename: str, repo_type: str | None, is_snapshot: bool) -> Path:
+  def _get_model_path(
+        self,
+        repo_id: str,
+        filename: str | None,
+        repo_type: str | None,
+        is_snapshot: bool,
+      ) -> Path:
     with self._lock:
+      cache_filename = "README.md"
+      if filename is not None:
+        cache_filename = filename
       model_path = try_to_load_from_cache(
         repo_id=repo_id,
-        filename=filename,
+        filename=cache_filename,
         repo_type=repo_type,
         cache_dir=self._model_cache_dir
       )
-      if not isinstance(model_path, str):
-        if is_snapshot:
-          model_path = snapshot_download(
-            cache_dir=self._model_cache_dir,
-            repo_id=repo_id,
-          )
-        else:
-          model_path = hf_hub_download(
-            cache_dir=self._model_cache_dir,
-            repo_id=repo_id,
-            filename=filename,
-          )
+      if isinstance(model_path, str):
+        if filename is None:
+          model_path = Path(model_path).parent
+
+      elif is_snapshot:
+        model_path = snapshot_download(
+          cache_dir=self._model_cache_dir,
+          repo_id=repo_id,
+        )
+      else:
+        model_path = hf_hub_download(
+          cache_dir=self._model_cache_dir,
+          repo_id=repo_id,
+          filename=filename,
+        )
       return Path(model_path)

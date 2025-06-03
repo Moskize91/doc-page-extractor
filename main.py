@@ -12,7 +12,7 @@ def main():
   project_path = os.path.dirname(__file__)
   model_path = os.path.join(project_path, "model")
   plot_path = os.path.join(project_path, "output")
-  image_path = os.path.join(project_path, "tests", "images", "table.png")
+  image_path = os.path.join(project_path, "tests", "images", "citation.png")
   os.makedirs(model_path, exist_ok=True)
   os.makedirs(plot_path, exist_ok=True)
 
