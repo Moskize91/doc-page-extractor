@@ -1,10 +1,11 @@
 import torch
 
-from typing import Generator
+from typing import Generator, Literal
 from dataclasses import dataclass
 from transformers import LayoutLMv3ForTokenClassification
 
-from .types import Layout, LayoutClass, GetModelDir
+from .types import Layout, LayoutClass
+from .model import Model
 from .layoutreader import prepare_inputs, boxes2inputs, parse_logits
 
 
@@ -17,18 +18,19 @@ class _BBox:
   value: tuple[float, float, float, float]
 
 class LayoutOrder:
-  def __init__(self, get_model_dir: GetModelDir):
-    self._model_path: str = get_model_dir()
-    self._model: LayoutLMv3ForTokenClassification | None = None
-    self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+  def __init__(self, device: Literal["cpu", "cuda"], model: Model):
+    self._model: Model = model
+    self._order_model: LayoutLMv3ForTokenClassification | None = None
+    self._device: Literal["cpu", "cuda"] = device
 
   def _get_model(self) -> LayoutLMv3ForTokenClassification:
-    if self._model is None:
-      self._model = LayoutLMv3ForTokenClassification.from_pretrained(
-        pretrained_model_name_or_path=self._model_path,
+    if self._order_model is None:
+      model_path = self._model.get_layoutreader_path()
+      self._order_model = LayoutLMv3ForTokenClassification.from_pretrained(
+        pretrained_model_name_or_path=model_path,
         local_files_only=True,
       ).to(device=self._device)
-    return self._model
+    return self._order_model
 
   def sort(self, layouts: list[Layout], size: tuple[int, int]) -> list[Layout]:
     width, height = size

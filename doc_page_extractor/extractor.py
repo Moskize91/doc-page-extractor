@@ -1,10 +1,11 @@
+import torch
 
+from os import PathLike
 from typing import Literal, Generator
 from PIL.Image import Image
 from doclayout_yolo import YOLOv10
-from logging import Logger, getLogger
 
-from .models import HuggingfaceModelsDownloader
+from .model import Model, HuggingfaceModel
 from .ocr import OCR
 from .ocr_corrector import correct_fragments
 from .raw_optimizer import RawOptimizer
@@ -16,7 +17,6 @@ from .overlap import merge_fragments_as_line, remove_overlap_layouts
 from .clipper import clip_from_image
 from .types import (
   ExtractedResult,
-  ModelsDownloader,
   OCRFragment,
   Layout,
   LayoutClass,
@@ -29,32 +29,28 @@ from .types import (
 
 class DocExtractor:
   def __init__(
-      self,
-      model_cache_dir: str | None = None,
-      device: Literal["cpu", "cuda"] = "cpu",
-      models_downloader: ModelsDownloader | None = None,
-      logger: Logger | None = None,
-    ):
-    self._logger = logger or getLogger(__name__)
-    self._models_downloader = models_downloader or HuggingfaceModelsDownloader(self._logger, model_cache_dir)
+        self,
+        model_cache_dir: PathLike | None = None,
+        device: Literal["cpu", "cuda"] = "cpu",
+        model: Model | None = None,
+      ) -> None:
+
+    if model is None:
+      if model_cache_dir is None:
+        raise ValueError("You must provide a model_cache_dir or a model instance.")
+      model = HuggingfaceModel(model_cache_dir)
+
+    if device == "cuda" and not torch.cuda.is_available():
+      device = "cpu"
+      print("CUDA is not available. Using CPU instead.")
 
     self._device: Literal["cpu", "cuda"] = device
+    self._model: Model = model
     self._yolo: YOLOv10 | None = None
-    self._ocr: OCR = OCR(
-      device=device,
-      get_model_dir=self._models_downloader.onnx_ocr,
-    )
-    self._table: Table = Table(
-      device=device,
-      get_model_dir=self._models_downloader.struct_eqtable,
-    )
-    self._latex: LaTeX = LaTeX(
-      get_model_dir=self._models_downloader.latex,
-      device=device,
-    )
-    self._layout_order: LayoutOrder = LayoutOrder(
-      get_model_dir=self._models_downloader.layoutreader,
-    )
+    self._ocr: OCR = OCR(device, model)
+    self._table: Table = Table(device, model)
+    self._latex: LaTeX = LaTeX(device, model)
+    self._layout_order: LayoutOrder = LayoutOrder(device, model)
 
   def extract(
       self,
@@ -199,7 +195,7 @@ class DocExtractor:
 
   def _get_yolo(self) -> YOLOv10:
     if self._yolo is None:
-      model_path = self._models_downloader.yolo()
+      model_path = self._model.get_yolo_path()
       self._yolo = YOLOv10(str(model_path))
     return self._yolo
 

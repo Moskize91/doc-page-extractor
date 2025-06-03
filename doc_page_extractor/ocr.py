@@ -5,7 +5,8 @@ import os
 from typing import Literal, Generator
 from dataclasses import dataclass
 from .onnxocr import TextSystem
-from .types import GetModelDir, OCRFragment
+from .types import OCRFragment
+from .model import Model
 from .rectangle import Rectangle
 from .utils import is_space_text
 
@@ -46,17 +47,10 @@ class _OONXParams:
   det_model_dir: str
   rec_char_dict_path: str
 
-
-
-
 class OCR:
-  def __init__(
-      self,
-      device: Literal["cpu", "cuda"],
-      get_model_dir: GetModelDir,
-    ):
+  def __init__(self, device: Literal["cpu", "cuda"], model: Model):
     self._device: Literal["cpu", "cuda"] = device
-    self._get_model_dir: GetModelDir = get_model_dir
+    self._model: Model = model
     self._text_system: TextSystem | None = None
 
   def search_fragments(self, image: np.ndarray) -> Generator[OCRFragment, None, None]:
@@ -89,17 +83,9 @@ class OCR:
     for box, res in zip(dt_boxes, rec_res):
       yield box.tolist(), res
 
-  def make_model_paths(self) -> list[str]:
-    model_paths = []
-    model_dir = self._get_model_dir()
-    for model_path in _MODELS:
-      file_name = os.path.join(*model_path)
-      model_paths.append(os.path.join(model_dir, file_name))
-    return model_paths
-
   def _get_text_system(self) -> TextSystem:
     if self._text_system is None:
-      model_paths = self.make_model_paths()
+      model_paths = self._make_model_paths()
       self._text_system = TextSystem(_OONXParams(
         use_angle_cls=True,
         use_gpu=(self._device != "cpu"),
@@ -127,8 +113,15 @@ class OCR:
         det_model_dir=model_paths[2],
         rec_char_dict_path=model_paths[3],
       ))
-
     return self._text_system
+
+  def _make_model_paths(self) -> list[str]:
+    model_paths: list[str] = []
+    model_dir = self._model.get_onnx_ocr_path()
+    for model_path in _MODELS:
+      file_name = os.path.join(*model_path)
+      model_paths.append(str(model_dir / file_name))
+    return model_paths
 
   def _preprocess_image(self, image: np.ndarray) -> np.ndarray:
     image = self._alpha_to_color(image, (255, 255, 255))
