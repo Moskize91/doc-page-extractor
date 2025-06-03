@@ -14,7 +14,7 @@ class Table:
     self._model: Model = model
     self._table_model: Any | None = None
     self._ban: bool = False
-    if device == "cpu" or not torch.cuda.is_available():
+    if device == "cpu":
       self._ban = True
 
   def predict(self, image: Image, format: TableLayoutParsedFormat) -> str | None:
