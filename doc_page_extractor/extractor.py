@@ -40,7 +40,7 @@ class DocExtractor:
         raise ValueError("You must provide a model_cache_dir or a model instance.")
       model = HuggingfaceModel(model_cache_dir)
 
-    if device =="cuda" and torch.cuda.is_available():
+    if device == "cuda" and not torch.cuda.is_available():
       device = "cpu"
       print("CUDA is not available. Using CPU instead.")
 
