@@ -93,11 +93,13 @@ class HuggingfaceModel(Model):
         model_path = snapshot_download(
           cache_dir=self._model_cache_dir,
           repo_id=repo_id,
+          repo_type=repo_type,
         )
       else:
         model_path = hf_hub_download(
           cache_dir=self._model_cache_dir,
           repo_id=repo_id,
+          repo_type=repo_type,
           filename=filename,
         )
       return Path(model_path)
