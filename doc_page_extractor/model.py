@@ -87,7 +87,9 @@ class HuggingfaceModel(Model):
       )
       if isinstance(model_path, str):
         if filename is None:
-          model_path = Path(model_path).parent
+          model_path = Path(model_path)
+          for _ in Path(filename).parts:
+            model_path = model_path.parent
 
       elif is_snapshot:
         model_path = snapshot_download(
