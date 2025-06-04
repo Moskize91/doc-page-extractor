@@ -31,9 +31,10 @@ class HuggingfaceModel(Model):
   def get_onnx_ocr_path(self) -> Path:
     return self._get_model_path(
       repo_id="moskize/OnnxOCR",
-      filename=None,
+      filename="README.md",
       repo_type=None,
-      is_snapshot=True
+      is_snapshot=True,
+      wanna_dir_path=True,
     )
 
   def get_yolo_path(self) -> Path:
@@ -42,14 +43,16 @@ class HuggingfaceModel(Model):
       filename="models/Layout/YOLO/doclayout_yolo_ft.pt",
       repo_type=None,
       is_snapshot=False,
+      wanna_dir_path=False,
     )
 
   def get_layoutreader_path(self) -> Path:
     return self._get_model_path(
       repo_id="hantian/layoutreader",
-      filename=None,
+      filename="model.safetensors",
       repo_type=None,
       is_snapshot=True,
+      wanna_dir_path=True,
     )
 
   def get_struct_eqtable_path(self) -> Path:
@@ -58,6 +61,7 @@ class HuggingfaceModel(Model):
       filename="model.safetensors",
       repo_type=None,
       is_snapshot=True,
+      wanna_dir_path=True,
     )
 
   def get_latex_path(self) -> Path:
@@ -66,40 +70,45 @@ class HuggingfaceModel(Model):
       filename="checkpoints/weights.pth",
       repo_type="space",
       is_snapshot=True,
+      wanna_dir_path=True,
     )
 
   def _get_model_path(
         self,
         repo_id: str,
-        filename: str | None,
+        filename: str,
         repo_type: str | None,
         is_snapshot: bool,
+        wanna_dir_path: bool,
       ) -> Path:
+
     with self._lock:
-      cache_filename = "README.md"
-      if filename is not None:
-        cache_filename = filename
       model_path = try_to_load_from_cache(
         repo_id=repo_id,
-        filename=cache_filename,
+        filename=filename,
         repo_type=repo_type,
         cache_dir=self._model_cache_dir
       )
       if isinstance(model_path, str):
-        if filename is None:
-          model_path = Path(model_path).parent
+        model_path = Path(model_path)
+        if wanna_dir_path:
+          for _ in Path(filename).parts:
+            model_path = model_path.parent
 
-      elif is_snapshot:
-        model_path = snapshot_download(
-          cache_dir=self._model_cache_dir,
-          repo_id=repo_id,
-          repo_type=repo_type,
-        )
       else:
-        model_path = hf_hub_download(
-          cache_dir=self._model_cache_dir,
-          repo_id=repo_id,
-          repo_type=repo_type,
-          filename=filename,
-        )
-      return Path(model_path)
+        if is_snapshot:
+          model_path = snapshot_download(
+            cache_dir=self._model_cache_dir,
+            repo_id=repo_id,
+            repo_type=repo_type,
+          )
+        else:
+          model_path = hf_hub_download(
+            cache_dir=self._model_cache_dir,
+            repo_id=repo_id,
+            repo_type=repo_type,
+            filename=filename,
+          )
+        model_path = Path(model_path)
+
+      return model_path
