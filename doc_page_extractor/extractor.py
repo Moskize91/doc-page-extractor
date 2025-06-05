@@ -52,6 +52,13 @@ class DocExtractor:
     self._latex: LaTeX = LaTeX(device, model)
     self._layout_order: LayoutOrder = LayoutOrder(device, model)
 
+  def prepare_models(self):
+    self._model.get_onnx_ocr_path()
+    self._model.get_yolo_path()
+    self._model.get_layoutreader_path()
+    self._model.get_struct_eqtable_path()
+    self._model.get_latex_path()
+
   def extract(
       self,
       image: Image,
