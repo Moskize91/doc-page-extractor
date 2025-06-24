@@ -1,0 +1,48 @@
+[project]
+name = "doc-page-extractor"
+version = "0.2.3"
+description = ""
+authors = [
+    {name = "Tao Zeyu",email = "i@taozeyu.com"}
+]
+maintainers = [
+    {name = "Tao Zeyu", email = "i@taozeyu.com"}
+]
+license = {text = "AGPL-3.0"}
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "opencv-python>=4.10.0,<5.0",
+    "pillow>=10.3,<11.0",
+    "pyclipper>=1.2.0,<2.0",
+    "numpy>=1.24.0,<2.0",
+    "shapely>=2.0.0,<3.0",
+    "transformers>=4.42.4,<=4.47",
+    "doclayout_yolo>=0.0.3",
+    "pix2tex>=0.1.4,<=0.2.0",
+    "accelerate>=1.6.0,<2.0",
+    "huggingface_hub>=0.33.0,<1.0",
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+license = "AGPL-3.0"
+readme = "README.md"
+repository = "https://github.com/moskize91/doc-page-extractor"
+packages = [
+    {include = "doc_page_extractor" }
+]
+classifiers=[
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU Affero General Public License v3",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.10",
+]
+
+[tool.poetry.group.dev.dependencies]
+pylint = "^3.3.7"

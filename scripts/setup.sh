@@ -17,8 +17,7 @@ conda create --prefix ./.venv python=3.10.16 -y
 eval "$(conda shell.bash hook)"
 conda activate ./.venv
 
-pip install --upgrade pip
-pip install -r requirements.txt
+poetry install --no-root
 pip install onnxruntime==1.21.0
 
 scripts/sync-struct-eqtable.sh
