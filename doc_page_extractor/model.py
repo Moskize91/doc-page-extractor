@@ -1,9 +1,13 @@
 from os import PathLike
+from time import sleep
 from typing import runtime_checkable, Protocol
 from pathlib import Path
 from threading import Lock
 from huggingface_hub import hf_hub_download, snapshot_download, try_to_load_from_cache
 
+
+_RETRY_TIMES = 6
+_RETRY_SLEEP = 3.5
 
 @runtime_checkable
 class Model(Protocol):
@@ -96,19 +100,34 @@ class HuggingfaceModel(Model):
             model_path = model_path.parent
 
       else:
-        if is_snapshot:
-          model_path = snapshot_download(
-            cache_dir=self._model_cache_dir,
-            repo_id=repo_id,
-            repo_type=repo_type,
-          )
-        else:
-          model_path = hf_hub_download(
-            cache_dir=self._model_cache_dir,
-            repo_id=repo_id,
-            repo_type=repo_type,
-            filename=filename,
-          )
+        # https://github.com/huggingface/huggingface_hub/issues/1542#issuecomment-1630465844
+        latest_error: ConnectionError | None = None
+        for i in range(_RETRY_TIMES + 1):
+          if latest_error is not None:
+            print(f"Retrying to download {repo_id} model, attempt {i + 1}/{_RETRY_TIMES}...")
+            sleep(_RETRY_SLEEP)
+          try:
+            if is_snapshot:
+              model_path = snapshot_download(
+                cache_dir=self._model_cache_dir,
+                repo_id=repo_id,
+                repo_type=repo_type,
+                resume_download=True,
+              )
+            else:
+              model_path = hf_hub_download(
+                cache_dir=self._model_cache_dir,
+                repo_id=repo_id,
+                repo_type=repo_type,
+                filename=filename,
+                resume_download=True,
+              )
+            latest_error = None
+          except ConnectionError as err:
+            latest_error = err
+
+        if latest_error is not None:
+          raise latest_error
         model_path = Path(model_path)
 
       return model_path
