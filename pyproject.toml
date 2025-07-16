@@ -11,19 +11,6 @@ maintainers = [
 license = {text = "AGPL-3.0"}
 readme = "README.md"
 requires-python = ">=3.10,<3.13"
-dependencies = [
-    "opencv-python>=4.10.0,<5.0",
-    "pillow>=10.3,<11.0",
-    "pyclipper>=1.2.0,<2.0",
-    "numpy>=1.24.0,<2.0",
-    "shapely>=2.0.0,<3.0",
-    "transformers>=4.42.4,<=4.47",
-    "doclayout_yolo>=0.0.3",
-    "pix2tex>=0.1.4,<=0.2.0",
-    "accelerate>=1.6.0,<2.0",
-    "huggingface_hub>=0.33.0,<1.0",
-]
-
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
@@ -36,6 +23,7 @@ repository = "https://github.com/moskize91/doc-page-extractor"
 packages = [
     {include = "doc_page_extractor" }
 ]
+include = ["doc_page_extractor/struct_eqtable/**/*.py"]
 classifiers=[
     "Development Status :: 2 - Pre-Alpha",
     "Intended Audience :: Developers",
@@ -44,5 +32,28 @@ classifiers=[
     "Programming Language :: Python :: 3.10",
 ]
 
+[tool.poetry.dependencies]
+opencv-python = ">=4.10.0,<5.0"
+pillow = ">=10.3,<11.0"
+pyclipper = ">=1.2.0,<2.0"
+numpy = ">=1.24.0,<2.0"
+shapely = ">=2.0.0,<3.0"
+transformers = ">=4.42.4,<=4.47"
+doclayout_yolo = ">=0.0.3"
+pix2tex = ">=0.1.4,<=0.2.0"
+accelerate = ">=1.6.0,<2.0"
+huggingface_hub = ">=0.33.0,<1.0"
+
+onnxruntime = { version = "1.21.0", optional = true }
+onnxruntime-gpu = { version = "1.21.0", optional = true }
+
+[tool.poetry.extras]
+cpu = ["onnxruntime"]
+gpu = ["onnxruntime-gpu"]
+
 [tool.poetry.group.dev.dependencies]
 pylint = "^3.3.7"
+
+[tool.poetry.build]
+generate-setup-file = false
+script = "scripts/prebuild.py"
