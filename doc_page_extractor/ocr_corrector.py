@@ -1,6 +1,6 @@
 import numpy as np
 
-from typing import Iterable
+from typing import cast, Iterable
 from shapely.geometry import Polygon
 from PIL.Image import new, Image, Resampling
 from .types import Layout, OCRFragment
@@ -90,13 +90,13 @@ def _match_fragments(
   ) -> tuple[list[tuple[OCRFragment, OCRFragment]], list[OCRFragment]]:
 
   zone_polygon = Polygon(zone_rect)
-  fragments2: list[OCRFragment] = list(fragments2)
+  fragments2 = list(fragments2)
   matched_fragments: list[tuple[OCRFragment, OCRFragment]] = []
   not_matched_fragments: list[OCRFragment] = []
 
   for fragment1 in fragments1:
     polygon1 = Polygon(fragment1.rect)
-    polygon1 = zone_polygon.intersection(polygon1)
+    polygon1 = cast(Polygon, zone_polygon.intersection(polygon1))
     if polygon1.is_empty:
       continue
 

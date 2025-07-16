@@ -1,6 +1,6 @@
 from os import PathLike
 from time import sleep
-from typing import runtime_checkable, Protocol
+from typing import cast, runtime_checkable, Protocol
 from pathlib import Path
 from threading import Lock
 from huggingface_hub import hf_hub_download, snapshot_download, try_to_load_from_cache
@@ -12,19 +12,19 @@ _RETRY_SLEEP = 3.5
 @runtime_checkable
 class Model(Protocol):
   def get_onnx_ocr_path(self) -> Path:
-    pass
+    raise NotImplementedError()
 
   def get_yolo_path(self) -> Path:
-    pass
+    raise NotImplementedError()
 
   def get_layoutreader_path(self) -> Path:
-    pass
+    raise NotImplementedError()
 
   def get_struct_eqtable_path(self) -> Path:
-    pass
+    raise NotImplementedError()
 
   def get_latex_path(self) -> Path:
-    pass
+    raise NotImplementedError()
 
 class HuggingfaceModel(Model):
   def __init__(self, model_cache_dir: PathLike):
@@ -128,6 +128,6 @@ class HuggingfaceModel(Model):
 
         if latest_error is not None:
           raise latest_error
-        model_path = Path(model_path)
+        model_path = Path(cast(PathLike, model_path))
 
       return model_path

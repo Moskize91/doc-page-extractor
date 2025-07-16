@@ -88,7 +88,7 @@ class LayoutOrder:
     y_scale = layoutreader_size / float(height)
 
     for bbox in bbox_list:
-      x0, y0, x1, y1 = self._squeeze(bbox.value, width, height)
+      x0, y0, x1, y1 = self._squeeze(bbox, width, height)
       x0 = round(x0 * x_scale)
       y0 = round(y0 * y_scale)
       x1 = round(x1 * x_scale)
@@ -223,8 +223,8 @@ class LayoutOrder:
       mid2 = sorted_numbers[n // 2]
       return float((mid1 + mid2) / 2)
 
-  def _squeeze(self, bbox: _BBox, width: int, height: int) -> _BBox:
-    x0, y0, x1, y1 = bbox
+  def _squeeze(self, bbox: _BBox, width: int, height: int) -> tuple[float, float, float, float]:
+    x0, y0, x1, y1 = bbox.value
     x0 = self._squeeze_value(x0, width)
     x1 = self._squeeze_value(x1, width)
     y0 = self._squeeze_value(y0, height)

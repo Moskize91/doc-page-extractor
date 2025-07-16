@@ -48,7 +48,7 @@ class Table:
       from .struct_eqtable import build_model
       model_path = self._model.get_struct_eqtable_path()
       table_model = build_model(
-        model_ckpt=model_path,
+        model_ckpt=str(model_path),
         max_new_tokens=1024,
         max_time=30,
         lmdeploy=False,

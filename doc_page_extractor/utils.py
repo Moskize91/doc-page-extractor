@@ -12,7 +12,7 @@ def ensure_dir(path: str) -> str:
   return path
 
 def is_space_text(text: str) -> bool:
-  return re.match(r"^\s*$", text)
+  return bool(re.match(r"^\s*$", text))
 
 def expand_image(image: Image, percent: float):
   width, height = image.size

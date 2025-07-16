@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 import os
 
-from typing import Literal, Generator
+from typing import cast, Any, Iterable, Literal, Generator
 from dataclasses import dataclass
 from .onnxocr import TextSystem
 from .types import OCRFragment
@@ -80,7 +80,10 @@ class OCR:
     image = self._preprocess_image(image)
     dt_boxes, rec_res = text_system(image)
 
-    for box, res in zip(dt_boxes, rec_res):
+    for box, res in zip(
+      cast(Iterable[Any], dt_boxes),
+      cast(Iterable[Any], rec_res),
+    ):
       yield box.tolist(), res
 
   def _get_text_system(self) -> TextSystem:
@@ -123,8 +126,8 @@ class OCR:
       model_paths.append(str(model_dir / file_name))
     return model_paths
 
-  def _preprocess_image(self, image: np.ndarray) -> np.ndarray:
-    image = self._alpha_to_color(image, (255, 255, 255))
+  def _preprocess_image(self, np_image: np.ndarray) -> np.ndarray:
+    image = self._alpha_to_color(np_image, (255, 255, 255))
     # image = cv2.bitwise_not(image) # inv
     # image = self._binarize_img(image) # bin
     image = cv2.normalize(
@@ -148,7 +151,7 @@ class OCR:
       image = gpu_frame.download()
     elif cv2.ocl.haveOpenCL():
       cv2.ocl.setUseOpenCL(True)
-      gpu_frame = cv2.UMat(image)
+      gpu_frame = cv2.UMat(cast(Any, image))
       image = cv2.fastNlMeansDenoisingColored(
         src=gpu_frame,
         dst=None,

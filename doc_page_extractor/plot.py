@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import cast, Iterable
 from PIL import ImageDraw
 from PIL.ImageFont import load_default, FreeTypeFont
 from PIL.Image import Image
@@ -9,8 +9,8 @@ _FRAGMENT_COLOR = (0x49, 0xCF, 0xCB) # Light Green
 _Color = tuple[int, int, int]
 
 def plot(image: Image, layouts: Iterable[Layout]) -> None:
-  layout_font = load_default(size=35)
-  fragment_font = load_default(size=25)
+  layout_font = cast(FreeTypeFont, load_default(size=35))
+  fragment_font = cast(FreeTypeFont, load_default(size=25))
   draw = ImageDraw.Draw(image, mode="RGBA")
 
   def _draw_number(position: Point, number: int, font: FreeTypeFont, bold: bool, color: _Color) -> None:
@@ -89,3 +89,5 @@ def _layout_color(layout: Layout) -> _Color:
     return (0xFA, 0x38, 0x27) # Red
   elif cls == LayoutClass.FORMULA_CAPTION:
     return (0xFF, 0x9D, 0x24) # Orange
+  else:
+    return (0x00, 0x00, 0x00)
