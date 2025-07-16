@@ -23,6 +23,7 @@ repository = "https://github.com/moskize91/doc-page-extractor"
 packages = [
     {include = "doc_page_extractor" }
 ]
+include = ["doc_page_extractor/struct_eqtable/**/*.py"]
 classifiers=[
     "Development Status :: 2 - Pre-Alpha",
     "Intended Audience :: Developers",
@@ -43,7 +44,6 @@ pix2tex = ">=0.1.4,<=0.2.0"
 accelerate = ">=1.6.0,<2.0"
 huggingface_hub = ">=0.33.0,<1.0"
 
-# 可选依赖项
 onnxruntime = { version = "1.21.0", optional = true }
 onnxruntime-gpu = { version = "1.21.0", optional = true }
 
@@ -53,3 +53,7 @@ gpu = ["onnxruntime-gpu"]
 
 [tool.poetry.group.dev.dependencies]
 pylint = "^3.3.7"
+
+[tool.poetry.build]
+generate-setup-file = false
+script = "scripts/prebuild.py"

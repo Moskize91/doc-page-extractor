@@ -21,6 +21,8 @@
     "paddlepaddle",
     "ppocr",
     "ppocrv",
+    "prebuild",
+    "pylint",
     "unclip",
     "xyxy"
   ],
