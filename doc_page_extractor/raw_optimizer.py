@@ -3,7 +3,7 @@ import numpy as np
 from dataclasses import dataclass
 from PIL.Image import Image
 from math import pi
-from .types import OCRFragment, Layout
+from .types import Layout, OCRFragment
 from .rotation import calculate_rotation, RotationAdjuster
 from .rectangle import Rectangle
 

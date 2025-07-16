@@ -19,6 +19,8 @@
     "OONX",
     "paddleocr",
     "paddlepaddle",
+    "ppocr",
+    "ppocrv",
     "unclip",
     "xyxy"
   ],

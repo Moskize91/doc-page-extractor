@@ -50,12 +50,12 @@ class PlainLayout(BaseLayout):
 @dataclass
 class TableLayout(BaseLayout):
   parsed: tuple[str, TableLayoutParsedFormat] | None
-  cls: LayoutClass.TABLE
+  cls: Literal[LayoutClass.TABLE]
 
 @dataclass
 class FormulaLayout(BaseLayout):
   latex: str | None
-  cls: LayoutClass.ISOLATE_FORMULA
+  cls: Literal[LayoutClass.ISOLATE_FORMULA]
 
 Layout = PlainLayout | TableLayout | FormulaLayout
 

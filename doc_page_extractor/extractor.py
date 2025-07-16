@@ -1,7 +1,7 @@
 import torch
 
 from os import PathLike
-from typing import Literal, Generator
+from typing import cast, Any, Literal, Generator
 from PIL.Image import Image
 from doclayout_yolo import YOLOv10
 
@@ -99,7 +99,7 @@ class DocExtractor:
     # about source parameter to see:
     # https://github.com/opendatalab/DocLayout-YOLO/blob/7c4be36bc61f11b67cf4a44ee47f3c41e9800a91/doclayout_yolo/data/build.py#L157-L175
     det_res = self._get_yolo().predict(
-      source=source,
+      source=cast(Any, source),
       imgsz=1024,
       conf=0.2,
       device=self._device    # Device to use (e.g., "cuda" or "cpu")
@@ -180,7 +180,7 @@ class DocExtractor:
 
   def _find_matched_layout(self, fragment: OCRFragment, layouts: list[Layout]) -> Layout | None:
     fragment_area = fragment.rect.area
-    primary_layouts: list[(Layout, float)] = []
+    primary_layouts: list[tuple[Layout, float]] = []
 
     if fragment_area == 0.0:
       return None

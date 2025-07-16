@@ -64,7 +64,7 @@ class DataCollator:
     return ret
 
 
-def boxes2inputs(boxes: List[List[int]]) -> Dict[str, torch.Tensor]:
+def boxes2inputs(boxes: List[List[float]]) -> Dict[str, torch.Tensor]:
   bbox = [[0, 0, 0, 0]] + boxes + [[0, 0, 0, 0]]
   input_ids = [CLS_TOKEN_ID] + [UNK_TOKEN_ID] * len(boxes) + [EOS_TOKEN_ID]
   attention_mask = [1] + [1] * len(boxes) + [1]

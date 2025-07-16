@@ -1,4 +1,4 @@
-from typing import Generator
+from typing import cast, Generator
 from shapely.geometry import Polygon
 from .types import Layout, OCRFragment
 from .rectangle import Rectangle
@@ -92,7 +92,7 @@ def merge_fragments_as_line(origin_fragments: list[OCRFragment]) -> list[OCRFrag
       continue
 
     fragments.append(OCRFragment(
-      order=min_order,
+      order=round(min_order),
       text=" ".join(texts),
       rank=text_rate_weights / proto_texts_len,
       rect=Rectangle(
@@ -141,7 +141,7 @@ def _split_fragments_into_groups(fragments: list[OCRFragment]) -> Generator[list
 # they are very sensitive to changes in height because they are very thin and long.
 # In order to make it equally sensitive to length and width, the ratio of area is not used.
 def overlap_rate(polygon1: Polygon, polygon2: Polygon) -> float:
-  intersection: Polygon = polygon1.intersection(polygon2)
+  intersection = cast(Polygon, polygon1.intersection(polygon2))
   if intersection.is_empty:
     return 0.0
   else:

@@ -13,12 +13,12 @@ def clip(
     wrapped_width: float = 0.0,
     wrapped_height: float = 0.0,
   ) -> Image:
-  image: Image
+  image: Image | None
   if extracted_result.adjusted_image is None:
     image = extracted_result.extracted_image
   else:
     image = extracted_result.adjusted_image
-
+  assert image is not None, "Image must not be None"
   return clip_from_image(
     image, layout.rect,
     wrapped_width, wrapped_height,
@@ -91,7 +91,7 @@ def _size_and_wrapper(rect: Rectangle):
 
   return width, height, max_width, max_height
 
-def _to_pillow_matrix(matrix: np.array):
+def _to_pillow_matrix(matrix):
   return (
     matrix[0][0], matrix[0][1], matrix[0][2],
     matrix[1][0], matrix[1][1], matrix[1][2],
