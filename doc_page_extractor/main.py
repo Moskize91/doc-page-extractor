@@ -113,8 +113,8 @@ def main() -> None:
     params = {
         'image': "C:\\Users\\i\\Downloads\\ocr\\source.png",
         'use_gpu': True,
-        'resolution': 'base',
-        'prompt': '<image>\nFree OCR.',
+        'resolution': 'large',
+        'prompt': "<image>\n<|grounding|>Convert the document to markdown.",
     }
     # Validate image path
     image_path = params['image']
