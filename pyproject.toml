@@ -1,0 +1,31 @@
+[tool.poetry]
+name = "doc-page-extractor"
+version = "1.0.0"
+description = ""
+authors = ["taozeyu <i@taozeyu.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.14"
+transformers = "4.46.3"
+addict = "^2.4.0"
+einops = "^0.8.1"
+easydict = "^1.13"
+# Default: CPU version from PyPI
+torch = {version = "^2.5.1", source = "pytorch-cu121"}
+torchvision = {version = "^0.20.1", source = "pytorch-cu121"}
+
+[[tool.poetry.source]]
+name = "pytorch-cu121"
+url = "https://download.pytorch.org/whl/cu121"
+priority = "explicit"
+
+[[tool.poetry.source]]
+name = "pytorch-cu118"
+url = "https://download.pytorch.org/whl/cu118"
+priority = "explicit"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
