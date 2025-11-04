@@ -31,10 +31,10 @@ def parse_ocr_response(response: str, width: int, height: int) -> Generator[Pars
             coords_match = _DET_COORDS_PATTERN.search(content)
             if coords_match:
                 x1_norm, y1_norm, x2_norm, y2_norm = [int(c) for c in coords_match.groups()]
-                x1 = int(x1_norm / 1000 * width)
-                y1 = int(y1_norm / 1000 * height)
-                x2 = int(x2_norm / 1000 * width)
-                y2 = int(y2_norm / 1000 * height)
+                x1 = round(x1_norm / 1000 * width)
+                y1 = round(y1_norm / 1000 * height)
+                x2 = round(x2_norm / 1000 * width)
+                y2 = round(y2_norm / 1000 * height)
                 yield ParsedItemKind.DET, (x1, y1, x2, y2)
         elif tag_type == "ref":
             yield ParsedItemKind.REF, content

@@ -4,6 +4,8 @@ from PIL import Image
 
 from .model import DeepSeekOCRModel, DeepSeekOCRSize
 from .parser import parse_ocr_response, ParsedItemKind
+from .redacter import redact, background_color
+
 
 @dataclass
 class Layout:
@@ -15,18 +17,27 @@ class PageExtractor:
     def __init__(self) -> None:
         self._model: DeepSeekOCRModel = DeepSeekOCRModel()
 
-    def extract(self, image: Image.Image, size: DeepSeekOCRSize, stages: int = 1):
-        prompt = "<image>\n<|grounding|>Convert the document to markdown."
-        for _ in range(stages):
+    def extract(self, image: Image.Image, size: DeepSeekOCRSize, stages: int = 1) -> Generator[tuple[Image.Image, list[Layout]], None, None]:
+        assert stages >= 1, "stages must be at least 1"
+        fill_color: tuple[int, int, int] | None = None
+        for i in range(stages):
             response = self._model.generate(
+                prompt="<image>\n<|grounding|>Convert the document to markdown.",
                 image=image,
-                prompt=prompt,
                 size=size,
             )
             layouts: list[Layout] = []
             for det, ref, text in self._parse_response(image, response):
                 layouts.append(Layout(det, ref, text))
-            yield layouts
+            yield image, layouts
+            if i < stages - 1:
+                if fill_color is None:
+                    fill_color = background_color(image)
+                image = redact(
+                    image=image.copy(), 
+                    fill_color=fill_color,
+                    rectangles=(layout.det for layout in layouts),
+                )
 
     def _parse_response(self, image: Image.Image, response: str) -> Generator[tuple[str, tuple[int, int, int, int], str | None], None, None]:
         width, height = image.size

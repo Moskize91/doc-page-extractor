@@ -1,0 +1,116 @@
+from typing import cast, Generator, Iterable
+from PIL import Image, ImageDraw
+
+def redact(
+        image: Image.Image, 
+        fill_color: tuple[int, int, int], 
+        rectangles: Iterable[tuple[int, int, int, int]],
+    ) -> Image.Image:
+    draw = ImageDraw.Draw(image)
+    for x1, y1, x2, y2 in rectangles:
+        draw.rectangle((x1, y1, x2, y2), fill=fill_color)
+    return image
+
+class _AveragingColor:
+    def __init__(self) -> None:
+        self._r: float = 0.0
+        self._g: float = 0.0
+        self._b: float = 0.0
+        self._a: float = 0.0
+        self._count: int = 0
+
+    @property
+    def average(self) -> tuple[float, float, float, float]:
+        if self._count == 0:
+            return 1.0, 1.0, 1.0, 1.0
+        return (
+            self._r / self._count,
+            self._g / self._count,
+            self._b / self._count,
+            self._a / self._count,
+        )
+
+    def add_color(self, r: float, g: float, b: float, a: float) -> None:
+        self._r += r
+        self._g += g
+        self._b += b
+        self._a += a
+        self._count += 1
+
+    def add_another(self, another: "_AveragingColor") -> None:
+        self._r += another._r
+        self._g += another._g
+        self._b += another._b
+        self._a += another._a
+        self._count += another._count
+
+def background_color(image: Image.Image) -> tuple[int, int, int]:
+    """取像素灰度的中位数，一般是纸张的颜色，故为背景色"""
+    bucket: list[_AveragingColor | None] = [None] * 256
+    count: int = 0
+    for r, g, b, a in _iter_pixels(image):
+        gray = round(255 * _gray(r, g, b, a))
+        colors = bucket[gray]
+        if colors is None:
+            colors = _AveragingColor()
+            bucket[gray] = colors
+            count += 1
+        colors.add_color(r, g, b, a)
+
+    if count == 0:
+        return 255, 255, 255
+    
+    middle_index: int
+    middle_count: int
+    if count % 2 == 0:
+        middle_count = 2
+        middle_index = count // 2 - 1
+    else:
+        middle_count = 1
+        middle_index = count // 2
+
+    middle_colors = _AveragingColor()
+    for colors in bucket:
+        if not colors:
+            continue
+        if middle_index == 0:
+            middle_colors.add_another(colors)
+            middle_count -= 1
+            if middle_count == 0:
+                break
+        else:
+            middle_index -= 1
+
+    r, g, b, a = middle_colors.average
+
+    # 背景色为白色
+    r = r * a + 1.0 * (1.0 - a)
+    g = g * a + 1.0 * (1.0 - a)
+    b = b * a + 1.0 * (1.0 - a)
+
+    return round(r * 255), round(g * 255), round(b * 255)
+
+def _gray(r: float, g: float, b: float, a: float) -> float:
+    # ITU-R BT.601 https://en.wikipedia.org/wiki/Rec._601
+    gray = 0.299 * r + 0.587 * g + 0.114 * b
+    return gray * a
+
+def _iter_pixels(image: Image.Image) -> Generator[tuple[float, float, float, float], None, None]:
+    for pixel in image.getdata():
+        pixel_len = len(cast(tuple, pixel)) if isinstance(pixel, tuple) else 1
+        if pixel_len == 4:
+            # RGBA 格式
+            r, g, b, a = cast(tuple[int, int, int, int], pixel)
+        elif pixel_len == 3:
+            # RGB 格式
+            r, g, b = cast(tuple[int, int, int], pixel)
+            a = 255
+        elif pixel_len == 2:
+            # LA 格式 (灰度 + alpha)
+            l, a = cast(tuple[int, int], pixel)
+            r = g = b = l
+        else:
+            # L 格式 (灰度)
+            r = g = b = cast(int, pixel)
+            a = 255
+        yield (r / 255.0, g / 255.0, b / 255.0, a / 255.0)
