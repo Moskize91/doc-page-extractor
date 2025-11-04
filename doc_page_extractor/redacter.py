@@ -20,6 +20,10 @@ class _AveragingColor:
         self._count: int = 0
 
     @property
+    def count(self) -> int:
+        return self._count
+
+    @property
     def average(self) -> tuple[float, float, float, float]:
         if self._count == 0:
             return 1.0, 1.0, 1.0, 1.0
@@ -37,51 +41,34 @@ class _AveragingColor:
         self._a += a
         self._count += 1
 
-    def add_another(self, another: "_AveragingColor") -> None:
-        self._r += another._r
-        self._g += another._g
-        self._b += another._b
-        self._a += another._a
-        self._count += another._count
-
 def background_color(image: Image.Image) -> tuple[int, int, int]:
-    """取像素灰度的中位数，一般是纸张的颜色，故为背景色"""
+    """将像素颜色按灰度排序，取中位颜色。此颜色与纸张的颜色相同，可做背景色"""
+    pixels_count = image.width * image.height
+    if pixels_count == 0:
+        return 255, 255, 255
+
     bucket: list[_AveragingColor | None] = [None] * 256
-    count: int = 0
     for r, g, b, a in _iter_pixels(image):
         gray = round(255 * _gray(r, g, b, a))
         colors = bucket[gray]
         if colors is None:
             colors = _AveragingColor()
             bucket[gray] = colors
-            count += 1
         colors.add_color(r, g, b, a)
 
-    if count == 0:
-        return 255, 255, 255
-    
-    middle_index: int
-    middle_count: int
-    if count % 2 == 0:
-        middle_count = 2
-        middle_index = count // 2 - 1
-    else:
-        middle_count = 1
-        middle_index = count // 2
+    offset: int = 0
+    found_colors: _AveragingColor | None = None
 
-    middle_colors = _AveragingColor()
     for colors in bucket:
         if not colors:
             continue
-        if middle_index == 0:
-            middle_colors.add_another(colors)
-            middle_count -= 1
-            if middle_count == 0:
-                break
-        else:
-            middle_index -= 1
+        offset += colors.count
+        if offset > pixels_count // 2:
+            found_colors = colors
+            break
 
-    r, g, b, a = middle_colors.average
+    assert found_colors is not None
+    r, g, b, a = found_colors.average
 
     # 背景色为白色
     r = r * a + 1.0 * (1.0 - a)
