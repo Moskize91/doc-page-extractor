@@ -5,7 +5,7 @@ from doc_page_extractor import plot, PageExtractor
 def main() -> None:
     project_root = Path(__file__).parent
     image_dir_path = project_root / "tests" / "images"
-    image_name = "figure.png"
+    image_name = "double_column.png"
     extractor = PageExtractor()
 
     plot_dir = project_root / "plot"

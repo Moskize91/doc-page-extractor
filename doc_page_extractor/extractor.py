@@ -31,8 +31,8 @@ class PageExtractor:
                     size=size,
                 )
                 layouts: list[Layout] = []
-                for det, ref, text in self._parse_response(image, response):
-                    layouts.append(Layout(det, ref, text))
+                for ref, det, text in self._parse_response(image, response):
+                    layouts.append(Layout(ref, det, text))
                 yield image, layouts
                 if i < stages - 1:
                     if fill_color is None:

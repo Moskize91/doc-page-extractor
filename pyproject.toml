@@ -1,20 +1,45 @@
-[tool.poetry]
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[project]
 name = "doc-page-extractor"
 version = "1.0.0"
-description = ""
-authors = ["taozeyu <i@taozeyu.com>"]
-license = "MIT"
+description = "Document page extraction tool powered by DeepSeek-OCR"
+authors = [
+    {name = "Tao Zeyu", email = "i@taozeyu.com"}
+]
+maintainers = [
+    {name = "Tao Zeyu", email = "i@taozeyu.com"}
+]
+license = {text = "MIT"}
 readme = "README.md"
+requires-python = ">=3.10,<3.14"
+# Core dependencies (torch and torchvision are NOT included - users must install manually)
+dependencies = [
+    "transformers>=4.46.0,<4.48.0",
+    "addict>=2.4.0",
+    "einops>=0.8.0",
+    "easydict>=1.13",
+]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
 
-[tool.poetry.dependencies]
-python = ">=3.10,<3.14"
-transformers = ">=4.46.0,<4.48.0"
-addict = "^2.4.0"
-einops = "^0.8.1"
-easydict = "^1.13"
-# Default: CPU version from PyPI
-torch = {version = "^2.5.1", source = "pytorch-cu121"}
-torchvision = {version = "^0.20.1", source = "pytorch-cu121"}
+[project.urls]
+Repository = "https://github.com/moskize91/doc-page-extractor"
+
+[tool.poetry]
+packages = [
+    {include = "doc_page_extractor"}
+]
 
 [[tool.poetry.source]]
 name = "pytorch-cu121"
@@ -26,6 +51,11 @@ name = "pytorch-cu118"
 url = "https://download.pytorch.org/whl/cu118"
 priority = "explicit"
 
-[build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
+[tool.poetry.group.dev.dependencies]
+pylint = "^3.3.7"
+# Development environment includes CUDA 12.1 PyTorch
+torch = {version = "^2.5.1", source = "pytorch-cu121"}
+torchvision = {version = "^0.20.1", source = "pytorch-cu121"}
+
+[tool.poetry.build]
+generate-setup-file = false

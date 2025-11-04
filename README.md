@@ -4,74 +4,90 @@ Document page extraction tool powered by DeepSeek-OCR.
 
 ## Installation
 
-### Quick Start (CPU Version)
+> **⚠️ Important:** This package requires PyTorch with CUDA support (GPU Required). PyTorch is NOT automatically installed - you must install it manually first.
+
+### Step 1: Install PyTorch with CUDA
+
+Choose the command that matches your CUDA version:
+
+```bash
+# For CUDA 12.1 (recommended for most users)
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+
+# For CUDA 11.8
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
+
+# For CUDA 12.6
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu126
+```
+
+> 💡 **Don't know your CUDA version?** Run `nvidia-smi` to check, or just try CUDA 12.1 (works with most recent drivers).
+
+### Step 2: Install doc-page-extractor
 
 ```bash
 pip install doc-page-extractor
 ```
 
-Or with Poetry:
+### Verify Installation
+
+Check if everything is working:
 
 ```bash
-poetry add doc-page-extractor
+python -c "import doc_page_extractor; import torch; print('✓ Installation successful!'); print('✓ CUDA available:', torch.cuda.is_available())"
 ```
 
-### GPU Support (Optional)
-
-If you have an NVIDIA GPU and want faster inference, upgrade PyTorch to CUDA version after installation.
-
-**For CUDA 12.1:**
-
-With pip:
-```bash
-pip install doc-page-extractor
-pip install --upgrade torch torchvision --index-url https://download.pytorch.org/whl/cu121
+Expected output:
+```
+✓ Installation successful!
+✓ CUDA available: True
 ```
 
-With Poetry:
-```bash
-poetry add doc-page-extractor
-poetry add torch@latest torchvision@latest --source https://download.pytorch.org/whl/cu121
-```
-
-**For CUDA 11.8:**
-
-With pip:
-```bash
-pip install doc-page-extractor
-pip install --upgrade torch torchvision --index-url https://download.pytorch.org/whl/cu118
-```
-
-With Poetry:
-```bash
-poetry add doc-page-extractor
-poetry add torch@latest torchvision@latest --source https://download.pytorch.org/whl/cu118
-```
+If CUDA shows `False`, see the troubleshooting section below.
 
 ## Usage
 
 ```python
-from doc_page_extractor import main
+from doc_page_extractor import PageExtractor
 
 # Your code here
 ```
 
-## Verify Installation
+## Troubleshooting
 
-Check if CUDA is available:
+### "PyTorch is required but not installed!"
 
+Install PyTorch first:
 ```bash
-python -c "import torch; print('PyTorch:', torch.__version__); print('CUDA available:', torch.cuda.is_available())"
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 ```
 
-Expected output for GPU:
+### "CUDA is not available!"
+
+**Check your GPU driver:**
+```bash
+nvidia-smi
 ```
-PyTorch: 2.5.1+cu121
-CUDA available: True
+
+**If the command fails**, you need to install NVIDIA drivers:
+- Download from: https://www.nvidia.com/download/index.aspx
+
+**If it succeeds**, you might have CPU-only PyTorch. Reinstall with CUDA:
+```bash
+pip uninstall torch torchvision
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 ```
 
 ## Requirements
 
 - Python >= 3.10, < 3.14
-- For GPU: NVIDIA GPU with CUDA 11.8 or 12.1 support
-- For CPU: Any system with sufficient RAM (slower inference)
+- **NVIDIA GPU with CUDA 11.8 or 12.1 support (Required)**
+- Sufficient GPU memory (recommended: 4GB+ VRAM)
+
+## Development
+
+For contributors and developers, see [Development Guide](docs/DEVELOPMENT.md) for:
+- Running tests
+- Running lint checks
+- Building the package
+

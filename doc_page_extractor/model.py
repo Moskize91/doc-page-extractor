@@ -24,7 +24,7 @@ _SIZE_CONFIGS: dict[DeepSeekOCRSize, _SizeConfig] = {
 
 _ATTN_IMPLEMENTATION: str
 try:
-    import flash_attn # type: ignore
+    import flash_attn # type: ignore # pylint: disable=unused-import
     _ATTN_IMPLEMENTATION = "flash_attention_2"
 except ImportError:
     _ATTN_IMPLEMENTATION = "eager"
