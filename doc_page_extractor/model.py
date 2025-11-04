@@ -1,6 +1,5 @@
 import os
 import torch
-import tempfile
 
 from typing import Literal
 from dataclasses import dataclass
@@ -45,21 +44,20 @@ class DeepSeekOCRModel:
         )
         self._model = self._model.cuda().to(torch.bfloat16)
 
-    def generate(self, image: Image.Image, prompt: str, size: DeepSeekOCRSize):
+    def generate(self, image: Image.Image, prompt: str, temp_path: str, size: DeepSeekOCRSize):
         config = _SIZE_CONFIGS[size]
-        with tempfile.TemporaryDirectory() as temp_path:
-            temp_image_path = os.path.join(temp_path, "temp_image.png")
-            image.save(temp_image_path)
-            text_result = self._model.infer(
-                self._tokenizer,
-                prompt=prompt,
-                image_file=temp_image_path,
-                output_path=temp_path,
-                base_size=config.base_size,
-                image_size=config.image_size,
-                crop_mode=config.crop_mode,
-                save_results=True,
-                test_compress=True,
-                eval_mode=True,
-            )
+        temp_image_path = os.path.join(temp_path, "temp_image.png")
+        image.save(temp_image_path)
+        text_result = self._model.infer(
+            self._tokenizer,
+            prompt=prompt,
+            image_file=temp_image_path,
+            output_path=temp_path,
+            base_size=config.base_size,
+            image_size=config.image_size,
+            crop_mode=config.crop_mode,
+            save_results=True,
+            test_compress=True,
+            eval_mode=True,
+        )
         return text_result

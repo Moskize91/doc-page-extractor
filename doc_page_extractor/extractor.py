@@ -1,3 +1,5 @@
+import tempfile
+
 from dataclasses import dataclass
 from typing import Generator, cast
 from PIL import Image
@@ -19,25 +21,27 @@ class PageExtractor:
 
     def extract(self, image: Image.Image, size: DeepSeekOCRSize, stages: int = 1) -> Generator[tuple[Image.Image, list[Layout]], None, None]:
         assert stages >= 1, "stages must be at least 1"
-        fill_color: tuple[int, int, int] | None = None
-        for i in range(stages):
-            response = self._model.generate(
-                prompt="<image>\n<|grounding|>Convert the document to markdown.",
-                image=image,
-                size=size,
-            )
-            layouts: list[Layout] = []
-            for det, ref, text in self._parse_response(image, response):
-                layouts.append(Layout(det, ref, text))
-            yield image, layouts
-            if i < stages - 1:
-                if fill_color is None:
-                    fill_color = background_color(image)
-                image = redact(
-                    image=image.copy(), 
-                    fill_color=fill_color,
-                    rectangles=(layout.det for layout in layouts),
+        with tempfile.TemporaryDirectory() as temp_path:
+            fill_color: tuple[int, int, int] | None = None
+            for i in range(stages):
+                response = self._model.generate(
+                    image=image,
+                    prompt="<image>\n<|grounding|>Convert the document to markdown.",
+                    temp_path=temp_path,
+                    size=size,
                 )
+                layouts: list[Layout] = []
+                for det, ref, text in self._parse_response(image, response):
+                    layouts.append(Layout(det, ref, text))
+                yield image, layouts
+                if i < stages - 1:
+                    if fill_color is None:
+                        fill_color = background_color(image)
+                    image = redact(
+                        image=image.copy(), 
+                        fill_color=fill_color,
+                        rectangles=(layout.det for layout in layouts),
+                    )
 
     def _parse_response(self, image: Image.Image, response: str) -> Generator[tuple[str, tuple[int, int, int, int], str | None], None, None]:
         width, height = image.size

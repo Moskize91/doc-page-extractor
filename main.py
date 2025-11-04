@@ -1,10 +1,14 @@
+from pathlib import Path
 from PIL import Image
 from doc_page_extractor import PageExtractor
 
 def main() -> None:
+    project_root = Path(__file__).parent
+    image_dir_path = project_root / "tests" / "images"
     extractor = PageExtractor()
+
     for _, layouts in extractor.extract(
-        image=Image.open("C:\\Users\\i\\codes\\github.com\\moskize91\\doc-page-extractor\\tests\\images\\page3.png"),
+        image=Image.open(image_dir_path / "lost-citation.png"),
         size="gundam",
         stages=2,
     ):
