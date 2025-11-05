@@ -13,8 +13,8 @@ class ParsedItemKind(Enum):
     TEXT = auto()
 
 ParsedItem = (
-    tuple[ParsedItemKind.DET, tuple[int, int, int, int]] | 
-    tuple[ParsedItemKind.REF, str] | 
+    tuple[ParsedItemKind.DET, tuple[int, int, int, int]] |
+    tuple[ParsedItemKind.REF, str] |
     tuple[ParsedItemKind.TEXT, str]
 )
 
@@ -39,7 +39,7 @@ def parse_ocr_response(response: str, width: int, height: int) -> Generator[Pars
         elif tag_type == "ref":
             yield ParsedItemKind.REF, content
         last_end = matched.end()
-    
+
     if last_end < len(response):
         plain_text = response[last_end:]
         if plain_text:

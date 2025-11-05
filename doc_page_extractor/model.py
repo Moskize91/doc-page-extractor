@@ -37,7 +37,7 @@ class DeepSeekOCRModel:
             trust_remote_code=True
         )
         self._model = AutoModel.from_pretrained(
-            pretrained_model_name_or_path=model_name, 
+            pretrained_model_name_or_path=model_name,
             _attn_implementation=_ATTN_IMPLEMENTATION,
             trust_remote_code=True,
             use_safetensors=True,

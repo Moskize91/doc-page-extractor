@@ -1,9 +1,10 @@
-from typing import cast, Generator, Iterable
+from typing import cast, Any, Generator, Iterable
 from PIL import Image, ImageDraw
 
+
 def redact(
-        image: Image.Image, 
-        fill_color: tuple[int, int, int], 
+        image: Image.Image,
+        fill_color: tuple[int, int, int],
         rectangles: Iterable[tuple[int, int, int, int]],
     ) -> Image.Image:
     draw = ImageDraw.Draw(image)
@@ -83,7 +84,7 @@ def _gray(r: float, g: float, b: float, a: float) -> float:
     return gray * a
 
 def _iter_pixels(image: Image.Image) -> Generator[tuple[float, float, float, float], None, None]:
-    for pixel in image.getdata():
+    for pixel in cast(Any, image.getdata()):
         pixel_len = len(cast(tuple, pixel)) if isinstance(pixel, tuple) else 1
         if pixel_len == 4:
             # RGBA 格式

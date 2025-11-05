@@ -38,7 +38,7 @@ class PageExtractor:
                     if fill_color is None:
                         fill_color = background_color(image)
                     image = redact(
-                        image=image.copy(), 
+                        image=image.copy(),
                         fill_color=fill_color,
                         rectangles=(layout.det for layout in layouts),
                     )
