@@ -6,6 +6,7 @@ from os import PathLike
 from pathlib import Path
 from PIL import Image
 
+from .check_env import check_env
 from .model import DeepSeekOCRModel, DeepSeekOCRSize
 from .parser import parse_ocr_response, ParsedItemKind
 from .redacter import redact, background_color
@@ -30,6 +31,7 @@ class PageExtractor:
         self._model.load()
 
     def extract(self, image: Image.Image, size: DeepSeekOCRSize, stages: int = 1) -> Generator[tuple[Image.Image, list[Layout]], None, None]:
+        check_env()
         assert stages >= 1, "stages must be at least 1"
         with tempfile.TemporaryDirectory() as temp_path:
             fill_color: tuple[int, int, int] | None = None
