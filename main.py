@@ -6,7 +6,7 @@ def main() -> None:
     project_root = Path(__file__).parent
     image_dir_path = project_root / "tests" / "images"
     image_name = "double_column.png"
-    extractor = PageExtractor()
+    extractor = PageExtractor(project_root / "models-cache")
 
     plot_dir = project_root / "plot"
     plot_dir.mkdir(exist_ok=True)

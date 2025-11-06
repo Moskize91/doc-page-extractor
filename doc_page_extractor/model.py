@@ -1,9 +1,11 @@
 import os
+from pathlib import Path
 import torch
 
-from typing import Literal
+from typing import Any, Literal
 from dataclasses import dataclass
 from transformers import AutoModel, AutoTokenizer
+from huggingface_hub import snapshot_download
 from PIL import Image
 
 DeepSeekOCRSize = Literal["tiny", "small", "base", "large", "gundam"]
@@ -29,27 +31,50 @@ try:
 except ImportError:
     _ATTN_IMPLEMENTATION = "eager"
 
-class DeepSeekOCRModel:
-    def __init__(self) -> None:
-        model_name = "deepseek-ai/DeepSeek-OCR"
-        self._tokenizer = AutoTokenizer.from_pretrained(
-            model_name,
-            trust_remote_code=True
-        )
-        self._model = AutoModel.from_pretrained(
-            pretrained_model_name_or_path=model_name,
-            _attn_implementation=_ATTN_IMPLEMENTATION,
-            trust_remote_code=True,
-            use_safetensors=True,
-        )
-        self._model = self._model.cuda().to(torch.bfloat16)
+_Models = tuple[Any, Any]
 
-    def generate(self, image: Image.Image, prompt: str, temp_path: str, size: DeepSeekOCRSize):
+class DeepSeekOCRModel:
+    def __init__(self, model_path: Path | None) -> None:
+        self._model_name = "deepseek-ai/DeepSeek-OCR"
+        self._cache_dir = str(model_path) if model_path else None
+        self._models: _Models | None = None
+
+    def download(self) -> None:
+        snapshot_download(
+            repo_id=self._model_name,
+            repo_type="model",
+            cache_dir=self._cache_dir,
+        )
+
+    def load(self) -> None:
+        self._ensure_models()
+
+    def _ensure_models(self) -> _Models:
+        if self._models is None:
+            tokenizer = AutoTokenizer.from_pretrained(
+                self._model_name,
+                trust_remote_code=True,
+                cache_dir=self._cache_dir,
+            )
+            model = AutoModel.from_pretrained(
+                pretrained_model_name_or_path=self._model_name,
+                _attn_implementation=_ATTN_IMPLEMENTATION,
+                trust_remote_code=True,
+                use_safetensors=True,
+                cache_dir=self._cache_dir,
+            )
+            model = model.cuda().to(torch.bfloat16)
+            self._models = (tokenizer, model)
+
+        return self._models
+
+    def generate(self, image: Image.Image, prompt: str, temp_path: str, size: DeepSeekOCRSize) -> str:
+        tokenizer, model = self._ensure_models()
         config = _SIZE_CONFIGS[size]
         temp_image_path = os.path.join(temp_path, "temp_image.png")
         image.save(temp_image_path)
-        text_result = self._model.infer(
-            self._tokenizer,
+        text_result = model.infer(
+            tokenizer,
             prompt=prompt,
             image_file=temp_image_path,
             output_path=temp_path,

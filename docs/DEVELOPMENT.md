@@ -2,6 +2,12 @@
 
 ## Setup
 
+Setup Conda
+```shell
+conda create -p ./env python=3.11.14
+conda activate ./env
+```
+
 Install dependencies:
 
 ```shell

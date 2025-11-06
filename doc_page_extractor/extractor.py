@@ -2,6 +2,8 @@ import tempfile
 
 from dataclasses import dataclass
 from typing import Generator, cast
+from os import PathLike
+from pathlib import Path
 from PIL import Image
 
 from .model import DeepSeekOCRModel, DeepSeekOCRSize
@@ -16,8 +18,16 @@ class Layout:
     text: str | None
 
 class PageExtractor:
-    def __init__(self) -> None:
-        self._model: DeepSeekOCRModel = DeepSeekOCRModel()
+    def __init__(self, model_path: PathLike | None = None) -> None:
+        self._model: DeepSeekOCRModel = DeepSeekOCRModel(
+            model_path=Path(model_path) if model_path else None,
+        )
+
+    def download_models(self) -> None:
+        self._model.download()
+
+    def load_models(self) -> None:
+        self._model.load()
 
     def extract(self, image: Image.Image, size: DeepSeekOCRSize, stages: int = 1) -> Generator[tuple[Image.Image, list[Layout]], None, None]:
         assert stages >= 1, "stages must be at least 1"
