@@ -6,7 +6,7 @@ _env_checked = False
 
 
 def check_env() -> None:
-    global _env_checked
+    global _env_checked  # pylint: disable=global-statement
     if _env_checked:
         return
     _env_checked = True

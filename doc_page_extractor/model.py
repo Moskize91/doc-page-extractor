@@ -39,8 +39,11 @@ _Models = tuple[Any, Any]
 
 class DeepSeekOCRModel:
     def __init__(self, model_path: Path | None, local_only: bool) -> None:
+        if local_only and model_path is None:
+            raise ValueError("model_path must be provided when local_only is True")
+
         self._model_name = "deepseek-ai/DeepSeek-OCR"
-        self._cache_dir = str(model_path) if model_path else None
+        self._model_path: Path | None = model_path
         self._local_only = local_only
         self._models: _Models | None = None
 
@@ -48,32 +51,18 @@ class DeepSeekOCRModel:
         snapshot_download(
             repo_id=self._model_name,
             repo_type="model",
-            cache_dir=self._cache_dir,
+            cache_dir=self._cache_dir(),
         )
+        if self._model_path is not None and self._find_pretrained_path() is None:
+            raise RuntimeError(
+                f"Model downloaded but not found in expected cache structure. "
+                f"Expected path: {self._model_path}/models--deepseek-ai--DeepSeek-OCR/snapshots/. "
+                f"This may indicate a Hugging Face cache structure change. "
+                f"Please report this issue."
+            )
 
     def load(self) -> None:
         self._ensure_models()
-
-    def _ensure_models(self) -> _Models:
-        if self._models is None:
-            tokenizer = AutoTokenizer.from_pretrained(
-                self._model_name,
-                trust_remote_code=True,
-                cache_dir=self._cache_dir,
-                local_files_only=self._local_only,
-            )
-            model = AutoModel.from_pretrained(
-                pretrained_model_name_or_path=self._model_name,
-                _attn_implementation=_ATTN_IMPLEMENTATION,
-                trust_remote_code=True,
-                use_safetensors=True,
-                cache_dir=self._cache_dir,
-                local_files_only=self._local_only,
-            )
-            model = model.cuda().to(torch.bfloat16)
-            self._models = (tokenizer, model)
-
-        return self._models
 
     def generate(
         self, image: Image.Image, prompt: str, temp_path: str, size: DeepSeekOCRSize
@@ -95,3 +84,69 @@ class DeepSeekOCRModel:
             eval_mode=True,
         )
         return text_result
+
+    def _ensure_models(self) -> _Models:
+        if self._models is not None:
+            return self._models
+
+        name_or_path = self._model_name
+        cache_dir: str | None = None
+
+        if self._local_only:
+            name_or_path = self._find_pretrained_path()
+            if name_or_path is None:
+                raise ValueError(
+                    f"Local model not found at {self._model_path}. "
+                    f"Expected Hugging Face cache structure: "
+                    f"{self._model_path}/models--deepseek-ai--DeepSeek-OCR/snapshots/[hash]/. "
+                    f"Please run download_models() first to download the model."
+                )
+        else:
+            cache_dir = self._cache_dir()
+
+        tokenizer = AutoTokenizer.from_pretrained(
+            pretrained_model_name_or_path=name_or_path,
+            trust_remote_code=True,
+            cache_dir=cache_dir,
+            local_files_only=self._local_only,
+        )
+        model = AutoModel.from_pretrained(
+            pretrained_model_name_or_path=name_or_path,
+            _attn_implementation=_ATTN_IMPLEMENTATION,
+            trust_remote_code=True,
+            use_safetensors=True,
+            cache_dir=cache_dir,
+            local_files_only=self._local_only,
+        )
+        model = model.cuda().to(torch.bfloat16)
+        self._models = (tokenizer, model)
+
+        return self._models
+
+    def _cache_dir(self) -> str | None:
+        if self._model_path is not None:
+            return str(self._model_path)
+        return None
+
+    def _find_pretrained_path(self) -> str | None:
+        # Hugging Face 缓存结构: cache_dir/models--{org}--{model}/snapshots/{hash}/
+        assert self._model_path is not None
+        cache_model_dir = self._model_path / "models--deepseek-ai--DeepSeek-OCR"
+        if not cache_model_dir.exists():
+            return None
+
+        ref_file = cache_model_dir / "refs" / "main"
+        if ref_file.exists() and ref_file.is_file():
+            snapshot_hash = ref_file.read_text().strip()
+            snapshot_path = cache_model_dir / "snapshots" / snapshot_hash
+            if snapshot_path.exists() and snapshot_path.is_dir():
+                return str(snapshot_path)
+
+        snapshots_dir = cache_model_dir / "snapshots"
+        if not snapshots_dir.exists():
+            return None
+        snapshot_dirs = [d for d in snapshots_dir.iterdir() if d.is_dir()]
+        if not snapshot_dirs:
+            return None
+        latest_snapshot = max(snapshot_dirs, key=lambda d: d.stat().st_mtime)
+        return str(latest_snapshot)
