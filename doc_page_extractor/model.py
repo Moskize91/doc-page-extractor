@@ -39,10 +39,19 @@ _Models = tuple[Any, Any]
 
 class DeepSeekOCRModel:
     def __init__(self, model_path: Path | None, local_only: bool) -> None:
+        if local_only and model_path is None:
+            raise ValueError("model_path must be provided when local_only is True")
+
         self._model_name = "deepseek-ai/DeepSeek-OCR"
         self._cache_dir = str(model_path) if model_path else None
-        self._local_only = local_only
         self._models: _Models | None = None
+
+        if local_only:
+            self._pretrained_model_name_or_path = str(model_path)
+            self._local_files_only = True
+        else:
+            self._pretrained_model_name_or_path = self._model_name
+            self._local_files_only = False
 
     def download(self) -> None:
         snapshot_download(
@@ -57,18 +66,18 @@ class DeepSeekOCRModel:
     def _ensure_models(self) -> _Models:
         if self._models is None:
             tokenizer = AutoTokenizer.from_pretrained(
-                self._model_name,
+                self._pretrained_model_name_or_path,
                 trust_remote_code=True,
                 cache_dir=self._cache_dir,
-                local_files_only=self._local_only,
+                local_files_only=self._local_files_only,
             )
             model = AutoModel.from_pretrained(
-                pretrained_model_name_or_path=self._model_name,
+                pretrained_model_name_or_path=self._pretrained_model_name_or_path,
                 _attn_implementation=_ATTN_IMPLEMENTATION,
                 trust_remote_code=True,
                 use_safetensors=True,
                 cache_dir=self._cache_dir,
-                local_files_only=self._local_only,
+                local_files_only=self._local_files_only,
             )
             model = model.cuda().to(torch.bfloat16)
             self._models = (tokenizer, model)
