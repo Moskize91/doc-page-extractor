@@ -4,8 +4,8 @@
 
 Setup Conda
 ```shell
-conda create -p ./env python=3.11.14
-conda activate ./env
+conda create -p ./.conda python=3.11.14
+conda activate ./.conda
 ```
 
 Install dependencies:
@@ -34,6 +34,21 @@ Or directly:
 
 ```shell
 poetry run pylint doc_page_extractor
+```
+
+### macOS Development Setup
+
+For macOS developers, PyTorch CUDA version is not compatible. Use the following steps:
+
+```shell
+# Install only main dependencies first (skip dev group to avoid CUDA installation)
+poetry install --without dev
+
+# Install PyTorch CPU version
+poetry run pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+
+# Install other dev dependencies (pylint, etc.)
+poetry install --only dev
 ```
 
 ### Build Package
