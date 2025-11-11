@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "doc-page-extractor"
-version = "1.0.1"
+version = "1.0.2"
 description = "Document page extraction tool powered by DeepSeek-OCR"
 authors = [
     {name = "Tao Zeyu", email = "i@taozeyu.com"}
