@@ -1,8 +1,9 @@
-import torch
 import warnings
 
+import torch
 
 _env_checked = False
+
 
 def check_env() -> None:
     global _env_checked
@@ -35,5 +36,5 @@ def check_env() -> None:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         """.strip(),
         RuntimeWarning,
-        stacklevel=2
+        stacklevel=2,
     )

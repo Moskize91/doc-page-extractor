@@ -1,18 +1,26 @@
-from typing import cast, Iterable
+from typing import Iterable, cast
+
 from PIL import ImageDraw
-from PIL.ImageFont import load_default, FreeTypeFont
 from PIL.Image import Image
+from PIL.ImageFont import FreeTypeFont, load_default
 
 from .extractor import Layout
 
-_FRAGMENT_COLOR = (0x49, 0xCF, 0xCB) # Light Green
+_FRAGMENT_COLOR = (0x49, 0xCF, 0xCB)  # Light Green
 _Color = tuple[int, int, int]
+
 
 def plot(image: Image, layouts: Iterable[Layout]) -> Image:
     layout_font = cast(FreeTypeFont, load_default(size=35))
     draw = ImageDraw.Draw(image, mode="RGBA")
 
-    def _draw_text(position: tuple[int, int], text: str, font: FreeTypeFont, bold: bool, color: _Color) -> None:
+    def _draw_text(
+        position: tuple[int, int],
+        text: str,
+        font: FreeTypeFont,
+        bold: bool,
+        color: _Color,
+    ) -> None:
         nonlocal draw
         x, y = position
         bbox = font.getbbox(text)
@@ -21,10 +29,10 @@ def plot(image: Image, layouts: Iterable[Layout]) -> Image:
 
         for dx, dy in _generate_delta(bold):
             draw.text(
-                    xy=(x + dx - text_width - offset, y + dy),
-                    text=text,
-                    font=font,
-                    fill=color,
+                xy=(x + dx - text_width - offset, y + dy),
+                text=text,
+                font=font,
+                fill=color,
             )
 
     for layout in layouts:
@@ -45,6 +53,7 @@ def plot(image: Image, layouts: Iterable[Layout]) -> Image:
             color=_FRAGMENT_COLOR,
         )
     return image
+
 
 def _generate_delta(bold: bool):
     if bold:

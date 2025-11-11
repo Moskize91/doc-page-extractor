@@ -24,4 +24,9 @@
         },
         "files.trimTrailingWhitespace": true
     },
+    "cSpell.words": [
+        "gundam",
+        "huggingface",
+        "redacter"
+    ],
 }

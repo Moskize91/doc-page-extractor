@@ -1,29 +1,37 @@
 from pathlib import Path
+
 from PIL import Image
-from doc_page_extractor import plot, PageExtractor
+
+from doc_page_extractor import PageExtractor, plot
+
 
 def main() -> None:
     project_root = Path(__file__).parent
     image_dir_path = project_root / "tests" / "images"
     image_name = "double_column.png"
-    extractor = PageExtractor(project_root / "models-cache")
-
+    extractor = PageExtractor(
+        model_path=project_root / "models-cache",
+        local_only=False,
+    )
     plot_dir = project_root / "plot"
     plot_dir.mkdir(exist_ok=True)
     name_stem = Path(image_name).stem
     name_suffix = Path(image_name).suffix
 
-    for i, (image, layouts) in enumerate(extractor.extract(
-        image=Image.open(image_dir_path / image_name),
-        size="gundam",
-        stages=2,
-    )):
+    for i, (image, layouts) in enumerate(
+        extractor.extract(
+            image=Image.open(image_dir_path / image_name),
+            size="gundam",
+            stages=2,
+        )
+    ):
         print("Layouts:")
         for layout in layouts:
             print(f"  Ref: {layout.ref}, Det: {layout.det}, Text: {layout.text}")
         image = plot(image.copy(), layouts)
         output_path = plot_dir / f"{name_stem}_{i}{name_suffix}"
         image.save(output_path)
+
 
 if __name__ == "__main__":
     main()

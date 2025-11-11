@@ -1,15 +1,15 @@
 import tempfile
-
 from dataclasses import dataclass
-from typing import Generator, cast
 from os import PathLike
 from pathlib import Path
+from typing import Generator, cast
+
 from PIL import Image
 
 from .check_env import check_env
 from .model import DeepSeekOCRModel, DeepSeekOCRSize
-from .parser import parse_ocr_response, ParsedItemKind
-from .redacter import redact, background_color
+from .parser import ParsedItemKind, parse_ocr_response
+from .redacter import background_color, redact
 
 
 @dataclass
@@ -18,10 +18,16 @@ class Layout:
     det: tuple[int, int, int, int]
     text: str | None
 
+
 class PageExtractor:
-    def __init__(self, model_path: PathLike | None = None) -> None:
+    def __init__(
+        self,
+        model_path: PathLike | None = None,
+        local_only: bool = False,
+    ) -> None:
         self._model: DeepSeekOCRModel = DeepSeekOCRModel(
             model_path=Path(model_path) if model_path else None,
+            local_only=local_only,
         )
 
     def download_models(self) -> None:
@@ -30,7 +36,9 @@ class PageExtractor:
     def load_models(self) -> None:
         self._model.load()
 
-    def extract(self, image: Image.Image, size: DeepSeekOCRSize, stages: int = 1) -> Generator[tuple[Image.Image, list[Layout]], None, None]:
+    def extract(
+        self, image: Image.Image, size: DeepSeekOCRSize, stages: int = 1
+    ) -> Generator[tuple[Image.Image, list[Layout]], None, None]:
         check_env()
         assert stages >= 1, "stages must be at least 1"
         with tempfile.TemporaryDirectory() as temp_path:
@@ -55,7 +63,9 @@ class PageExtractor:
                         rectangles=(layout.det for layout in layouts),
                     )
 
-    def _parse_response(self, image: Image.Image, response: str) -> Generator[tuple[str, tuple[int, int, int, int], str | None], None, None]:
+    def _parse_response(
+        self, image: Image.Image, response: str
+    ) -> Generator[tuple[str, tuple[int, int, int, int], str | None], None, None]:
         width, height = image.size
         det: tuple[int, int, int, int] | None = None
         ref: str | None = None

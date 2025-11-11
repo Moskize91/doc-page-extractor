@@ -1,28 +1,31 @@
 import re
-
+from enum import Enum, auto
 from typing import Generator
-from enum import auto, Enum
-
 
 _TAG_PATTERN = re.compile(r"<\|(det|ref)\|>(.+?)<\|/\1\|>")
 _DET_COORDS_PATTERN = re.compile(r"\[\[(\d+),\s*(\d+),\s*(\d+),\s*(\d+)\]\]")
+
 
 class ParsedItemKind(Enum):
     DET = auto()
     REF = auto()
     TEXT = auto()
 
+
 ParsedItem = (
-    tuple[ParsedItemKind.DET, tuple[int, int, int, int]] |
-    tuple[ParsedItemKind.REF, str] |
-    tuple[ParsedItemKind.TEXT, str]
+    tuple[ParsedItemKind.DET, tuple[int, int, int, int]]
+    | tuple[ParsedItemKind.REF, str]
+    | tuple[ParsedItemKind.TEXT, str]
 )
 
-def parse_ocr_response(response: str, width: int, height: int) -> Generator[ParsedItem, None, None]:
+
+def parse_ocr_response(
+    response: str, width: int, height: int
+) -> Generator[ParsedItem, None, None]:
     last_end: int = 0
     for matched in _TAG_PATTERN.finditer(response):
         if matched.start() > last_end:
-            plain_text = response[last_end:matched.start()]
+            plain_text = response[last_end : matched.start()]
             if plain_text:
                 yield ParsedItemKind.TEXT, plain_text
         tag_type = matched.group(1)
@@ -30,7 +33,9 @@ def parse_ocr_response(response: str, width: int, height: int) -> Generator[Pars
         if tag_type == "det":
             coords_match = _DET_COORDS_PATTERN.search(content)
             if coords_match:
-                x1_norm, y1_norm, x2_norm, y2_norm = [int(c) for c in coords_match.groups()]
+                x1_norm, y1_norm, x2_norm, y2_norm = [
+                    int(c) for c in coords_match.groups()
+                ]
                 x1 = round(x1_norm / 1000 * width)
                 y1 = round(y1_norm / 1000 * height)
                 x2 = round(x2_norm / 1000 * width)

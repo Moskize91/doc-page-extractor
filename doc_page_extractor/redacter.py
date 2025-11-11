@@ -1,16 +1,18 @@
-from typing import cast, Any, Generator, Iterable
+from typing import Any, Generator, Iterable, cast
+
 from PIL import Image, ImageDraw
 
 
 def redact(
-        image: Image.Image,
-        fill_color: tuple[int, int, int],
-        rectangles: Iterable[tuple[int, int, int, int]],
-    ) -> Image.Image:
+    image: Image.Image,
+    fill_color: tuple[int, int, int],
+    rectangles: Iterable[tuple[int, int, int, int]],
+) -> Image.Image:
     draw = ImageDraw.Draw(image)
     for x1, y1, x2, y2 in rectangles:
         draw.rectangle((x1, y1, x2, y2), fill=fill_color)
     return image
+
 
 class _AveragingColor:
     def __init__(self) -> None:
@@ -41,6 +43,7 @@ class _AveragingColor:
         self._b += b
         self._a += a
         self._count += 1
+
 
 def background_color(image: Image.Image) -> tuple[int, int, int]:
     """将像素颜色按灰度排序，取中位颜色。此颜色与纸张的颜色相同，可做背景色"""
@@ -78,12 +81,16 @@ def background_color(image: Image.Image) -> tuple[int, int, int]:
 
     return round(r * 255), round(g * 255), round(b * 255)
 
+
 def _gray(r: float, g: float, b: float, a: float) -> float:
     # ITU-R BT.601 https://en.wikipedia.org/wiki/Rec._601
     gray = 0.299 * r + 0.587 * g + 0.114 * b
     return gray * a
 
-def _iter_pixels(image: Image.Image) -> Generator[tuple[float, float, float, float], None, None]:
+
+def _iter_pixels(
+    image: Image.Image,
+) -> Generator[tuple[float, float, float, float], None, None]:
     for pixel in cast(Any, image.getdata()):
         pixel_len = len(cast(tuple, pixel)) if isinstance(pixel, tuple) else 1
         if pixel_len == 4:
