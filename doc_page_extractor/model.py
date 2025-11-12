@@ -1,5 +1,6 @@
 import os
 from dataclasses import dataclass
+from importlib.util import find_spec
 from pathlib import Path
 from typing import Any, Literal
 
@@ -27,11 +28,9 @@ _SIZE_CONFIGS: dict[DeepSeekOCRSize, _SizeConfig] = {
 }
 
 _ATTN_IMPLEMENTATION: str
-try:
-    import flash_attn  # type: ignore # pylint: disable=unused-import
-
+if find_spec("flash_attn") is not None:
     _ATTN_IMPLEMENTATION = "flash_attention_2"
-except ImportError:
+else:
     _ATTN_IMPLEMENTATION = "eager"
 
 _Models = tuple[Any, Any]
