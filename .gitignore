@@ -1,6 +1,7 @@
 /env
 /plot
 /models-cache
+/.conda
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -124,10 +125,6 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-.env
-.venv
-env/
-venv/
 ENV/
 env.bak/
 venv.bak/

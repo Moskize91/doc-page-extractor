@@ -28,6 +28,7 @@
         "deepseek",
         "gundam",
         "huggingface",
+        "pylint",
         "redacter"
     ],
 }
