@@ -1,12 +1,17 @@
 import os
 from dataclasses import dataclass
+from importlib.util import find_spec
 from pathlib import Path
+from threading import Lock
 from typing import Any, Literal
 
 import torch
 from huggingface_hub import snapshot_download
 from PIL import Image
 from transformers import AutoModel, AutoTokenizer
+
+from .abort import AbortContext
+from .injection import InferWithInterruption
 
 DeepSeekOCRSize = Literal["tiny", "small", "base", "large", "gundam"]
 
@@ -27,11 +32,9 @@ _SIZE_CONFIGS: dict[DeepSeekOCRSize, _SizeConfig] = {
 }
 
 _ATTN_IMPLEMENTATION: str
-try:
-    import flash_attn  # type: ignore # pylint: disable=unused-import
-
+if find_spec("flash_attn") is not None:
     _ATTN_IMPLEMENTATION = "flash_attention_2"
-except ImportError:
+else:
     _ATTN_IMPLEMENTATION = "eager"
 
 _Models = tuple[Any, Any]
@@ -42,48 +45,61 @@ class DeepSeekOCRModel:
         if local_only and model_path is None:
             raise ValueError("model_path must be provided when local_only is True")
 
+        self._lock: Lock = Lock()
         self._model_name = "deepseek-ai/DeepSeek-OCR"
         self._model_path: Path | None = model_path
         self._local_only = local_only
         self._models: _Models | None = None
 
     def download(self) -> None:
-        snapshot_download(
-            repo_id=self._model_name,
-            repo_type="model",
-            cache_dir=self._cache_dir(),
-        )
-        if self._model_path is not None and self._find_pretrained_path() is None:
-            raise RuntimeError(
-                f"Model downloaded but not found in expected cache structure. "
-                f"Expected path: {self._model_path}/models--deepseek-ai--DeepSeek-OCR/snapshots/. "
-                f"This may indicate a Hugging Face cache structure change. "
-                f"Please report this issue."
+        with self._lock:
+            snapshot_download(
+                repo_id=self._model_name,
+                repo_type="model",
+                cache_dir=self._cache_dir(),
             )
+            if self._model_path is not None and self._find_pretrained_path() is None:
+                raise RuntimeError(
+                    f"Model downloaded but not found in expected cache structure. "
+                    f"Expected path: {self._model_path}/models--deepseek-ai--DeepSeek-OCR/snapshots/. "
+                    f"This may indicate a Hugging Face cache structure change. "
+                    f"Please report this issue."
+                )
 
     def load(self) -> None:
-        self._ensure_models()
+        with self._lock:
+            self._ensure_models()
 
     def generate(
-        self, image: Image.Image, prompt: str, temp_path: str, size: DeepSeekOCRSize
+        self,
+        image: Image.Image,
+        prompt: str,
+        temp_path: str,
+        size: DeepSeekOCRSize,
+        aborted_context: AbortContext | None,
     ) -> str:
-        tokenizer, model = self._ensure_models()
-        config = _SIZE_CONFIGS[size]
-        temp_image_path = os.path.join(temp_path, "temp_image.png")
-        image.save(temp_image_path)
-        text_result = model.infer(
-            tokenizer,
-            prompt=prompt,
-            image_file=temp_image_path,
-            output_path=temp_path,
-            base_size=config.base_size,
-            image_size=config.image_size,
-            crop_mode=config.crop_mode,
-            save_results=True,
-            test_compress=True,
-            eval_mode=True,
-        )
-        return text_result
+        with self._lock:
+            tokenizer, model = self._ensure_models()
+            config = _SIZE_CONFIGS[size]
+            temp_image_path = os.path.join(temp_path, "temp_image.png")
+            image.save(temp_image_path)
+            with InferWithInterruption(
+                model=model,
+                aborted_context=aborted_context,
+            ) as infer:
+                text_result = infer(
+                    tokenizer,
+                    prompt=prompt,
+                    image_file=temp_image_path,
+                    output_path=temp_path,
+                    base_size=config.base_size,
+                    image_size=config.image_size,
+                    crop_mode=config.crop_mode,
+                    save_results=True,
+                    test_compress=True,
+                    eval_mode=True,
+                )
+            return text_result
 
     def _ensure_models(self) -> _Models:
         if self._models is not None:

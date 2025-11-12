@@ -2,20 +2,6 @@
     "python-envs.defaultEnvManager": "ms-python.python:conda",
     "python-envs.defaultPackageManager": "ms-python.python:conda",
     "python-envs.pythonProjects": [],
-    "terminal.integrated.env.windows": {
-        "CONDA_AUTO_ACTIVATE_BASE": "false"
-    },
-    "terminal.integrated.shellIntegration.enabled": true,
-    "terminal.integrated.profiles.windows": {
-        "PowerShell with Conda": {
-            "source": "PowerShell",
-            "args": [
-                "-NoExit",
-                "-Command",
-                "conda activate ./env"
-            ]
-        }
-    },
     "terminal.integrated.defaultProfile.windows": "PowerShell with Conda",
     "[python]": {
         "editor.formatOnSave": true,
@@ -28,6 +14,7 @@
         "deepseek",
         "gundam",
         "huggingface",
+        "ngram",
         "pylint",
         "redacter"
     ],
