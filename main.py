@@ -1,11 +1,12 @@
-from pathlib import Path
 import time
+from pathlib import Path
 
 from PIL import Image
 
 from doc_page_extractor import AbortContext, PageExtractor, plot
 
-_ABORT_TIMEOUT = 5.0 # seconds
+_ABORT_TIMEOUT = 9999.0  # seconds
+
 
 def main() -> None:
     project_root = Path(__file__).parent
