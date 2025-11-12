@@ -70,56 +70,50 @@ USAGE:
         result = infer(...)
 """
 
-import threading
-from typing import Any, Callable, List, cast
+from typing import Any, Callable, cast
 
-from transformers import StoppingCriteria
+from .abort import AbortContext, AbortStoppingCriteria
 
 
 class InferWithInterruption:
-    _lock = threading.Lock()
-
     def __init__(
         self,
         model: Any,
-        stopping_criteria: List[StoppingCriteria] | None = None,
-        max_new_tokens: int | None = None,
-        no_repeat_ngram_size: int | None = None,
+        aborted_context: AbortContext | None,
     ):
-        self.model = model
-        self.stopping_criteria = stopping_criteria or []
-        self.max_new_tokens = max_new_tokens
-        self.no_repeat_ngram_size = no_repeat_ngram_size
-
-        # Will store the original generate method
+        self._model = model
+        self._stopping_criteria: list[Callable] = []
+        self._max_new_tokens: int | None = None
+        self._no_repeat_ngram_size: int | None = None
         self._original_generate: Callable | None = None
 
+        if aborted_context:
+            self._stopping_criteria.append(AbortStoppingCriteria(aborted_context))
+            self._max_new_tokens = aborted_context.max_new_tokens
+            self._no_repeat_ngram_size = aborted_context.no_repeat_ngram_size
+
     def __enter__(self) -> Callable:
-        self._lock.acquire()
-        self._original_generate = self.model.generate
+        self._original_generate = self._model.generate
 
         def patched_generate(*args, **kwargs):
-            if self.stopping_criteria:
+            if self._stopping_criteria:
                 kwargs["stopping_criteria"] = (
-                    kwargs.get("stopping_criteria", []) + self.stopping_criteria
+                    kwargs.get("stopping_criteria", []) + self._stopping_criteria
                 )
 
-            if self.max_new_tokens is not None:
-                kwargs["max_new_tokens"] = self.max_new_tokens
+            if self._max_new_tokens is not None:
+                kwargs["max_new_tokens"] = self._max_new_tokens
 
-            if self.no_repeat_ngram_size is not None:
-                kwargs["no_repeat_ngram_size"] = self.no_repeat_ngram_size
+            if self._no_repeat_ngram_size is not None:
+                kwargs["no_repeat_ngram_size"] = self._no_repeat_ngram_size
 
             return cast(Callable, self._original_generate)(*args, **kwargs)
 
-        self.model.generate = patched_generate
-        return self.model.infer
+        self._model.generate = patched_generate
+        return self._model.infer
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        try:
-            if self._original_generate is not None:
-                self.model.generate = self._original_generate
-                self._original_generate = None
-        finally:
-            self._lock.release()
+        if self._original_generate is not None:
+            self._model.generate = self._original_generate
+            self._original_generate = None
         return False

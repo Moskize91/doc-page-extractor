@@ -2,7 +2,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from doc_page_extractor import PageExtractor, plot
+from doc_page_extractor import AbortContext, PageExtractor, plot
 
 
 def main() -> None:
@@ -18,11 +18,16 @@ def main() -> None:
     name_stem = Path(image_name).stem
     name_suffix = Path(image_name).suffix
 
+    def check_aborted() -> bool:
+        print("check aborted")
+        return False
+
     for i, (image, layouts) in enumerate(
         extractor.extract(
             image=Image.open(image_dir_path / image_name),
             size="gundam",
             stages=2,
+            aborted_context=AbortContext(check_aborted=check_aborted),
         )
     ):
         print("Layouts:")

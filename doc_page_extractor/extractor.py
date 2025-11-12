@@ -6,6 +6,7 @@ from typing import Generator, cast
 
 from PIL import Image
 
+from .abort import AbortContext
 from .check_env import check_env
 from .model import DeepSeekOCRModel, DeepSeekOCRSize
 from .parser import ParsedItemKind, parse_ocr_response
@@ -37,7 +38,11 @@ class PageExtractor:
         self._model.load()
 
     def extract(
-        self, image: Image.Image, size: DeepSeekOCRSize, stages: int = 1
+        self,
+        image: Image.Image,
+        size: DeepSeekOCRSize,
+        stages: int = 1,
+        aborted_context: AbortContext | None = None,
     ) -> Generator[tuple[Image.Image, list[Layout]], None, None]:
         check_env()
         assert stages >= 1, "stages must be at least 1"
@@ -49,6 +54,7 @@ class PageExtractor:
                     prompt="<image>\n<|grounding|>Convert the document to markdown.",
                     temp_path=temp_path,
                     size=size,
+                    aborted_context=aborted_context,
                 )
                 layouts: list[Layout] = []
                 for ref, det, text in self._parse_response(image, response):
