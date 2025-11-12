@@ -3,4 +3,9 @@ from .model import DeepSeekOCRSize
 from .plot import plot
 
 __version__ = "1.0.0"
-__all__ = ["DeepSeekOCRSize", "Layout", "PageExtractor", "plot"]
+__all__ = [
+    "DeepSeekOCRSize",
+    "Layout",
+    "PageExtractor",
+    "plot",
+]
