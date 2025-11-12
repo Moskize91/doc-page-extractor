@@ -1,9 +1,11 @@
 from pathlib import Path
+import time
 
 from PIL import Image
 
 from doc_page_extractor import AbortContext, PageExtractor, plot
 
+_ABORT_TIMEOUT = 5.0 # seconds
 
 def main() -> None:
     project_root = Path(__file__).parent
@@ -17,9 +19,12 @@ def main() -> None:
     plot_dir.mkdir(exist_ok=True)
     name_stem = Path(image_name).stem
     name_suffix = Path(image_name).suffix
+    current_time = time.time()
 
     def check_aborted() -> bool:
-        print("check aborted")
+        if time.time() - current_time > _ABORT_TIMEOUT:
+            print("Aborted extraction due to timeout.")
+            return True
         return False
 
     for i, (image, layouts) in enumerate(
