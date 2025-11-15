@@ -50,8 +50,8 @@ class AbortStoppingCriteria(StoppingCriteria):
         self._context.output_tokens = output_tokens
 
         if (
-            self._context.output_tokens is not None
-            and tokens_count >= self._context.output_tokens
+            self._context.max_tokens is not None
+            and tokens_count >= self._context.max_tokens
         ) or (
             self._context.max_output_tokens is not None
             and output_tokens >= self._context.max_output_tokens
