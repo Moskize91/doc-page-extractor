@@ -8,6 +8,7 @@ from transformers import StoppingCriteria
 @dataclass
 class ExtractionContext:
     check_aborted: Callable[[], bool]
+    max_tokens: int | None = None
     max_output_tokens: int | None = None
     input_tokens: int = 0
     output_tokens: int = 0
@@ -17,7 +18,7 @@ class AbortError(Exception):
     pass
 
 
-class OutputLimitError(Exception):
+class TokenLimitError(Exception):
     pass
 
 
@@ -26,10 +27,10 @@ class AbortStoppingCriteria(StoppingCriteria):
         super().__init__()
         self._context: ExtractionContext = context
         self._input_tokens: int | None = None
-        self._error: AbortError | OutputLimitError | None = None
+        self._error: AbortError | TokenLimitError | None = None
 
     @property
-    def error(self) -> AbortError | OutputLimitError | None:
+    def error(self) -> AbortError | TokenLimitError | None:
         return self._error
 
     def __call__(self, input_ids, scores, **kwargs) -> torch.BoolTensor:
@@ -49,10 +50,13 @@ class AbortStoppingCriteria(StoppingCriteria):
         self._context.output_tokens = output_tokens
 
         if (
+            self._context.output_tokens is not None
+            and tokens_count >= self._context.output_tokens
+        ) or (
             self._context.max_output_tokens is not None
             and output_tokens >= self._context.max_output_tokens
         ):
-            self._error = OutputLimitError()
+            self._error = TokenLimitError()
             return cast(Any, True)
 
         if self._context.check_aborted():
