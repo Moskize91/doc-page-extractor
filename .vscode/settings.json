@@ -12,11 +12,14 @@
     },
     "cSpell.words": [
         "deepseek",
+        "easydict",
+        "einops",
         "gundam",
         "huggingface",
         "ngram",
         "pylint",
         "redacter",
-        "torchvision"
+        "torchvision",
+        "Zeyu"
     ],
 }
