@@ -6,8 +6,8 @@ from typing import Generator, cast
 
 from PIL import Image
 
-from .extraction_context import ExtractionContext
 from .check_env import check_env
+from .extraction_context import ExtractionContext
 from .model import DeepSeekOCRModel, DeepSeekOCRSize
 from .parser import ParsedItemKind, parse_ocr_response
 from .redacter import background_color, redact

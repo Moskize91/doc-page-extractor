@@ -111,5 +111,5 @@ class InferWithInterruption:
     def _proxy_infer(self, *args, **kwargs):
         result = self._model.infer(*args, **kwargs)
         if self._stopping:
-            self._stopping.raise_if_error()
+            self._stopping.notify_finished()
         return result
