@@ -18,8 +18,11 @@
         "huggingface",
         "ngram",
         "pylint",
+        "readerwriterlock",
         "redacter",
+        "rwlock",
         "torchvision",
+        "wlock",
         "Zeyu"
     ],
 }
