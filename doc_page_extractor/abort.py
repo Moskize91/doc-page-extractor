@@ -11,8 +11,10 @@ class AbortContext:
     max_new_tokens: int | None = None
     no_repeat_ngram_size: int | None = None
 
+
 class AbortError(Exception):
     pass
+
 
 class AbortStoppingCriteria(StoppingCriteria):
     def __init__(self, context: AbortContext) -> None:
@@ -25,6 +27,11 @@ class AbortStoppingCriteria(StoppingCriteria):
         return self._aborted
 
     def __call__(self, input_ids, scores, **kwargs) -> torch.BoolTensor:
+        batch_size = input_ids.shape[0]
+        for i in range(batch_size):
+            tokens = input_ids[i].shape[0]
+            print(f"Generated {tokens} tokens for batch item {i}")
+
         is_aborted: bool
         if self._aborted:
             is_aborted = True

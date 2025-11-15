@@ -16,6 +16,7 @@
         "huggingface",
         "ngram",
         "pylint",
-        "redacter"
+        "redacter",
+        "torchvision"
     ],
 }
