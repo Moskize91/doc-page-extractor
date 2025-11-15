@@ -3,7 +3,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from doc_page_extractor import AbortContext, PageExtractor, plot
+from doc_page_extractor import ExtractionContext, PageExtractor, plot
 
 _ABORT_TIMEOUT = 9999.0  # seconds
 
@@ -33,7 +33,7 @@ def main() -> None:
             image=Image.open(image_dir_path / image_name),
             size="gundam",
             stages=2,
-            aborted_context=AbortContext(check_aborted=check_aborted),
+            context=ExtractionContext(check_aborted=check_aborted),
         )
     ):
         print("Layouts:")

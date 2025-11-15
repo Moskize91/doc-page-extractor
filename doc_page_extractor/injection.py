@@ -71,27 +71,23 @@ USAGE:
 """
 
 from typing import Any, Callable, cast
+
 from transformers import StoppingCriteria
 
-from .abort import AbortContext, AbortError, AbortStoppingCriteria
+from .extraction_context import AbortStoppingCriteria, ExtractionContext
 
 
 class InferWithInterruption:
     def __init__(
         self,
         model: Any,
-        aborted_context: AbortContext | None,
+        context: ExtractionContext | None,
     ):
         self._model = model
         self._abort_stopping: AbortStoppingCriteria | None = None
-        self._max_new_tokens: int | None = None
-        self._no_repeat_ngram_size: int | None = None
         self._original_generate: Callable | None = None
-
-        if aborted_context:
-            self._abort_stopping = AbortStoppingCriteria(aborted_context)
-            self._max_new_tokens = aborted_context.max_new_tokens
-            self._no_repeat_ngram_size = aborted_context.no_repeat_ngram_size
+        if context:
+            self._abort_stopping = AbortStoppingCriteria(context)
 
     def __enter__(self) -> Callable:
         self._original_generate = self._model.generate
@@ -101,13 +97,6 @@ class InferWithInterruption:
                 stopping: list[StoppingCriteria] = kwargs.get("stopping_criteria", [])
                 stopping.append(self._abort_stopping)
                 kwargs["stopping_criteria"] = stopping
-
-            if self._max_new_tokens is not None:
-                kwargs["max_new_tokens"] = self._max_new_tokens
-
-            if self._no_repeat_ngram_size is not None:
-                kwargs["no_repeat_ngram_size"] = self._no_repeat_ngram_size
-
             return cast(Callable, self._original_generate)(*args, **kwargs)
 
         self._model.generate = patched_generate
@@ -121,6 +110,8 @@ class InferWithInterruption:
 
     def _proxy_infer(self, *args, **kwargs):
         result = self._model.infer(*args, **kwargs)
-        if self._abort_stopping and self._abort_stopping.aborted:
-            raise AbortError()
+        if self._abort_stopping:
+            error = self._abort_stopping.error
+            if error:
+                raise error
         return result
