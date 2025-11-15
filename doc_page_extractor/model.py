@@ -10,7 +10,7 @@ from huggingface_hub import snapshot_download
 from PIL import Image
 from transformers import AutoModel, AutoTokenizer
 
-from .abort import AbortContext
+from .extraction_context import ExtractionContext
 from .injection import InferWithInterruption
 
 DeepSeekOCRSize = Literal["tiny", "small", "base", "large", "gundam"]
@@ -76,7 +76,7 @@ class DeepSeekOCRModel:
         prompt: str,
         temp_path: str,
         size: DeepSeekOCRSize,
-        aborted_context: AbortContext | None,
+        context: ExtractionContext | None,
     ) -> str:
         with self._lock:
             tokenizer, model = self._ensure_models()
@@ -85,7 +85,7 @@ class DeepSeekOCRModel:
             image.save(temp_image_path)
             with InferWithInterruption(
                 model=model,
-                aborted_context=aborted_context,
+                context=context,
             ) as infer:
                 text_result = infer(
                     tokenizer,
