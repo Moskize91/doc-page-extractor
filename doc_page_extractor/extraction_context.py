@@ -14,11 +14,18 @@ class ExtractionContext:
     output_tokens: int = 0
 
 
-class AbortError(Exception):
+class ExtractionAbortedError(Exception):
+    def __init__(self):
+        super().__init__("Extraction was aborted.")
+        self.input_tokens: int = 0
+        self.output_tokens: int = 0
+
+
+class AbortError(ExtractionAbortedError):
     pass
 
 
-class TokenLimitError(Exception):
+class TokenLimitError(ExtractionAbortedError):
     pass
 
 
@@ -27,11 +34,11 @@ class AbortStoppingCriteria(StoppingCriteria):
         super().__init__()
         self._context: ExtractionContext = context
         self._input_tokens: int | None = None
-        self._error: AbortError | TokenLimitError | None = None
+        self._error: ExtractionAbortedError | None = None
 
-    @property
-    def error(self) -> AbortError | TokenLimitError | None:
-        return self._error
+    def raise_if_error(self):
+        if self._error:
+            raise self._error
 
     def __call__(self, input_ids, scores, **kwargs) -> torch.BoolTensor:
         if self._error:
