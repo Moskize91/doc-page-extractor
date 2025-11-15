@@ -84,18 +84,18 @@ class InferWithInterruption:
         context: ExtractionContext | None,
     ):
         self._model = model
-        self._abort_stopping: AbortStoppingCriteria | None = None
+        self._stopping: AbortStoppingCriteria | None = None
         self._original_generate: Callable | None = None
         if context:
-            self._abort_stopping = AbortStoppingCriteria(context)
+            self._stopping = AbortStoppingCriteria(context)
 
     def __enter__(self) -> Callable:
         self._original_generate = self._model.generate
 
         def patched_generate(*args, **kwargs):
-            if self._abort_stopping:
+            if self._stopping:
                 stopping: list[StoppingCriteria] = kwargs.get("stopping_criteria", [])
-                stopping.append(self._abort_stopping)
+                stopping.append(self._stopping)
                 kwargs["stopping_criteria"] = stopping
             return cast(Callable, self._original_generate)(*args, **kwargs)
 
@@ -110,8 +110,6 @@ class InferWithInterruption:
 
     def _proxy_infer(self, *args, **kwargs):
         result = self._model.infer(*args, **kwargs)
-        if self._abort_stopping:
-            error = self._abort_stopping.error
-            if error:
-                raise error
+        if self._stopping:
+            self._stopping.notify_finished()
         return result
