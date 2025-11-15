@@ -2,12 +2,12 @@ import os
 from dataclasses import dataclass
 from importlib.util import find_spec
 from pathlib import Path
-from threading import Lock
 from typing import Any, Literal
 
 import torch
 from huggingface_hub import snapshot_download
 from PIL import Image
+from readerwriterlock import rwlock
 from transformers import AutoModel, AutoTokenizer
 
 from .extraction_context import ExtractionContext
@@ -45,14 +45,14 @@ class DeepSeekOCRModel:
         if local_only and model_path is None:
             raise ValueError("model_path must be provided when local_only is True")
 
-        self._lock: Lock = Lock()
+        self._rwlock = rwlock.RWLockFair()
         self._model_name = "deepseek-ai/DeepSeek-OCR"
         self._model_path: Path | None = model_path
         self._local_only = local_only
         self._models: _Models | None = None
 
     def download(self) -> None:
-        with self._lock:
+        with self._rwlock.gen_wlock():
             snapshot_download(
                 repo_id=self._model_name,
                 repo_type="model",
@@ -67,7 +67,7 @@ class DeepSeekOCRModel:
                 )
 
     def load(self) -> None:
-        with self._lock:
+        with self._rwlock.gen_wlock():
             self._ensure_models()
 
     def generate(
@@ -78,7 +78,7 @@ class DeepSeekOCRModel:
         size: DeepSeekOCRSize,
         context: ExtractionContext | None,
     ) -> str:
-        with self._lock:
+        with self._rwlock.gen_rlock():
             tokenizer, model = self._ensure_models()
             config = _SIZE_CONFIGS[size]
             temp_image_path = os.path.join(temp_path, "temp_image.png")
