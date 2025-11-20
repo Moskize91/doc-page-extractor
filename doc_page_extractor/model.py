@@ -70,6 +70,11 @@ class DeepSeekOCRModel:
         with self._rwlock.gen_wlock():
             self._ensure_models()
 
+    def unload(self) -> None:
+        with self._rwlock.gen_wlock():
+            if self._models is not None:
+                self._models = None
+
     def generate(
         self,
         image: Image.Image,
