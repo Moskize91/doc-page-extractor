@@ -11,7 +11,7 @@ from readerwriterlock import rwlock
 from transformers import AutoModel, AutoTokenizer
 
 from .extraction_context import ExtractionContext
-from .injection import InferWithInterruption
+from .injection import InferWithInterruption, preprocess_model
 
 DeepSeekOCRSize = Literal["tiny", "small", "base", "large", "gundam"]
 
@@ -87,10 +87,7 @@ class DeepSeekOCRModel:
             config = _SIZE_CONFIGS[size]
             temp_image_path = os.path.join(temp_path, "temp_image.png")
             image.save(temp_image_path)
-            with InferWithInterruption(
-                model=model,
-                context=context,
-            ) as infer:
+            with InferWithInterruption(model, context) as infer:
                 text_result = infer(
                     tokenizer,
                     prompt=prompt,
@@ -146,6 +143,7 @@ class DeepSeekOCRModel:
             )
             model = model.cuda().to(torch.bfloat16)
             self._models = (tokenizer, model)
+            preprocess_model(model)
 
             return self._models
 

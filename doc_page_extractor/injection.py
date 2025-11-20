@@ -15,8 +15,9 @@ WHY WE NEED THIS HACK:
 
 APPROACH:
 ---------
-We temporarily replace the model's generate() method to inject stopping_criteria,
-then restore it after inference completes. This allows:
+We replace the model's generate() method ONCE at initialization time with a wrapper
+that reads stopping_criteria from thread-local storage. This allows:
+- Thread-safe concurrent inference
 - Clean interruption via StoppingCriteria interface
 - Timeout control for long-running inference
 - User-triggered cancellation
@@ -25,26 +26,23 @@ then restore it after inference completes. This allows:
 
 THREAD SAFETY:
 --------------
-This implementation uses a lock to ensure thread-safe patching. Since GPU resources
-are limited and the model is large, concurrent inference is not practical anyway.
-
-LIMITATIONS:
-------------
-1. If exceptions occur during inference, the lock will be released but errors will propagate
-2. Stack traces may be slightly less clear due to method wrapping
-3. If DeepSeek-OCR changes their infer() implementation significantly, this may break
-   (though it will fail loudly rather than silently)
+This implementation uses thread-local storage to pass context between threads.
+The model's generate() method is patched only once during initialization,
+making it safe for concurrent use by multiple threads.
 
 USAGE:
 ------
-    from doc_page_extractor.injection import InferWithInterruption
-    from transformers import MaxTimeCriteria, StoppingCriteria
-    import threading
+    from doc_page_extractor.injection import preprocess_model, InferWithInterruption
 
-    # Example 1: With timeout
-    with InferWithInterruption(model, stopping_criteria=[MaxTimeCriteria(60.0)]) as infer:
+    # Step 1: Preprocess model once at initialization
+    model = AutoModel.from_pretrained(...)
+    preprocess_model(model)
+
+    # Step 2: Use in concurrent inference
+    with InferWithInterruption(context=context) as infer:
         result = infer(
-            tokenizer=tokenizer,
+            model,
+            tokenizer,
             prompt="<image>\\n<|grounding|>Convert the document to markdown.",
             image_file="input.png",
             output_path="./output",
@@ -54,27 +52,31 @@ USAGE:
             save_results=True,
             eval_mode=True
         )
-
-    # Example 2: With manual cancellation
-    class CancelCriteria(StoppingCriteria):
-        def __init__(self):
-            self.event = threading.Event()
-        def cancel(self):
-            self.event.set()
-        def __call__(self, input_ids, scores, **kwargs):
-            return self.event.is_set()
-
-    cancel_criteria = CancelCriteria()
-    with InferWithInterruption(model, stopping_criteria=[cancel_criteria]) as infer:
-        # In another thread, you can call: cancel_criteria.cancel()
-        result = infer(...)
 """
 
-from typing import Any, Callable, cast
+import threading
+from typing import Any
 
 from transformers import StoppingCriteria
 
 from .extraction_context import AbortStoppingCriteria, ExtractionContext
+
+_LOCAL = threading.local()
+_LOCAL_KEY = "value"
+
+
+def preprocess_model(model: Any) -> Any:
+    original_generate = model.generate
+
+    def thread_safe_generate(*args, **kwargs):
+        stopping_criteria = getattr(_LOCAL, _LOCAL_KEY, None)
+        if stopping_criteria is not None:
+            stopping: list[StoppingCriteria] = kwargs.get("stopping_criteria", [])
+            stopping.append(stopping_criteria)
+            kwargs["stopping_criteria"] = stopping
+        return original_generate(*args, **kwargs)
+
+    model.generate = thread_safe_generate
 
 
 class InferWithInterruption:
@@ -85,30 +87,19 @@ class InferWithInterruption:
     ):
         self._model = model
         self._stopping: AbortStoppingCriteria | None = None
-        self._original_generate: Callable | None = None
         if context:
             self._stopping = AbortStoppingCriteria(context)
 
-    def __enter__(self) -> Callable:
-        self._original_generate = self._model.generate
-
-        def patched_generate(*args, **kwargs):
-            if self._stopping:
-                stopping: list[StoppingCriteria] = kwargs.get("stopping_criteria", [])
-                stopping.append(self._stopping)
-                kwargs["stopping_criteria"] = stopping
-            return cast(Callable, self._original_generate)(*args, **kwargs)
-
-        self._model.generate = patched_generate
-        return self._proxy_infer
+    def __enter__(self):
+        setattr(_LOCAL, _LOCAL_KEY, self._stopping)
+        return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if self._original_generate is not None:
-            self._model.generate = self._original_generate
-            self._original_generate = None
+        setattr(_LOCAL, _LOCAL_KEY, None)
         return False
 
-    def _proxy_infer(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs):
+        """Direct call to model.infer()"""
         result = self._model.infer(*args, **kwargs)
         if self._stopping:
             self._stopping.notify_finished()
