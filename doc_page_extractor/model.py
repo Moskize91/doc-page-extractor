@@ -67,8 +67,7 @@ class DeepSeekOCRModel:
                 )
 
     def load(self) -> None:
-        with self._rwlock.gen_wlock():
-            self._ensure_models()
+        self._ensure_models()
 
     def unload(self) -> None:
         with self._rwlock.gen_wlock():
@@ -83,8 +82,8 @@ class DeepSeekOCRModel:
         size: DeepSeekOCRSize,
         context: ExtractionContext | None,
     ) -> str:
+        tokenizer, model = self._ensure_models()
         with self._rwlock.gen_rlock():
-            tokenizer, model = self._ensure_models()
             config = _SIZE_CONFIGS[size]
             temp_image_path = os.path.join(temp_path, "temp_image.png")
             image.save(temp_image_path)
@@ -107,42 +106,48 @@ class DeepSeekOCRModel:
             return text_result
 
     def _ensure_models(self) -> _Models:
-        if self._models is not None:
+        with self._rwlock.gen_rlock():
+            if self._models is not None:
+                return self._models
+
+        with self._rwlock.gen_wlock():
+            # 检查两次，因为中间有解锁
+            if self._models is not None:
+                return self._models
+
+            name_or_path = self._model_name
+            cache_dir: str | None = None
+
+            if self._local_only:
+                name_or_path = self._find_pretrained_path()
+                if name_or_path is None:
+                    raise ValueError(
+                        f"Local model not found at {self._model_path}. "
+                        f"Expected Hugging Face cache structure: "
+                        f"{self._model_path}/models--deepseek-ai--DeepSeek-OCR/snapshots/[hash]/. "
+                        f"Please run download_models() first to download the model."
+                    )
+            else:
+                cache_dir = self._cache_dir()
+
+            tokenizer = AutoTokenizer.from_pretrained(
+                pretrained_model_name_or_path=name_or_path,
+                trust_remote_code=True,
+                cache_dir=cache_dir,
+                local_files_only=self._local_only,
+            )
+            model = AutoModel.from_pretrained(
+                pretrained_model_name_or_path=name_or_path,
+                _attn_implementation=_ATTN_IMPLEMENTATION,
+                trust_remote_code=True,
+                use_safetensors=True,
+                cache_dir=cache_dir,
+                local_files_only=self._local_only,
+            )
+            model = model.cuda().to(torch.bfloat16)
+            self._models = (tokenizer, model)
+
             return self._models
-
-        name_or_path = self._model_name
-        cache_dir: str | None = None
-
-        if self._local_only:
-            name_or_path = self._find_pretrained_path()
-            if name_or_path is None:
-                raise ValueError(
-                    f"Local model not found at {self._model_path}. "
-                    f"Expected Hugging Face cache structure: "
-                    f"{self._model_path}/models--deepseek-ai--DeepSeek-OCR/snapshots/[hash]/. "
-                    f"Please run download_models() first to download the model."
-                )
-        else:
-            cache_dir = self._cache_dir()
-
-        tokenizer = AutoTokenizer.from_pretrained(
-            pretrained_model_name_or_path=name_or_path,
-            trust_remote_code=True,
-            cache_dir=cache_dir,
-            local_files_only=self._local_only,
-        )
-        model = AutoModel.from_pretrained(
-            pretrained_model_name_or_path=name_or_path,
-            _attn_implementation=_ATTN_IMPLEMENTATION,
-            trust_remote_code=True,
-            use_safetensors=True,
-            cache_dir=cache_dir,
-            local_files_only=self._local_only,
-        )
-        model = model.cuda().to(torch.bfloat16)
-        self._models = (tokenizer, model)
-
-        return self._models
 
     def _cache_dir(self) -> str | None:
         if self._model_path is not None:
