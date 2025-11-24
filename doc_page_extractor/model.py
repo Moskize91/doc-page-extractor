@@ -141,8 +141,9 @@ class DeepSeekOCRModel:
                 cache_dir=cache_dir,
                 local_files_only=self._local_only,
                 torch_dtype=torch.bfloat16,
+                device_map="cuda",
             )
-            model = model.to("cuda").eval()
+            model = model.eval()
             self._models = (tokenizer, model)
             preprocess_model(model)
 
