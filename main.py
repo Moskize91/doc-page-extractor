@@ -20,10 +20,10 @@ def main() -> None:
     plot_dir.mkdir(exist_ok=True)
     name_stem = Path(image_name).stem
     name_suffix = Path(image_name).suffix
-    current_time = time.time()
+    created_at = time.time()
 
     def check_aborted() -> bool:
-        if time.time() - current_time > _ABORT_TIMEOUT:
+        if time.time() - created_at > _ABORT_TIMEOUT:
             print("Aborted extraction due to timeout.")
             return True
         return False
@@ -43,6 +43,7 @@ def main() -> None:
         output_path = plot_dir / f"{name_stem}_{i}{name_suffix}"
         image.save(output_path)
 
+    print(f"Extraction cost {time.time() - created_at:.2f} seconds.")
 
 if __name__ == "__main__":
     main()
