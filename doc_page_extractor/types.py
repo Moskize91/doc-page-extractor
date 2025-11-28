@@ -28,7 +28,7 @@ class ExtractionContext:
 
 @runtime_checkable
 class PageExtractor(Protocol):
-    def download_models(self) -> None:
+    def download_models(self, revision: str | None = None) -> None:
         ...
 
     def load_models(self) -> None:
@@ -47,7 +47,7 @@ class PageExtractor(Protocol):
 
 @runtime_checkable
 class DeepSeekOCRModel(Protocol):
-    def download(self) -> None:
+    def download(self, revision: str | None) -> None:
         ...
 
     def load(self) -> None:
