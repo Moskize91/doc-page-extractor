@@ -15,7 +15,6 @@ maintainers = [
 license = {text = "MIT"}
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
-# Core dependencies (torch and torchvision are NOT included - users must install manually)
 dependencies = [
     "transformers>=4.46.0,<4.48.0",
     "addict>=2.4.0",
@@ -43,16 +42,8 @@ packages = [
     {include = "doc_page_extractor"}
 ]
 
-[[tool.poetry.source]]
-name = "pytorch-cu121"
-url = "https://download.pytorch.org/whl/cu121"
-priority = "explicit"
-
 [tool.poetry.group.dev.dependencies]
 pylint = "^3.3.7"
-# Development environment includes CUDA 12.1 PyTorch
-torch = {version = "^2.5.1", source = "pytorch-cu121"}
-torchvision = {version = "^0.20.1", source = "pytorch-cu121"}
 
 [tool.poetry.build]
 generate-setup-file = false

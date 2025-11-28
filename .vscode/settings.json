@@ -8,6 +8,8 @@
         "files.trimTrailingWhitespace": true,
     },
     "cSpell.words": [
+        "abatilo",
+        "CUDA",
         "deepseek",
         "easydict",
         "einops",
@@ -19,6 +21,7 @@
         "redacter",
         "rwlock",
         "torchvision",
+        "venv",
         "wlock",
         "Zeyu"
     ],
