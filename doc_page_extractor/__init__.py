@@ -3,8 +3,10 @@ from .extraction_context import (
     ExtractionAbortedError,
     TokenLimitError,
 )
-from .extractor import create_page_extractor
+
+from .extractor import create_page_extractor, create_page_extractor_with_model
 from .plot import plot
+from .lazy_loader import LazyGetter
 from .types import (
     Layout,
     PageExtractor,
@@ -17,6 +19,7 @@ __version__ = "1.0.0"
 __all__ = [
     "plot",
     "create_page_extractor",
+    "create_page_extractor_with_model",
     "PageExtractor",
     "DeepSeekOCRSize",
     "DeepSeekOCRModel",
@@ -25,4 +28,5 @@ __all__ = [
     "ExtractionAbortedError",
     "TokenLimitError",
     "Layout",
+    "LazyGetter",
 ]

@@ -1,4 +1,3 @@
-import os
 from dataclasses import dataclass
 from importlib.util import find_spec
 from pathlib import Path
@@ -6,7 +5,6 @@ from typing import Iterable
 
 import torch
 from huggingface_hub import snapshot_download
-from PIL import Image
 from readerwriterlock import rwlock
 from transformers import AutoModel, AutoTokenizer
 

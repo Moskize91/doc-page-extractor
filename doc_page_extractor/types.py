@@ -5,6 +5,8 @@ from typing import runtime_checkable, Protocol, Generator, Literal, Callable
 
 from PIL import Image
 
+from .lazy_loader import LazyGetter
+
 
 DeepSeekOCRSize = Literal["tiny", "small", "base", "large", "gundam"]
 
@@ -39,7 +41,7 @@ class PageExtractor(Protocol):
         stages: int = 1,
         context: ExtractionContext | None = None,
         device_number: int | None = None,
-    ) -> Generator[tuple[Image.Image, list[Layout]], None, None]:
+    ) -> Generator[LazyGetter[tuple[Image.Image, list[Layout]]], None, None]:
         ...
 
 

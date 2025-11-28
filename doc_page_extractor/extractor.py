@@ -1,7 +1,7 @@
 import tempfile
 from os import PathLike
 from pathlib import Path
-from typing import cast, Generator, Iterable
+from typing import cast, Any, Generator, Iterable
 
 from PIL import Image
 
@@ -9,6 +9,7 @@ from .check_env import check_env
 from .model import DeepSeekOCRHugginfaceModel
 from .parser import ParsedItemKind, parse_ocr_response
 from .redacter import background_color, redact
+from .lazy_loader import lazy_load, LazyGetter
 from .types import Layout, PageExtractor, ExtractionContext, DeepSeekOCRModel, DeepSeekOCRSize
 
 
@@ -48,7 +49,8 @@ class _PageExtractorImpls:
         stages: int = 1,
         context: ExtractionContext | None = None,
         device_number: int | None = None,
-    ) -> Generator[tuple[Image.Image, list[Layout]], None, None]:
+    ) -> Generator[LazyGetter[tuple[Image.Image, list[Layout]]], None, None]:
+
         check_env()
         assert stages >= 1, "stages must be at least 1"
 
@@ -73,11 +75,13 @@ class _PageExtractorImpls:
                     context=context,
                     device_number=device_number,
                 )
-                layouts: list[Layout] = []
-                for ref, det, text in self._parse_response(image, response):
-                    layouts.append(Layout(ref, det, text))
-                yield image, layouts
+                extraction_pair = lazy_load(
+                    load=lambda ip=image_path, res=response: self._generate_extraction_pair(ip, res),
+                )
+                yield extraction_pair
+
                 if i < stages - 1:
+                    image, layouts = extraction_pair()
                     if fill_color is None:
                         fill_color = background_color(image)
                     image = redact(
@@ -88,6 +92,13 @@ class _PageExtractorImpls:
         finally:
             if temp_dir is not None:
                 temp_dir.cleanup()
+
+    def _generate_extraction_pair(self, image_path: Path, response: Any) -> tuple[Image.Image, list[Layout]]:
+        layouts: list[Layout] = []
+        image = Image.open(image_path)
+        for ref, det, text in self._parse_response(image, response):
+            layouts.append(Layout(ref, det, text))
+        return image, layouts
 
     def _parse_response(
         self, image: Image.Image, response: str
