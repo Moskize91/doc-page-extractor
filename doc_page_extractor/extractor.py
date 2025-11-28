@@ -1,7 +1,7 @@
 import tempfile
 from os import PathLike
 from pathlib import Path
-from typing import Generator, cast
+from typing import cast, Generator, Iterable
 
 from PIL import Image
 
@@ -16,10 +16,12 @@ from .types import Layout, PageExtractor, ExtractionContext, DeepSeekOCRModel, D
 def create_page_extractor(
     model_path: PathLike | None = None,
     local_only: bool = False,
+    enable_devices_numbers: Iterable[int] | None = None,
 ) -> PageExtractor:
     model: DeepSeekOCRHugginfaceModel = DeepSeekOCRHugginfaceModel(
         model_path=Path(model_path) if model_path else None,
         local_only=local_only,
+        enable_devices_numbers=enable_devices_numbers,
     )
     return _PageExtractorImpls(model)
 
@@ -45,6 +47,7 @@ class _PageExtractorImpls:
         size: DeepSeekOCRSize,
         stages: int = 1,
         context: ExtractionContext | None = None,
+        device_number: int | None = None,
     ) -> Generator[tuple[Image.Image, list[Layout]], None, None]:
         check_env()
         assert stages >= 1, "stages must be at least 1"
@@ -57,6 +60,7 @@ class _PageExtractorImpls:
                     temp_path=temp_path,
                     size=size,
                     context=context,
+                    device_number=device_number,
                 )
                 layouts: list[Layout] = []
                 for ref, det, text in self._parse_response(image, response):

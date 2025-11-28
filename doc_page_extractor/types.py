@@ -36,6 +36,7 @@ class PageExtractor(Protocol):
         size: DeepSeekOCRSize,
         stages: int = 1,
         context: ExtractionContext | None = None,
+        device_number: int | None = None,
     ) -> Generator[tuple[Image.Image, list[Layout]], None, None]:
         ...
 
@@ -58,5 +59,6 @@ class DeepSeekOCRModel(Protocol):
         temp_path: str,
         size: DeepSeekOCRSize,
         context: ExtractionContext | None,
+        device_number: int | None,
     ) -> str:
         ...

@@ -78,6 +78,7 @@ def preprocess_model(model: Any) -> Any:
         return original_generate(*args, **kwargs)
 
     model.generate = thread_safe_generate
+    return model
 
 
 class InferWithInterruption:

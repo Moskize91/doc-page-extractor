@@ -2,7 +2,7 @@ import os
 from dataclasses import dataclass
 from importlib.util import find_spec
 from pathlib import Path
-from typing import Any
+from typing import Iterable
 
 import torch
 from huggingface_hub import snapshot_download
@@ -37,11 +37,20 @@ if find_spec("flash_attn") is not None:
 else:
     _ATTN_IMPLEMENTATION = "eager"
 
-_Models = tuple[Any, Any]
+
+@dataclass
+class _Models:
+    tokenizer: AutoTokenizer
+    llms: list[AutoModel]
 
 
 class DeepSeekOCRHugginfaceModel:
-    def __init__(self, model_path: Path | None, local_only: bool) -> None:
+    def __init__(
+            self,
+            model_path: Path | None,
+            local_only: bool,
+            enable_devices_numbers: Iterable[int] | None,
+        ) -> None:
         if local_only and model_path is None:
             raise ValueError("model_path must be provided when local_only is True")
 
@@ -50,6 +59,28 @@ class DeepSeekOCRHugginfaceModel:
         self._model_path: Path | None = model_path
         self._local_only = local_only
         self._models: _Models | None = None
+        self._device_number_to_index: list[int | None]
+
+        device_count = torch.cuda.device_count()
+        if device_count == 0:
+            raise RuntimeError("No CUDA devices available")
+
+        if enable_devices_numbers is None:
+            self._device_number_to_index = list(range(device_count))
+        else:
+            self._device_number_to_index = [None] * device_count
+            next_model_index: int = 0
+            for enable_device_number in sorted(list(set(enable_devices_numbers))):
+                if enable_device_number < 0 or enable_device_number >= device_count:
+                    raise ValueError(
+                        f"Invalid device number {enable_device_number}, "
+                        f"your system has {device_count} CUDA devices."
+                    )
+                self._device_number_to_index[enable_device_number] = next_model_index
+                next_model_index += 1
+
+            if next_model_index == 0:
+                raise ValueError("No devices are enabled for model loading.")
 
     def download(self) -> None:
         with self._rwlock.gen_wlock():
@@ -81,13 +112,26 @@ class DeepSeekOCRHugginfaceModel:
         temp_path: str,
         size: DeepSeekOCRSize,
         context: ExtractionContext | None,
+        device_number: int | None,
     ) -> str:
-        tokenizer, model = self._ensure_models()
+        if device_number is None:
+            model_index = self._device_number_to_index[0]
+        else:
+            model_index = self._device_number_to_index[device_number]
+
+        if model_index is None:
+            raise ValueError(f"Device number {device_number} is not enabled.")
+
+        models = self._ensure_models()
+        tokenizer = models.tokenizer
+        llm_model = models.llms[model_index]
+        config = _SIZE_CONFIGS[size]
+
         with self._rwlock.gen_rlock():
-            config = _SIZE_CONFIGS[size]
+            # TODO: 支持直接读取图片地址
             temp_image_path = os.path.join(temp_path, "temp_image.png")
             image.save(temp_image_path)
-            with InferWithInterruption(model, context) as infer:
+            with InferWithInterruption(llm_model, context) as infer:
                 text_result = infer(
                     tokenizer,
                     prompt=prompt,
@@ -133,20 +177,25 @@ class DeepSeekOCRHugginfaceModel:
                 cache_dir=cache_dir,
                 local_files_only=self._local_only,
             )
-            model = AutoModel.from_pretrained(
-                pretrained_model_name_or_path=name_or_path,
-                _attn_implementation=_ATTN_IMPLEMENTATION,
-                trust_remote_code=True,
-                use_safetensors=True,
-                cache_dir=cache_dir,
-                local_files_only=self._local_only,
-                torch_dtype=torch.bfloat16,
-                device_map="cuda",
-            )
-            model = model.eval()
-            self._models = (tokenizer, model)
-            preprocess_model(model)
+            llm_models: list[AutoModel] = []
+            for device_number, model_index in enumerate(self._device_number_to_index):
+                if model_index is None:
+                    continue
+                model = AutoModel.from_pretrained(
+                    pretrained_model_name_or_path=name_or_path,
+                    _attn_implementation=_ATTN_IMPLEMENTATION,
+                    trust_remote_code=True,
+                    use_safetensors=True,
+                    cache_dir=cache_dir,
+                    local_files_only=self._local_only,
+                )
+                model = model.cuda(device_number).to(torch.bfloat16)
+                llm_models.append(preprocess_model(model))
 
+            self._models = _Models(
+                tokenizer=tokenizer,
+                llms=llm_models,
+            )
             return self._models
 
     def _cache_dir(self) -> str | None:
