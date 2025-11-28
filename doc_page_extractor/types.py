@@ -1,8 +1,11 @@
 from dataclasses import dataclass
-from typing import Protocol, runtime_checkable
-from typing import Generator, Literal, Callable
+from os import PathLike
+from pathlib import Path
+from typing import runtime_checkable, Protocol, Generator, Literal, Callable
 
 from PIL import Image
+
+from .lazy_loader import LazyGetter
 
 
 DeepSeekOCRSize = Literal["tiny", "small", "base", "large", "gundam"]
@@ -16,6 +19,7 @@ class Layout:
 @dataclass
 class ExtractionContext:
     check_aborted: Callable[[], bool]
+    output_dir_path: PathLike | str | None = None
     max_tokens: int | None = None
     max_output_tokens: int | None = None
     input_tokens: int = 0
@@ -32,12 +36,12 @@ class PageExtractor(Protocol):
 
     def extract(
         self,
-        image: Image.Image,
+        image_path: PathLike | str,
         size: DeepSeekOCRSize,
         stages: int = 1,
         context: ExtractionContext | None = None,
         device_number: int | None = None,
-    ) -> Generator[tuple[Image.Image, list[Layout]], None, None]:
+    ) -> Generator[LazyGetter[tuple[Image.Image, list[Layout]]], None, None]:
         ...
 
 
@@ -54,9 +58,9 @@ class DeepSeekOCRModel(Protocol):
 
     def generate(
         self,
-        image: Image.Image,
         prompt: str,
-        temp_path: str,
+        image_path: Path,
+        output_path: Path,
         size: DeepSeekOCRSize,
         context: ExtractionContext | None,
         device_number: int | None,

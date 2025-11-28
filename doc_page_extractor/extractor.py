@@ -9,12 +9,13 @@ from .check_env import check_env
 from .model import DeepSeekOCRHugginfaceModel
 from .parser import ParsedItemKind, parse_ocr_response
 from .redacter import background_color, redact
+from .lazy_loader import lazy_load, LazyGetter
 from .types import Layout, PageExtractor, ExtractionContext, DeepSeekOCRModel, DeepSeekOCRSize
 
 
 
 def create_page_extractor(
-    model_path: PathLike | None = None,
+    model_path: PathLike | str | None = None,
     local_only: bool = False,
     enable_devices_numbers: Iterable[int] | None = None,
 ) -> PageExtractor:
@@ -43,30 +44,44 @@ class _PageExtractorImpls:
 
     def extract(
         self,
-        image: Image.Image,
+        image_path: PathLike | str,
         size: DeepSeekOCRSize,
         stages: int = 1,
         context: ExtractionContext | None = None,
         device_number: int | None = None,
-    ) -> Generator[tuple[Image.Image, list[Layout]], None, None]:
+    ) -> Generator[LazyGetter[tuple[Image.Image, list[Layout]]], None, None]:
+
         check_env()
         assert stages >= 1, "stages must be at least 1"
-        with tempfile.TemporaryDirectory() as temp_path:
-            fill_color: tuple[int, int, int] | None = None
+
+        image_path = Path(image_path)
+        fill_color: tuple[int, int, int] | None = None
+        output_path: Path | None = None
+        temp_dir: tempfile.TemporaryDirectory | None = None
+
+        if context and context.output_dir_path:
+            output_path = Path(context.output_dir_path)
+        else:
+            temp_dir = tempfile.TemporaryDirectory()
+            output_path = Path(temp_dir.name)
+
+        try:
             for i in range(stages):
                 response = self._model.generate(
-                    image=image,
                     prompt="<image>\n<|grounding|>Convert the document to markdown.",
-                    temp_path=temp_path,
+                    image_path=image_path,
+                    output_path=output_path,
                     size=size,
                     context=context,
                     device_number=device_number,
                 )
-                layouts: list[Layout] = []
-                for ref, det, text in self._parse_response(image, response):
-                    layouts.append(Layout(ref, det, text))
-                yield image, layouts
+                extraction_pair = lazy_load(
+                    load=lambda ip=image_path, res=response: self._generate_extraction_pair(ip, res),
+                )
+                yield extraction_pair
+
                 if i < stages - 1:
+                    image, layouts = extraction_pair()
                     if fill_color is None:
                         fill_color = background_color(image)
                     image = redact(
@@ -74,6 +89,18 @@ class _PageExtractorImpls:
                         fill_color=fill_color,
                         rectangles=(layout.det for layout in layouts),
                     )
+        finally:
+            if temp_dir is not None:
+                temp_dir.cleanup()
+
+
+    def _generate_extraction_pair(self, image_path: Path, response: str) -> tuple[Image.Image, list[Layout]]:
+        layouts: list[Layout] = []
+        image = Image.open(image_path)
+        for ref, det, text in self._parse_response(image, response):
+            layouts.append(Layout(ref, det, text))
+        return image, layouts
+
 
     def _parse_response(
         self, image: Image.Image, response: str
