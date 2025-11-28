@@ -59,7 +59,8 @@ from typing import Any
 
 from transformers import StoppingCriteria
 
-from .extraction_context import AbortStoppingCriteria, ExtractionContext
+from .types import ExtractionContext
+from .extraction_context import AbortStoppingCriteria
 
 _LOCAL = threading.local()
 _LOCAL_KEY = "value"

@@ -4,7 +4,8 @@
         "editor.codeActionsOnSave": {
             "source.organizeImports": "explicit"
         },
-        "files.trimTrailingWhitespace": true
+        "python.linting.enabled": true,
+        "files.trimTrailingWhitespace": true,
     },
     "cSpell.words": [
         "deepseek",

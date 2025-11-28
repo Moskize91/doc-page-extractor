@@ -1,17 +1,11 @@
-from dataclasses import dataclass
 from typing import Any, Callable, cast
 
 import torch
 from transformers import StoppingCriteria
 
+from .types import ExtractionContext
 
-@dataclass
-class ExtractionContext:
-    check_aborted: Callable[[], bool]
-    max_tokens: int | None = None
-    max_output_tokens: int | None = None
-    input_tokens: int = 0
-    output_tokens: int = 0
+
 
 
 class ExtractionAbortedError(Exception):

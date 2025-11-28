@@ -1,5 +1,4 @@
 import tempfile
-from dataclasses import dataclass
 from os import PathLike
 from pathlib import Path
 from typing import Generator, cast
@@ -7,17 +6,11 @@ from typing import Generator, cast
 from PIL import Image
 
 from .check_env import check_env
-from .extraction_context import ExtractionContext
-from .model import DeepSeekOCRModel, DeepSeekOCRSize
+from .model import DeepSeekOCRModel
 from .parser import ParsedItemKind, parse_ocr_response
 from .redacter import background_color, redact
+from .types import Layout, ExtractionContext, DeepSeekOCRSize
 
-
-@dataclass
-class Layout:
-    ref: str
-    det: tuple[int, int, int, int]
-    text: str | None
 
 
 class PageExtractor:
