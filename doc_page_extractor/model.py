@@ -2,7 +2,7 @@ import os
 from dataclasses import dataclass
 from importlib.util import find_spec
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 import torch
 from huggingface_hub import snapshot_download
@@ -12,8 +12,8 @@ from transformers import AutoModel, AutoTokenizer
 
 from .extraction_context import ExtractionContext
 from .injection import InferWithInterruption, preprocess_model
+from .types import DeepSeekOCRSize
 
-DeepSeekOCRSize = Literal["tiny", "small", "base", "large", "gundam"]
 
 
 @dataclass
@@ -40,7 +40,7 @@ else:
 _Models = tuple[Any, Any]
 
 
-class DeepSeekOCRModel:
+class DeepSeekOCRHugginfaceModel:
     def __init__(self, model_path: Path | None, local_only: bool) -> None:
         if local_only and model_path is None:
             raise ValueError("model_path must be provided when local_only is True")

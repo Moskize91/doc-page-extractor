@@ -4,7 +4,7 @@ from PIL import ImageDraw
 from PIL.Image import Image
 from PIL.ImageFont import FreeTypeFont, load_default
 
-from .extractor import Layout
+from .types import Layout
 
 _FRAGMENT_COLOR = (0x49, 0xCF, 0xCB)  # Light Green
 _Color = tuple[int, int, int]

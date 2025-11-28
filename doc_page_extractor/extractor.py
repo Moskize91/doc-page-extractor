@@ -1,5 +1,4 @@
 import tempfile
-from dataclasses import dataclass
 from os import PathLike
 from pathlib import Path
 from typing import Generator, cast
@@ -7,29 +6,32 @@ from typing import Generator, cast
 from PIL import Image
 
 from .check_env import check_env
-from .extraction_context import ExtractionContext
-from .model import DeepSeekOCRModel, DeepSeekOCRSize
+from .model import DeepSeekOCRHugginfaceModel
 from .parser import ParsedItemKind, parse_ocr_response
 from .redacter import background_color, redact
+from .types import Layout, PageExtractor, ExtractionContext, DeepSeekOCRModel, DeepSeekOCRSize
 
 
-@dataclass
-class Layout:
-    ref: str
-    det: tuple[int, int, int, int]
-    text: str | None
+
+def create_page_extractor(
+    model_path: PathLike | None = None,
+    local_only: bool = False,
+) -> PageExtractor:
+    model: DeepSeekOCRHugginfaceModel = DeepSeekOCRHugginfaceModel(
+        model_path=Path(model_path) if model_path else None,
+        local_only=local_only,
+    )
+    return _PageExtractorImpls(model)
+
+def create_page_extractor_with_model(model: DeepSeekOCRModel) -> PageExtractor:
+    if not isinstance(model, DeepSeekOCRModel):
+        raise TypeError("model must implement DeepSeekOCRModel protocol")
+    return _PageExtractorImpls(model)
 
 
-class PageExtractor:
-    def __init__(
-        self,
-        model_path: PathLike | None = None,
-        local_only: bool = False,
-    ) -> None:
-        self._model: DeepSeekOCRModel = DeepSeekOCRModel(
-            model_path=Path(model_path) if model_path else None,
-            local_only=local_only,
-        )
+class _PageExtractorImpls:
+    def __init__(self, model: DeepSeekOCRModel) -> None:
+        self._model: DeepSeekOCRModel = model
 
     def download_models(self) -> None:
         self._model.download()

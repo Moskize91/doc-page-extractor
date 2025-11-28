@@ -48,11 +48,6 @@ name = "pytorch-cu121"
 url = "https://download.pytorch.org/whl/cu121"
 priority = "explicit"
 
-[[tool.poetry.source]]
-name = "pytorch-cu118"
-url = "https://download.pytorch.org/whl/cu118"
-priority = "explicit"
-
 [tool.poetry.group.dev.dependencies]
 pylint = "^3.3.7"
 # Development environment includes CUDA 12.1 PyTorch
