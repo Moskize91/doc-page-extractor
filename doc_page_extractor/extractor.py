@@ -36,8 +36,8 @@ class _PageExtractorImpls:
     def __init__(self, model: DeepSeekOCRModel) -> None:
         self._model: DeepSeekOCRModel = model
 
-    def download_models(self) -> None:
-        self._model.download()
+    def download_models(self, revision: str | None = None) -> None:
+        self._model.download(revision)
 
     def load_models(self) -> None:
         self._model.load()

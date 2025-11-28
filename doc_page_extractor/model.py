@@ -80,11 +80,13 @@ class DeepSeekOCRHugginfaceModel:
             if next_model_index == 0:
                 raise ValueError("No devices are enabled for model loading.")
 
-    def download(self) -> None:
+    def download(self, revision: str | None) -> None:
         with self._rwlock.gen_wlock():
             snapshot_download(
                 repo_id=self._model_name,
                 repo_type="model",
+                revision=revision,
+                force_download=True,
                 cache_dir=self._cache_dir(),
             )
             if self._model_path is not None and self._find_pretrained_path() is None:
