@@ -14,6 +14,12 @@ Install dependencies:
 poetry install
 ```
 
+Install CUDA 12.1 version of torch and torchvision (Linux/Windows, GPU support):
+
+```shell
+poetry run pip install torch==2.5.1+cu121 torchvision==0.20.1+cu121 --index-url https://download.pytorch.org/whl/cu121
+```
+
 ## Development Workflow
 
 ### Run Tests
@@ -42,13 +48,10 @@ For macOS developers, PyTorch CUDA version is not compatible. Use the following 
 
 ```shell
 # Install only main dependencies first (skip dev group to avoid CUDA installation)
-poetry install --without dev
+poetry install
 
 # Install PyTorch CPU version
 poetry run pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-
-# Install other dev dependencies (pylint, etc.)
-poetry install --only dev
 ```
 
 ### Build Package
