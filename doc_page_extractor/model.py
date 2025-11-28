@@ -107,9 +107,9 @@ class DeepSeekOCRHugginfaceModel:
 
     def generate(
         self,
-        image: Image.Image,
         prompt: str,
-        temp_path: str,
+        image_path: Path,
+        output_path: Path,
         size: DeepSeekOCRSize,
         context: ExtractionContext | None,
         device_number: int | None,
@@ -128,15 +128,12 @@ class DeepSeekOCRHugginfaceModel:
         config = _SIZE_CONFIGS[size]
 
         with self._rwlock.gen_rlock():
-            # TODO: 支持直接读取图片地址
-            temp_image_path = os.path.join(temp_path, "temp_image.png")
-            image.save(temp_image_path)
             with InferWithInterruption(llm_model, context) as infer:
                 text_result = infer(
                     tokenizer,
                     prompt=prompt,
-                    image_file=temp_image_path,
-                    output_path=temp_path,
+                    image_file=str(image_path),
+                    output_path=str(output_path),
                     base_size=config.base_size,
                     image_size=config.image_size,
                     crop_mode=config.crop_mode,

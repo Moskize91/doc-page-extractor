@@ -14,7 +14,7 @@ from .types import Layout, PageExtractor, ExtractionContext, DeepSeekOCRModel, D
 
 
 def create_page_extractor(
-    model_path: PathLike | None = None,
+    model_path: PathLike | str | None = None,
     local_only: bool = False,
     enable_devices_numbers: Iterable[int] | None = None,
 ) -> PageExtractor:
@@ -43,7 +43,7 @@ class _PageExtractorImpls:
 
     def extract(
         self,
-        image: Image.Image,
+        image_path: PathLike | str,
         size: DeepSeekOCRSize,
         stages: int = 1,
         context: ExtractionContext | None = None,
@@ -51,13 +51,24 @@ class _PageExtractorImpls:
     ) -> Generator[tuple[Image.Image, list[Layout]], None, None]:
         check_env()
         assert stages >= 1, "stages must be at least 1"
-        with tempfile.TemporaryDirectory() as temp_path:
-            fill_color: tuple[int, int, int] | None = None
+
+        image_path = Path(image_path)
+        fill_color: tuple[int, int, int] | None = None
+        output_path: Path | None = None
+        temp_dir: tempfile.TemporaryDirectory | None = None
+
+        if context:
+            output_path = Path(context.output_dir_path)
+        else:
+            temp_dir = tempfile.TemporaryDirectory()
+            output_path = Path(temp_dir.name)
+
+        try:
             for i in range(stages):
                 response = self._model.generate(
-                    image=image,
                     prompt="<image>\n<|grounding|>Convert the document to markdown.",
-                    temp_path=temp_path,
+                    image_path=image_path,
+                    output_path=output_path,
                     size=size,
                     context=context,
                     device_number=device_number,
@@ -74,6 +85,9 @@ class _PageExtractorImpls:
                         fill_color=fill_color,
                         rectangles=(layout.det for layout in layouts),
                     )
+        finally:
+            if temp_dir is not None:
+                temp_dir.cleanup()
 
     def _parse_response(
         self, image: Image.Image, response: str
