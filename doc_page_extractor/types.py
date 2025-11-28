@@ -21,6 +21,7 @@ class ExtractionContext:
     input_tokens: int = 0
     output_tokens: int = 0
 
+
 @runtime_checkable
 class PageExtractor(Protocol):
     def download_models(self) -> None:
@@ -36,4 +37,26 @@ class PageExtractor(Protocol):
         stages: int = 1,
         context: ExtractionContext | None = None,
     ) -> Generator[tuple[Image.Image, list[Layout]], None, None]:
+        ...
+
+
+@runtime_checkable
+class DeepSeekOCRModel(Protocol):
+    def download(self) -> None:
+        ...
+
+    def load(self) -> None:
+        ...
+
+    def unload(self) -> None:
+        ...
+
+    def generate(
+        self,
+        image: Image.Image,
+        prompt: str,
+        temp_path: str,
+        size: DeepSeekOCRSize,
+        context: ExtractionContext | None,
+    ) -> str:
         ...

@@ -40,7 +40,7 @@ else:
 _Models = tuple[Any, Any]
 
 
-class DeepSeekOCRModel:
+class DeepSeekOCRHugginfaceModel:
     def __init__(self, model_path: Path | None, local_only: bool) -> None:
         if local_only and model_path is None:
             raise ValueError("model_path must be provided when local_only is True")
