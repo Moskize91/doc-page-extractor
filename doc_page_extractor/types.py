@@ -19,7 +19,7 @@ class Layout:
 @dataclass
 class ExtractionContext:
     check_aborted: Callable[[], bool]
-    output_dir_path: PathLike | str
+    output_dir_path: PathLike | str | None = None
     max_tokens: int | None = None
     max_output_tokens: int | None = None
     input_tokens: int = 0

@@ -1,7 +1,7 @@
 import tempfile
 from os import PathLike
 from pathlib import Path
-from typing import cast, Any, Generator, Iterable
+from typing import cast, Generator, Iterable
 
 from PIL import Image
 
@@ -59,7 +59,7 @@ class _PageExtractorImpls:
         output_path: Path | None = None
         temp_dir: tempfile.TemporaryDirectory | None = None
 
-        if context:
+        if context and context.output_dir_path:
             output_path = Path(context.output_dir_path)
         else:
             temp_dir = tempfile.TemporaryDirectory()
@@ -93,12 +93,14 @@ class _PageExtractorImpls:
             if temp_dir is not None:
                 temp_dir.cleanup()
 
-    def _generate_extraction_pair(self, image_path: Path, response: Any) -> tuple[Image.Image, list[Layout]]:
+
+    def _generate_extraction_pair(self, image_path: Path, response: str) -> tuple[Image.Image, list[Layout]]:
         layouts: list[Layout] = []
         image = Image.open(image_path)
         for ref, det, text in self._parse_response(image, response):
             layouts.append(Layout(ref, det, text))
         return image, layouts
+
 
     def _parse_response(
         self, image: Image.Image, response: str
