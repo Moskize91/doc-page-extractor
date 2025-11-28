@@ -2,10 +2,10 @@
 
 ## Setup
 
-Setup Conda
+Setup Python env
 ```shell
-conda create -p ./.conda python=3.11.14
-conda activate ./.conda
+python -m venv .venv
+. ./.venv/bin/activate
 ```
 
 Install dependencies:
