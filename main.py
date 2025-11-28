@@ -16,18 +16,23 @@ def main() -> None:
         model_path=project_root / "models-cache",
         local_only=False,
     )
+    begin_at = time.time()
+    extractor.load_models()
+    print(f"Models loaded in {time.time() - begin_at:.2f} seconds.")
+
     plot_dir = project_root / "plot"
     plot_dir.mkdir(exist_ok=True)
     name_stem = Path(image_name).stem
     name_suffix = Path(image_name).suffix
-    created_at = time.time()
+    begin_at = time.time()
 
     def check_aborted() -> bool:
-        if time.time() - created_at > _ABORT_TIMEOUT:
+        if time.time() - begin_at > _ABORT_TIMEOUT:
             print("Aborted extraction due to timeout.")
             return True
         return False
 
+    print("Starting extraction...")
     for i, (image, layouts) in enumerate(
         extractor.extract(
             image=Image.open(image_dir_path / image_name),
@@ -43,7 +48,7 @@ def main() -> None:
         output_path = plot_dir / f"{name_stem}_{i}{name_suffix}"
         image.save(output_path)
 
-    print(f"Extraction cost {time.time() - created_at:.2f} seconds.")
+    print(f"Extraction cost {time.time() - begin_at:.2f} seconds.")
 
 if __name__ == "__main__":
     main()

@@ -2,7 +2,6 @@ import os
 from dataclasses import dataclass
 from importlib.util import find_spec
 from pathlib import Path
-from typing import Any
 
 import torch
 from huggingface_hub import snapshot_download
@@ -12,6 +11,7 @@ from transformers import AutoModel, AutoTokenizer
 
 from .extraction_context import ExtractionContext
 from .injection import InferWithInterruption, preprocess_model
+from .resource_locks import ResourceLocks
 from .types import DeepSeekOCRSize
 
 
@@ -37,7 +37,11 @@ if find_spec("flash_attn") is not None:
 else:
     _ATTN_IMPLEMENTATION = "eager"
 
-_Models = tuple[Any, Any]
+
+@dataclass
+class _Models:
+    tokenizer: AutoTokenizer
+    llms: ResourceLocks[AutoModel]
 
 
 class DeepSeekOCRHugginfaceModel:
@@ -82,25 +86,27 @@ class DeepSeekOCRHugginfaceModel:
         size: DeepSeekOCRSize,
         context: ExtractionContext | None,
     ) -> str:
-        tokenizer, model = self._ensure_models()
+        models = self._ensure_models()
+        tokenizer = models.tokenizer
         with self._rwlock.gen_rlock():
-            config = _SIZE_CONFIGS[size]
-            temp_image_path = os.path.join(temp_path, "temp_image.png")
-            image.save(temp_image_path)
-            with InferWithInterruption(model, context) as infer:
-                text_result = infer(
-                    tokenizer,
-                    prompt=prompt,
-                    image_file=temp_image_path,
-                    output_path=temp_path,
-                    base_size=config.base_size,
-                    image_size=config.image_size,
-                    crop_mode=config.crop_mode,
-                    save_results=True,
-                    test_compress=True,
-                    eval_mode=True,
-                )
-            return text_result
+            with models.llms.access() as llm_model:
+                config = _SIZE_CONFIGS[size]
+                temp_image_path = os.path.join(temp_path, "temp_image.png")
+                image.save(temp_image_path)
+                with InferWithInterruption(llm_model, context) as infer:
+                    text_result = infer(
+                        tokenizer,
+                        prompt=prompt,
+                        image_file=temp_image_path,
+                        output_path=temp_path,
+                        base_size=config.base_size,
+                        image_size=config.image_size,
+                        crop_mode=config.crop_mode,
+                        save_results=True,
+                        test_compress=True,
+                        eval_mode=True,
+                    )
+                return text_result
 
     def _ensure_models(self) -> _Models:
         with self._rwlock.gen_rlock():
@@ -133,20 +139,27 @@ class DeepSeekOCRHugginfaceModel:
                 cache_dir=cache_dir,
                 local_files_only=self._local_only,
             )
-            model = AutoModel.from_pretrained(
-                pretrained_model_name_or_path=name_or_path,
-                _attn_implementation=_ATTN_IMPLEMENTATION,
-                trust_remote_code=True,
-                use_safetensors=True,
-                cache_dir=cache_dir,
-                local_files_only=self._local_only,
-                torch_dtype=torch.bfloat16,
-                device_map="cuda",
-            )
-            model = model.eval()
-            self._models = (tokenizer, model)
-            preprocess_model(model)
+            device_count = torch.cuda.device_count()
+            if device_count == 0:
+                raise RuntimeError("No CUDA devices available")
 
+            llm_models: list[AutoModel] = []
+            for i in range(0, device_count):
+                model = AutoModel.from_pretrained(
+                    pretrained_model_name_or_path=name_or_path,
+                    _attn_implementation=_ATTN_IMPLEMENTATION,
+                    trust_remote_code=True,
+                    use_safetensors=True,
+                    cache_dir=cache_dir,
+                    local_files_only=self._local_only,
+                )
+                model = model.cuda(i).to(torch.bfloat16)
+                llm_models.append(preprocess_model(model))
+
+            self._models = _Models(
+                tokenizer=tokenizer,
+                llms=ResourceLocks(llm_models),
+            )
             return self._models
 
     def _cache_dir(self) -> str | None:
