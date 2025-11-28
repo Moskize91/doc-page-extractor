@@ -11,7 +11,6 @@ from transformers import AutoModel, AutoTokenizer
 
 from .extraction_context import ExtractionContext
 from .injection import InferWithInterruption, preprocess_model
-from .resource_locks import ResourceLocks
 from .types import DeepSeekOCRSize
 
 
@@ -41,7 +40,7 @@ else:
 @dataclass
 class _Models:
     tokenizer: AutoTokenizer
-    llms: ResourceLocks[AutoModel]
+    llms: list[AutoModel]
 
 
 class DeepSeekOCRHugginfaceModel:
@@ -89,24 +88,25 @@ class DeepSeekOCRHugginfaceModel:
         models = self._ensure_models()
         tokenizer = models.tokenizer
         with self._rwlock.gen_rlock():
-            with models.llms.access() as llm_model:
-                config = _SIZE_CONFIGS[size]
-                temp_image_path = os.path.join(temp_path, "temp_image.png")
-                image.save(temp_image_path)
-                with InferWithInterruption(llm_model, context) as infer:
-                    text_result = infer(
-                        tokenizer,
-                        prompt=prompt,
-                        image_file=temp_image_path,
-                        output_path=temp_path,
-                        base_size=config.base_size,
-                        image_size=config.image_size,
-                        crop_mode=config.crop_mode,
-                        save_results=True,
-                        test_compress=True,
-                        eval_mode=True,
-                    )
-                return text_result
+            llm_model = models.llms[0]
+            config = _SIZE_CONFIGS[size]
+            # TODO: 支持直接读取图片地址
+            temp_image_path = os.path.join(temp_path, "temp_image.png")
+            image.save(temp_image_path)
+            with InferWithInterruption(llm_model, context) as infer:
+                text_result = infer(
+                    tokenizer,
+                    prompt=prompt,
+                    image_file=temp_image_path,
+                    output_path=temp_path,
+                    base_size=config.base_size,
+                    image_size=config.image_size,
+                    crop_mode=config.crop_mode,
+                    save_results=True,
+                    test_compress=True,
+                    eval_mode=True,
+                )
+            return text_result
 
     def _ensure_models(self) -> _Models:
         with self._rwlock.gen_rlock():
@@ -158,7 +158,7 @@ class DeepSeekOCRHugginfaceModel:
 
             self._models = _Models(
                 tokenizer=tokenizer,
-                llms=ResourceLocks(llm_models),
+                llms=llm_models,
             )
             return self._models
 
