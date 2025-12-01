@@ -126,6 +126,9 @@ class DeepSeekOCRHugginfaceModel:
             return text_result
 
     def _create_device_number_to_index(self, enable_devices_numbers: Iterable[int] | None) -> list[int | None]:
+        if not torch.cuda.is_available():
+            return []
+
         device_count = torch.cuda.device_count()
         if enable_devices_numbers is None:
             return list(range(device_count))
