@@ -13,7 +13,6 @@ from .injection import InferWithInterruption, preprocess_model
 from .types import DeepSeekOCRSize
 
 
-
 @dataclass
 class _SizeConfig:
     base_size: int
@@ -44,41 +43,23 @@ class _Models:
 
 class DeepSeekOCRHugginfaceModel:
     def __init__(
-            self,
-            model_path: Path | None,
-            local_only: bool,
-            enable_devices_numbers: Iterable[int] | None,
-        ) -> None:
+        self,
+        model_path: Path | None,
+        local_only: bool,
+        enable_devices_numbers: Iterable[int] | None,
+    ) -> None:
         if local_only and model_path is None:
-            raise ValueError("model_path must be provided when local_only is True")
+            raise ValueError(
+                "model_path must be provided when local_only is True")
 
         self._rwlock = rwlock.RWLockFair()
         self._model_name = "deepseek-ai/DeepSeek-OCR"
         self._model_path: Path | None = model_path
         self._local_only = local_only
         self._models: _Models | None = None
-        self._device_number_to_index: list[int | None]
-
-        device_count = torch.cuda.device_count()
-        if device_count == 0:
-            raise RuntimeError("No CUDA devices available")
-
-        if enable_devices_numbers is None:
-            self._device_number_to_index = list(range(device_count))
-        else:
-            self._device_number_to_index = [None] * device_count
-            next_model_index: int = 0
-            for enable_device_number in sorted(list(set(enable_devices_numbers))):
-                if enable_device_number < 0 or enable_device_number >= device_count:
-                    raise ValueError(
-                        f"Invalid device number {enable_device_number}, "
-                        f"your system has {device_count} CUDA devices."
-                    )
-                self._device_number_to_index[enable_device_number] = next_model_index
-                next_model_index += 1
-
-            if next_model_index == 0:
-                raise ValueError("No devices are enabled for model loading.")
+        self._device_number_to_index: list[int | None] = self._create_device_number_to_index(
+            enable_devices_numbers=enable_devices_numbers,
+        )
 
     def download(self, revision: str | None) -> None:
         with self._rwlock.gen_wlock():
@@ -114,6 +95,8 @@ class DeepSeekOCRHugginfaceModel:
         context: ExtractionContext | None,
         device_number: int | None,
     ) -> str:
+
+        models = self._ensure_models()
         if device_number is None:
             model_index = self._device_number_to_index[0]
         else:
@@ -122,7 +105,6 @@ class DeepSeekOCRHugginfaceModel:
         if model_index is None:
             raise ValueError(f"Device number {device_number} is not enabled.")
 
-        models = self._ensure_models()
         tokenizer = models.tokenizer
         llm_model = models.llms[model_index]
         config = _SIZE_CONFIGS[size]
@@ -143,6 +125,30 @@ class DeepSeekOCRHugginfaceModel:
                 )
             return text_result
 
+    def _create_device_number_to_index(self, enable_devices_numbers: Iterable[int] | None) -> list[int | None]:
+        if not torch.cuda.is_available():
+            return []
+
+        device_count = torch.cuda.device_count()
+        if enable_devices_numbers is None:
+            return list(range(device_count))
+
+        device_number_to_index: list[int | None] = [None] * device_count
+        next_model_index: int = 0
+        for enable_device_number in sorted(list(set(enable_devices_numbers))):
+            if enable_device_number < 0 or enable_device_number >= device_count:
+                raise ValueError(
+                    f"Invalid device number {enable_device_number}, "
+                    f"your system has {device_count} CUDA devices."
+                )
+            device_number_to_index[enable_device_number] = next_model_index
+            next_model_index += 1
+
+        if next_model_index == 0:
+            raise ValueError("No devices are enabled for model loading.")
+
+        return device_number_to_index
+
     def _ensure_models(self) -> _Models:
         with self._rwlock.gen_rlock():
             if self._models is not None:
@@ -152,6 +158,9 @@ class DeepSeekOCRHugginfaceModel:
             # 检查两次，因为中间有解锁
             if self._models is not None:
                 return self._models
+
+            if len(self._device_number_to_index) == 0:
+                raise RuntimeError("No CUDA devices available")
 
             name_or_path = self._model_name
             cache_dir: str | None = None
