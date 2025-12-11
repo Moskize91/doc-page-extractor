@@ -65,14 +65,18 @@ class _PageExtractorImpls:
             for i in range(stages):
                 image_path = output_path / f"raw-{i+1}.png"
                 image.save(image_path, "PNG")
-                response = self._model.generate(
-                    prompt="<image>\n<|grounding|>Convert the document to markdown.",
-                    image_path=image_path,
-                    output_path=output_path,
-                    size=size,
-                    context=context,
-                    device_number=device_number,
-                )
+                try:
+                    response = self._model.generate(
+                        prompt="<image>\n<|grounding|>Convert the document to markdown.",
+                        image_path=image_path,
+                        output_path=output_path,
+                        size=size,
+                        context=context,
+                        device_number=device_number,
+                    )
+                finally:
+                    image_path.unlink(missing_ok=True)
+
                 layouts = [
                     Layout(ref, det, text)
                     for ref, det, text in self._parse_response(image, response)
