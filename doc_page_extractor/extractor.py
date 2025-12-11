@@ -8,7 +8,6 @@ from PIL import Image
 from .model import DeepSeekOCRHugginfaceModel
 from .parser import ParsedItemKind, parse_ocr_response
 from .redacter import background_color, redact
-from .lazy_loader import lazy_load, LazyGetter
 from .types import Layout, PageExtractor, ExtractionContext, DeepSeekOCRModel, DeepSeekOCRSize
 
 
@@ -43,15 +42,14 @@ class _PageExtractorImpls:
 
     def extract(
         self,
-        image_path: PathLike | str,
+        image: Image.Image,
         size: DeepSeekOCRSize,
         stages: int = 1,
         context: ExtractionContext | None = None,
         device_number: int | None = None,
-    ) -> Generator[LazyGetter[tuple[Image.Image, list[Layout]]], None, None]:
+    ) -> Generator[tuple[Image.Image, list[Layout]], None, None]:
         assert stages >= 1, "stages must be at least 1"
 
-        image_path = Path(image_path)
         fill_color: tuple[int, int, int] | None = None
         output_path: Path | None = None
         temp_dir: tempfile.TemporaryDirectory | None = None
@@ -63,23 +61,29 @@ class _PageExtractorImpls:
             output_path = Path(temp_dir.name)
 
         try:
+
             for i in range(stages):
-                response = self._model.generate(
-                    prompt="<image>\n<|grounding|>Convert the document to markdown.",
-                    image_path=image_path,
-                    output_path=output_path,
-                    size=size,
-                    context=context,
-                    device_number=device_number,
-                )
-                extraction_pair = lazy_load(
-                    load=lambda ip=image_path, res=response: self._generate_extraction_pair(
-                        ip, res),
-                )
-                yield extraction_pair
+                image_path = output_path / f"raw-{i+1}.png"
+                image.save(image_path, "PNG")
+                try:
+                    response = self._model.generate(
+                        prompt="<image>\n<|grounding|>Convert the document to markdown.",
+                        image_path=image_path,
+                        output_path=output_path,
+                        size=size,
+                        context=context,
+                        device_number=device_number,
+                    )
+                finally:
+                    image_path.unlink(missing_ok=True)
+
+                layouts = [
+                    Layout(ref, det, text)
+                    for ref, det, text in self._parse_response(image, response)
+                ]
+                yield image, layouts
 
                 if i < stages - 1:
-                    image, layouts = extraction_pair()
                     if fill_color is None:
                         fill_color = background_color(image)
                     image = redact(
@@ -98,9 +102,7 @@ class _PageExtractorImpls:
             layouts.append(Layout(ref, det, text))
         return image, layouts
 
-    def _parse_response(
-        self, image: Image.Image, response: str
-    ) -> Generator[tuple[str, tuple[int, int, int, int], str | None], None, None]:
+    def _parse_response(self, image: Image.Image, response: str) -> Generator[tuple[str, tuple[int, int, int, int], str | None], None, None]:
         width, height = image.size
         det: tuple[int, int, int, int] | None = None
         ref: str | None = None

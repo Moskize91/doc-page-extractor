@@ -5,16 +5,16 @@ from typing import runtime_checkable, Protocol, Generator, Literal, Callable
 
 from PIL import Image
 
-from .lazy_loader import LazyGetter
-
 
 DeepSeekOCRSize = Literal["tiny", "small", "base", "large", "gundam"]
+
 
 @dataclass
 class Layout:
     ref: str
     det: tuple[int, int, int, int]
     text: str | None
+
 
 @dataclass
 class ExtractionContext:
@@ -36,12 +36,12 @@ class PageExtractor(Protocol):
 
     def extract(
         self,
-        image_path: PathLike | str,
+        image: Image.Image,
         size: DeepSeekOCRSize,
         stages: int = 1,
         context: ExtractionContext | None = None,
         device_number: int | None = None,
-    ) -> Generator[LazyGetter[tuple[Image.Image, list[Layout]]], None, None]:
+    ) -> Generator[tuple[Image.Image, list[Layout]], None, None]:
         ...
 
 

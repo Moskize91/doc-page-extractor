@@ -1,6 +1,7 @@
 import time
-from pathlib import Path
 
+from pathlib import Path
+from PIL import Image
 from doc_page_extractor import plot, create_page_extractor, ExtractionContext
 
 _ABORT_TIMEOUT = 9999.0  # seconds
@@ -31,23 +32,24 @@ def main() -> None:
         return False
 
     print("Starting extraction...")
-    for i, get_pair in enumerate(
+    for i, (image, layouts) in enumerate(
         extractor.extract(
-            image_path=image_dir_path / image_name,
+            image=Image.open(image_dir_path / image_name),
             size="gundam",
             stages=2,
             context=ExtractionContext(check_aborted=check_aborted),
         )
     ):
         print("Layouts:")
-        image, layouts = get_pair()
         for layout in layouts:
-            print(f"  Ref: {layout.ref}, Det: {layout.det}, Text: {layout.text}")
+            print(
+                f"  Ref: {layout.ref}, Det: {layout.det}, Text: {layout.text}")
         image = plot(image.copy(), layouts)
         output_path = plot_dir / f"{name_stem}_{i}{name_suffix}"
         image.save(output_path)
 
     print(f"Extraction cost {time.time() - begin_at:.2f} seconds.")
+
 
 if __name__ == "__main__":
     main()
