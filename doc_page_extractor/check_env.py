@@ -1,11 +1,11 @@
 import warnings
 
-import torch
 
 _env_checked = False
 
 
 def check_env() -> None:
+    import torch
     global _env_checked  # pylint: disable=global-statement
     if _env_checked:
         return

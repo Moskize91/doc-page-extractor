@@ -1,17 +1,15 @@
 import tempfile
+
 from os import PathLike
 from pathlib import Path
 from typing import cast, Generator, Iterable
-
 from PIL import Image
 
-from .check_env import check_env
 from .model import DeepSeekOCRHugginfaceModel
 from .parser import ParsedItemKind, parse_ocr_response
 from .redacter import background_color, redact
 from .lazy_loader import lazy_load, LazyGetter
 from .types import Layout, PageExtractor, ExtractionContext, DeepSeekOCRModel, DeepSeekOCRSize
-
 
 
 def create_page_extractor(
@@ -25,6 +23,7 @@ def create_page_extractor(
         enable_devices_numbers=enable_devices_numbers,
     )
     return _PageExtractorImpls(model)
+
 
 def create_page_extractor_with_model(model: DeepSeekOCRModel) -> PageExtractor:
     if not isinstance(model, DeepSeekOCRModel):
@@ -50,8 +49,6 @@ class _PageExtractorImpls:
         context: ExtractionContext | None = None,
         device_number: int | None = None,
     ) -> Generator[LazyGetter[tuple[Image.Image, list[Layout]]], None, None]:
-
-        check_env()
         assert stages >= 1, "stages must be at least 1"
 
         image_path = Path(image_path)
@@ -76,7 +73,8 @@ class _PageExtractorImpls:
                     device_number=device_number,
                 )
                 extraction_pair = lazy_load(
-                    load=lambda ip=image_path, res=response: self._generate_extraction_pair(ip, res),
+                    load=lambda ip=image_path, res=response: self._generate_extraction_pair(
+                        ip, res),
                 )
                 yield extraction_pair
 
@@ -93,14 +91,12 @@ class _PageExtractorImpls:
             if temp_dir is not None:
                 temp_dir.cleanup()
 
-
     def _generate_extraction_pair(self, image_path: Path, response: str) -> tuple[Image.Image, list[Layout]]:
         layouts: list[Layout] = []
         image = Image.open(image_path)
         for ref, det, text in self._parse_response(image, response):
             layouts.append(Layout(ref, det, text))
         return image, layouts
-
 
     def _parse_response(
         self, image: Image.Image, response: str

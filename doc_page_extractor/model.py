@@ -3,14 +3,14 @@ from importlib.util import find_spec
 from pathlib import Path
 from typing import Iterable
 
-import torch
 from huggingface_hub import snapshot_download
 from readerwriterlock import rwlock
 from transformers import AutoModel, AutoTokenizer
 
+from .types import DeepSeekOCRSize
+from .check_env import check_env
 from .extraction_context import ExtractionContext
 from .injection import InferWithInterruption, preprocess_model
-from .types import DeepSeekOCRSize
 
 
 @dataclass
@@ -126,6 +126,7 @@ class DeepSeekOCRHugginfaceModel:
             return text_result
 
     def _create_device_number_to_index(self, enable_devices_numbers: Iterable[int] | None) -> list[int | None]:
+        import torch
         if not torch.cuda.is_available():
             return []
 
@@ -150,6 +151,8 @@ class DeepSeekOCRHugginfaceModel:
         return device_number_to_index
 
     def _ensure_models(self) -> _Models:
+        import torch
+        check_env()
         with self._rwlock.gen_rlock():
             if self._models is not None:
                 return self._models
