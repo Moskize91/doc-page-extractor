@@ -88,8 +88,6 @@ pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 
 This project is licensed under the MIT License. It depends on the DeepSeek-OCR model which uses **easydict** (LGPLv3) for configuration management.
 
-The LGPL license allows dynamic linking (as used here via Python imports) without affecting the license of dependent projects. Users are free to use, modify, and distribute this software under the MIT License terms.
-
 ## Development
 
 For contributors and developers, see [Development Guide](docs/DEVELOPMENT.md) for:
