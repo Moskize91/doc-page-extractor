@@ -6,7 +6,6 @@ from .extraction_context import (
 
 from .extractor import create_page_extractor, create_page_extractor_with_model
 from .plot import plot
-from .lazy_loader import LazyGetter
 from .types import (
     Layout,
     PageExtractor,
@@ -28,5 +27,4 @@ __all__ = [
     "ExtractionAbortedError",
     "TokenLimitError",
     "Layout",
-    "LazyGetter",
 ]
