@@ -110,6 +110,10 @@ class DeepSeekOCRHugginfaceModel:
 
         with self._rwlock.gen_rlock():
             with InferWithInterruption(llm_model, context) as infer:
+                # - {output_path}/result.mmd - OCR提取的Markdown格式结果
+                # - {output_path}/result_with_boxes.jpg - 带有边界框标注的可视化图片
+                # - {output_path}/images/{N}.jpg - 从文档中提取的图片（N为索引号）
+                # - {output_path}/geo.jpg - 如果检测到几何图形会生成该文件（条件性）
                 text_result = infer(
                     tokenizer,
                     prompt=prompt,
