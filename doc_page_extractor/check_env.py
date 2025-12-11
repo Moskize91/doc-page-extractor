@@ -5,11 +5,20 @@ _env_checked = False
 
 
 def check_env() -> None:
-    import torch
     global _env_checked  # pylint: disable=global-statement
     if _env_checked:
         return
     _env_checked = True
+
+    try:
+        import torch
+    except ImportError:
+        warnings.warn(
+            "This package requires PyTorch to run. Install it with: pip install torch torchvision",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        raise
 
     if torch.cuda.is_available():
         return
