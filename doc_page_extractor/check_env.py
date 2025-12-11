@@ -1,6 +1,5 @@
 import warnings
 
-import torch
 
 _env_checked = False
 
@@ -10,6 +9,16 @@ def check_env() -> None:
     if _env_checked:
         return
     _env_checked = True
+
+    try:
+        import torch
+    except ImportError:
+        warnings.warn(
+            "This package requires PyTorch to run. Install it with: pip install torch torchvision",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        raise
 
     if torch.cuda.is_available():
         return

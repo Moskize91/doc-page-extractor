@@ -3,14 +3,14 @@ from importlib.util import find_spec
 from pathlib import Path
 from typing import Iterable
 
-import torch
 from huggingface_hub import snapshot_download
 from readerwriterlock import rwlock
 from transformers import AutoModel, AutoTokenizer
 
+from .types import DeepSeekOCRSize
+from .check_env import check_env
 from .extraction_context import ExtractionContext
 from .injection import InferWithInterruption, preprocess_model
-from .types import DeepSeekOCRSize
 
 
 @dataclass
@@ -57,9 +57,8 @@ class DeepSeekOCRHugginfaceModel:
         self._model_path: Path | None = model_path
         self._local_only = local_only
         self._models: _Models | None = None
-        self._device_number_to_index: list[int | None] = self._create_device_number_to_index(
-            enable_devices_numbers=enable_devices_numbers,
-        )
+        self._enable_devices_numbers: Iterable[int] | None = enable_devices_numbers
+        self._device_number_to_index: list[int | None] | None = None
 
     def download(self, revision: str | None) -> None:
         with self._rwlock.gen_wlock():
@@ -98,9 +97,9 @@ class DeepSeekOCRHugginfaceModel:
 
         models = self._ensure_models()
         if device_number is None:
-            model_index = self._device_number_to_index[0]
+            model_index = self._get_device_number_to_index()[0]
         else:
-            model_index = self._device_number_to_index[device_number]
+            model_index = self._get_device_number_to_index()[device_number]
 
         if model_index is None:
             raise ValueError(f"Device number {device_number} is not enabled.")
@@ -125,31 +124,10 @@ class DeepSeekOCRHugginfaceModel:
                 )
             return text_result
 
-    def _create_device_number_to_index(self, enable_devices_numbers: Iterable[int] | None) -> list[int | None]:
-        if not torch.cuda.is_available():
-            return []
-
-        device_count = torch.cuda.device_count()
-        if enable_devices_numbers is None:
-            return list(range(device_count))
-
-        device_number_to_index: list[int | None] = [None] * device_count
-        next_model_index: int = 0
-        for enable_device_number in sorted(list(set(enable_devices_numbers))):
-            if enable_device_number < 0 or enable_device_number >= device_count:
-                raise ValueError(
-                    f"Invalid device number {enable_device_number}, "
-                    f"your system has {device_count} CUDA devices."
-                )
-            device_number_to_index[enable_device_number] = next_model_index
-            next_model_index += 1
-
-        if next_model_index == 0:
-            raise ValueError("No devices are enabled for model loading.")
-
-        return device_number_to_index
-
     def _ensure_models(self) -> _Models:
+        check_env()
+        import torch
+
         with self._rwlock.gen_rlock():
             if self._models is not None:
                 return self._models
@@ -159,7 +137,8 @@ class DeepSeekOCRHugginfaceModel:
             if self._models is not None:
                 return self._models
 
-            if len(self._device_number_to_index) == 0:
+            device_number_to_index = self._get_device_number_to_index()
+            if len(device_number_to_index) == 0:
                 raise RuntimeError("No CUDA devices available")
 
             name_or_path = self._model_name
@@ -184,7 +163,7 @@ class DeepSeekOCRHugginfaceModel:
                 local_files_only=self._local_only,
             )
             llm_models: list[AutoModel] = []
-            for device_number, model_index in enumerate(self._device_number_to_index):
+            for device_number, model_index in enumerate(device_number_to_index):
                 if model_index is None:
                     continue
                 model = AutoModel.from_pretrained(
@@ -231,3 +210,34 @@ class DeepSeekOCRHugginfaceModel:
             return None
         latest_snapshot = max(snapshot_dirs, key=lambda d: d.stat().st_mtime)
         return str(latest_snapshot)
+
+    def _get_device_number_to_index(self) -> list[int | None]:
+        if self._device_number_to_index is None:
+            import torch
+            if torch.cuda.is_available():
+                device_count = torch.cuda.device_count()
+                if self._enable_devices_numbers is None:
+                    self._device_number_to_index = list(range(device_count))
+                else:
+                    next_model_index: int = 0
+                    device_number_to_index: list[int | None] = [
+                        None] * device_count
+                    for enable_device_number in sorted(list(set(self._enable_devices_numbers))):
+                        if enable_device_number < 0 or enable_device_number >= device_count:
+                            raise ValueError(
+                                f"Invalid device number {enable_device_number}, "
+                                f"your system has {device_count} CUDA devices."
+                            )
+                        device_number_to_index[enable_device_number] = next_model_index
+                        next_model_index += 1
+
+                    if next_model_index == 0:
+                        raise ValueError(
+                            "No devices are enabled for model loading.")
+                    self._device_number_to_index = device_number_to_index
+            else:
+                self._device_number_to_index = []
+
+            self._enable_devices_numbers = None
+
+        return self._device_number_to_index

@@ -1,11 +1,7 @@
 from typing import Any, Callable, cast
-
-import torch
 from transformers import StoppingCriteria
 
 from .types import ExtractionContext
-
-
 
 
 class ExtractionAbortedError(Exception):
@@ -59,7 +55,7 @@ class AbortStoppingCriteria(StoppingCriteria):
             self._error.output_tokens = self._raw_context.output_tokens
             raise self._error
 
-    def __call__(self, input_ids, scores, **kwargs) -> torch.BoolTensor:
+    def __call__(self, input_ids, scores, **kwargs) -> Any:
         if self._error:
             return cast(Any, True)
 
