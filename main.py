@@ -20,17 +20,17 @@ def main() -> None:
     extractor.load_models()
     print(f"Models loaded in {time.time() - begin_at:.2f} seconds.")
 
-    plot_dir = project_root / "plot"
-    plot_dir.mkdir(exist_ok=True)
-    name_stem = Path(image_name).stem
-    name_suffix = Path(image_name).suffix
-    begin_at = time.time()
-
     def check_aborted() -> bool:
         if time.time() - begin_at > _ABORT_TIMEOUT:
             print("Aborted extraction due to timeout.")
             return True
         return False
+
+    plot_dir = project_root / "plot"
+    plot_dir.mkdir(exist_ok=True)
+    name_stem = Path(image_name).stem
+    name_suffix = Path(image_name).suffix
+    context = ExtractionContext(check_aborted=check_aborted)
 
     print("Starting extraction...")
     for i, (image, layouts) in enumerate(
@@ -38,7 +38,7 @@ def main() -> None:
             image=Image.open(image_dir_path / image_name),
             size="gundam",
             stages=2,
-            context=ExtractionContext(check_aborted=check_aborted),
+            context=context,
         )
     ):
         print("Layouts:")
@@ -50,6 +50,8 @@ def main() -> None:
         image.save(output_path)
 
     print(f"Extraction cost {time.time() - begin_at:.2f} seconds.")
+    print(
+        f"Input tokens: {context.input_tokens}; Output tokens: {context.output_tokens}")
 
 
 if __name__ == "__main__":
