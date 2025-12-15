@@ -61,7 +61,6 @@ class _PageExtractorImpls:
             output_path = Path(temp_dir.name)
 
         try:
-
             for i in range(stages):
                 image_path = output_path / f"raw-{i+1}.png"
                 image.save(image_path, "PNG")
@@ -94,13 +93,6 @@ class _PageExtractorImpls:
         finally:
             if temp_dir is not None:
                 temp_dir.cleanup()
-
-    def _generate_extraction_pair(self, image_path: Path, response: str) -> tuple[Image.Image, list[Layout]]:
-        layouts: list[Layout] = []
-        image = Image.open(image_path)
-        for ref, det, text in self._parse_response(image, response):
-            layouts.append(Layout(ref, det, text))
-        return image, layouts
 
     def _parse_response(self, image: Image.Image, response: str) -> Generator[tuple[str, tuple[int, int, int, int], str | None], None, None]:
         width, height = image.size
