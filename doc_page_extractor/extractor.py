@@ -1,4 +1,5 @@
 import tempfile
+import sys
 
 from os import PathLike
 from pathlib import Path
@@ -61,7 +62,6 @@ class _PageExtractorImpls:
             output_path = Path(temp_dir.name)
 
         try:
-
             for i in range(stages):
                 image_path = output_path / f"raw-{i+1}.png"
                 image.save(image_path, "PNG")
@@ -89,18 +89,14 @@ class _PageExtractorImpls:
                     image = redact(
                         image=image.copy(),
                         fill_color=fill_color,
-                        rectangles=(layout.det for layout in layouts),
+                        rectangles=self._redect_rectangles(
+                            image=image,
+                            dets=(layout.det for layout in layouts),
+                        ),
                     )
         finally:
             if temp_dir is not None:
                 temp_dir.cleanup()
-
-    def _generate_extraction_pair(self, image_path: Path, response: str) -> tuple[Image.Image, list[Layout]]:
-        layouts: list[Layout] = []
-        image = Image.open(image_path)
-        for ref, det, text in self._parse_response(image, response):
-            layouts.append(Layout(ref, det, text))
-        return image, layouts
 
     def _parse_response(self, image: Image.Image, response: str) -> Generator[tuple[str, tuple[int, int, int, int], str | None], None, None]:
         width, height = image.size
@@ -123,3 +119,34 @@ class _PageExtractorImpls:
                 ref = cast(str, content)
         if det is not None and ref is not None:
             yield ref, det, None
+
+    def _redect_rectangles(self, image: Image.Image, dets: Iterable[tuple[int, int, int, int]]):
+        # 将页面上 2/3 全部涂抹，并沿着 2/3 线向下涂抹到每一个识别为文字区块的底部
+        # 这种方法旨在涂抹掉尽可能多的不是页脚的区域，以排除诸如页眉之类干扰识别页脚的内容
+        rate = float(2/3)
+        width, height = image.size
+        y_cutted = round(height * rate)
+        yield (0, 0, width, y_cutted)
+        yield from self._redact_button_rectangles(y_cutted, dets)
+
+    def _redact_button_rectangles(self, y_cutted: int, dets: Iterable[tuple[int, int, int, int]]):
+        parts: list[tuple[int, int, int]] = []  # x1, x2, height
+        for det in dets:
+            x1, _, x2, y2 = det
+            height = y2 - y_cutted
+            if height > 0:
+                parts.append((x1, x2, height))
+
+        parts.sort()
+        forbidden: int = -sys.maxsize
+
+        for i, (x1, x2, height) in enumerate(parts):
+            left = max(x1, forbidden)
+            right = x2
+            for j in range(i + 1, len(parts)):
+                nx1, _, nheight = parts[j]
+                if nheight > height:
+                    right = min(right, nx1)
+            if left < right:
+                yield (left, y_cutted, right, y_cutted + height)
+                forbidden = right

@@ -4,16 +4,17 @@ from pathlib import Path
 from PIL import Image
 from doc_page_extractor import plot, create_page_extractor, ExtractionContext
 
+_IMAGE_STEM = "friendly-title"
 _ABORT_TIMEOUT = 9999.0  # seconds
 
 
 def main() -> None:
     project_root = Path(__file__).parent
     image_dir_path = project_root / "tests" / "images"
-    image_name = "double_column.png"
+    image_name = f"{_IMAGE_STEM}.png"
     extractor = create_page_extractor(
         model_path=project_root / "models-cache",
-        local_only=False,
+        # local_only=True,
     )
     begin_at = time.time()
     extractor.load_models()
