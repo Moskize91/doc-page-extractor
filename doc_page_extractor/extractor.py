@@ -89,7 +89,10 @@ class _PageExtractorImpls:
                     image = redact(
                         image=image.copy(),
                         fill_color=fill_color,
-                        rectangles=(layout.det for layout in layouts),
+                        rectangles=self._redect_rectangles(
+                            image=image,
+                            dets=(layout.det for layout in layouts),
+                        ),
                     )
         finally:
             if temp_dir is not None:
@@ -117,7 +120,16 @@ class _PageExtractorImpls:
         if det is not None and ref is not None:
             yield ref, det, None
 
-    def _generate_redact_rectangles(self, y_cutted: int, dets: Iterable[tuple[int, int, int, int]]) -> Generator[tuple[int, int, int, int], None, None]:
+    def _redect_rectangles(self, image: Image.Image, dets: Iterable[tuple[int, int, int, int]]):
+        # 将页面上 2/3 全部涂抹，并沿着 2/3 线向下涂抹到每一个识别为文字区块的底部
+        # 这种方法旨在涂抹掉尽可能多的不是页脚的区域，以排除诸如页眉之类干扰识别页脚的内容
+        rate = float(2/3)
+        width, height = image.size
+        y_cutted = round(height * rate)
+        yield (0, 0, width, y_cutted)
+        yield from self._redact_button_rectangles(y_cutted, dets)
+
+    def _redact_button_rectangles(self, y_cutted: int, dets: Iterable[tuple[int, int, int, int]]):
         parts: list[tuple[int, int, int]] = []  # x1, x2, height
         for det in dets:
             x1, _, x2, y2 = det

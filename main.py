@@ -14,7 +14,7 @@ def main() -> None:
     image_name = f"{_IMAGE_STEM}.png"
     extractor = create_page_extractor(
         model_path=project_root / "models-cache",
-        local_only=False,
+        # local_only=True,
     )
     begin_at = time.time()
     extractor.load_models()
