@@ -1,4 +1,5 @@
 import tempfile
+import sys
 
 from os import PathLike
 from pathlib import Path
@@ -115,3 +116,25 @@ class _PageExtractorImpls:
                 ref = cast(str, content)
         if det is not None and ref is not None:
             yield ref, det, None
+
+    def _generate_redact_rectangles(self, y_cutted: int, dets: Iterable[tuple[int, int, int, int]]) -> Generator[tuple[int, int, int, int], None, None]:
+        parts: list[tuple[int, int, int]] = []  # x1, x2, height
+        for det in dets:
+            x1, _, x2, y2 = det
+            height = y2 - y_cutted
+            if height > 0:
+                parts.append((x1, x2, height))
+
+        parts.sort()
+        forbidden: int = -sys.maxsize
+
+        for i, (x1, x2, height) in enumerate(parts):
+            left = max(x1, forbidden)
+            right = x2
+            for j in range(i + 1, len(parts)):
+                nx1, _, nheight = parts[j]
+                if nheight > height:
+                    right = min(right, nx1)
+            if left < right:
+                yield (left, y_cutted, right, y_cutted + height)
+                forbidden = right
