@@ -4,7 +4,7 @@ from pathlib import Path
 from PIL import Image
 from doc_page_extractor import plot, create_page_extractor, ExtractionContext
 
-_IMAGE_STEM = "friendly-portrait"
+_IMAGE_STEM = "friendly-title"
 _ABORT_TIMEOUT = 9999.0  # seconds
 
 
