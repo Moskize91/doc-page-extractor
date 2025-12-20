@@ -178,7 +178,7 @@ class DeepSeekOCRHugginfaceModel:
                     cache_dir=cache_dir,
                     local_files_only=self._local_only,
                 )
-                model = model.cuda(device_number).to(torch.bfloat16)
+                model = model.to(torch.bfloat16).cuda(device_number)
                 llm_models.append(preprocess_model(model))
 
             self._models = _Models(
