@@ -2,23 +2,18 @@
 
 ## Setup
 
-Setup Python env
-```shell
-python -m venv .venv
-. ./.venv/bin/activate
-```
-
-Install dependencies:
+Use Poetry with an in-project virtual environment. This keeps each git worktree isolated while still reusing Poetry and pip download caches.
 
 ```shell
-poetry install
+pipx install poetry==2.1.3
+PYTHON_BIN="$(pyenv which python3 2>/dev/null || command -v python3)"
+"$PYTHON_BIN" -m venv .venv
+export VIRTUAL_ENV="$PWD/.venv"
+export PATH="$VIRTUAL_ENV/bin:$PATH"
+poetry install --only dev
 ```
 
-Install CUDA 12.1 version of torch and torchvision (Linux/Windows, GPU support):
-
-```shell
-poetry run pip install torch==2.5.1+cu121 torchvision==0.20.1+cu121 --index-url https://download.pytorch.org/whl/cu121
-```
+PyTorch and the model runtime dependencies are intentionally not installed for the default development setup. The lightweight test and lint workflow does not need to load the OCR model.
 
 ## Development Workflow
 
@@ -33,25 +28,7 @@ poetry run python test.py
 Check code quality with pylint:
 
 ```shell
-python lint.py
-```
-
-Or directly:
-
-```shell
-poetry run pylint doc_page_extractor
-```
-
-### macOS Development Setup
-
-For macOS developers, PyTorch CUDA version is not compatible. Use the following steps:
-
-```shell
-# Install only main dependencies first (skip dev group to avoid CUDA installation)
-poetry install
-
-# Install PyTorch CPU version
-poetry run pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+poetry run pylint --disable=import-error doc_page_extractor
 ```
 
 ### Build Package
@@ -68,5 +45,13 @@ Make sure all checks pass:
 
 ```shell
 poetry run python test.py
-python lint.py
+poetry run pylint --disable=import-error doc_page_extractor
 ```
+
+## VGE Worktree Workflow
+
+VGE uses `.conductor/config.yaml` for worktree lifecycle commands:
+
+- `setup` creates or updates the in-project `.venv` with Poetry.
+- `run` executes the lightweight checks: parser tests and pylint.
+- `cleanup` removes generated build and cache files while keeping `.venv` for faster reuse.
