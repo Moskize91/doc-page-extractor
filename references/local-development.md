@@ -33,18 +33,10 @@ set -a && source .env && set +a
 
 VGE/Conductor 新建 worktree 时，ignored 的 `.env` 不会自动随 git 带过去。`setup` 会按以下顺序创建 `.env`：
 
-1. 如果设置了 `DOC_PAGE_EXTRACTOR_ENV_FILE` 且文件存在，复制它。
-2. 否则如果 `~/.config/doc-page-extractor/.env` 存在，复制它。
-3. 否则复制 `.env.template`，并提示手动填写私有配置。
+1. 如果 worktree 里已经有 `.env`，保留它。
+2. 否则复制 `.env.template`，并提示手动填写私有配置。
 
-推荐把长期可复用的私有配置放在：
-
-```shell
-mkdir -p ~/.config/doc-page-extractor
-cp .env ~/.config/doc-page-extractor/.env
-```
-
-该私有文件不属于仓库，不应提交或写入文档。
+Conductor 不会从仓库外的隐藏路径复制私有配置。需要真实远程 OCR 凭据时，应在对应 worktree 的 `.env` 中明确填写；`.env` 不属于仓库，不应提交或写入文档。
 
 ## 后端选择
 
