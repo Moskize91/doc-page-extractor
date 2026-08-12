@@ -1,0 +1,11 @@
+[scripts]
+setup = '''
+if ! command -v poetry >/dev/null 2>&1; then
+  pipx install poetry==2.1.3
+fi
+PYTHON_BIN="$(pyenv which python3 2>/dev/null || command -v python3)"
+"$PYTHON_BIN" -m venv .venv
+export VIRTUAL_ENV="$PWD/.venv"
+export PATH="$VIRTUAL_ENV/bin:$PATH"
+poetry install --only dev
+'''
