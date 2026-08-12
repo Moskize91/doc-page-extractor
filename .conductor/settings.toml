@@ -9,15 +9,7 @@ export VIRTUAL_ENV="$PWD/.venv"
 export PATH="$VIRTUAL_ENV/bin:$PATH"
 poetry install --only dev
 if [ ! -f .env ]; then
-  if [ -n "${DOC_PAGE_EXTRACTOR_ENV_FILE:-}" ] && [ -f "$DOC_PAGE_EXTRACTOR_ENV_FILE" ]; then
-    cp "$DOC_PAGE_EXTRACTOR_ENV_FILE" .env
-    echo "Copied .env from DOC_PAGE_EXTRACTOR_ENV_FILE."
-  elif [ -f "$HOME/.config/doc-page-extractor/.env" ]; then
-    cp "$HOME/.config/doc-page-extractor/.env" .env
-    echo "Copied .env from ~/.config/doc-page-extractor/.env."
-  else
-    cp .env.template .env
-    echo "Created .env from .env.template. Fill private Vendor settings before running Vendor samples."
-  fi
+  cp .env.template .env
+  echo "Created .env from .env.template. Fill private OCR settings before running remote samples."
 fi
 '''
