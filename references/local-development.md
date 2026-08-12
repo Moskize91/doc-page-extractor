@@ -1,8 +1,8 @@
-# macOS Local Development
+# macOS 本地开发
 
-## Default Setup
+## 默认环境
 
-Use Poetry with an in-project virtual environment:
+使用 Poetry 和项目内虚拟环境：
 
 ```shell
 pipx install poetry==2.1.3
@@ -13,38 +13,38 @@ export PATH="$VIRTUAL_ENV/bin:$PATH"
 poetry install --only dev
 ```
 
-This setup intentionally avoids CUDA PyTorch and model downloads. It is enough for parser tests, package import checks, lint, and development-model tests.
+这个环境刻意避开 CUDA PyTorch 和模型下载。它足够用于解析器测试、包导入检查、lint，以及使用开发模型的测试。
 
-## Local Environment File
+## 本地环境文件
 
-Copy `.env.template` to `.env` for machine-specific values:
+把 `.env.template` 复制为 `.env`，填写本机私有配置：
 
 ```shell
 cp .env.template .env
 ```
 
-`.env` is ignored by git. It may contain private Vendor API settings or local model paths. The library does not automatically load `.env`; source it when a script or manual command needs those values:
+`.env` 会被 git 忽略。它可以包含私有 Vendor API 配置或本地模型路径。本库当前不会自动读取 `.env`；只有脚本或手动命令需要这些值时才 source：
 
 ```shell
 set -a && source .env && set +a
 ```
 
-Keep `.env.template` free of secrets.
+`.env.template` 不得包含密钥。
 
-## Verification
+## 验证命令
 
-Default checks for macOS:
+macOS 默认检查：
 
 ```shell
 poetry run python test.py
 poetry run pylint --disable=import-error doc_page_extractor
 ```
 
-Do not run `main.py`, `download.py`, or `PageExtractor.load_models()` on macOS unless the task explicitly asks for a real backend experiment.
+除非任务明确要求真实后端实验，否则不要在 macOS 上运行 `main.py`、`download.py` 或 `PageExtractor.load_models()`。
 
-## Development Backend Pattern
+## 开发后端模式
 
-Use `create_page_extractor_with_model()` for local tests that need the full extraction loop without CUDA:
+需要在无 CUDA 环境测试完整抽取循环时，使用 `create_page_extractor_with_model()`：
 
 ```python
 from pathlib import Path
@@ -69,8 +69,8 @@ class FixtureOCRModel:
 extractor = create_page_extractor_with_model(FixtureOCRModel())
 ```
 
-This exercises image saving, response parsing, layout construction, staged redaction, and context token accounting if the fixture updates `context`.
+这会覆盖图片保存、响应解析、布局构造、阶段涂抹；如果 fixture 更新了 `context`，也能覆盖 token 统计。
 
-## What macOS Cannot Prove
+## macOS 不能验证的内容
 
-macOS checks do not validate CUDA availability, GPU memory behavior, Hugging Face remote code compatibility, `flash_attn`, or multi-GPU device routing. Those require a Linux/NVIDIA environment.
+macOS 检查不能验证 CUDA 可用性、显存行为、Hugging Face remote code 兼容性、`flash_attn` 或多 GPU 设备路由。这些需要 Linux/NVIDIA 环境。

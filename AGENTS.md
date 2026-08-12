@@ -1,8 +1,8 @@
-# Agent Workflow
+# Agent 工作流
 
-本项目使用 `~/.agents/skills/vibecoding` 作为通用维护工作法。进入本项目后，先按该 skill 控制任务粒度、模块边界、Git 操作和收尾验证；本文件只补充 `doc-page-extractor` 的项目事实和按条件读取的文档路由。
+本文件是 Agent 进入 `doc-page-extractor` 后的项目入口，只记录项目事实、工作区边界和按条件读取的文档路由。
 
-## Workspace Boundaries
+## 工作区边界
 
 - `doc_page_extractor/` 是发布包源码。`extractor.py` 负责页面抽取流程，`model.py` 负责 Hugging Face/DeepSeek-OCR CUDA 后端，`parser.py`、`redacter.py`、`plot.py` 是可在 macOS 上测试的纯 Python 后处理。
 - `tests/` 存放轻量单元测试，默认不得要求 CUDA、下载模型或访问 Hugging Face。
@@ -10,7 +10,7 @@
 - `models-cache/`、`plot/`、`.venv/`、`.env` 是本地状态或生成产物，不要提交。
 - `.env.template` 是可提交的本地配置模板；`.env` 是私有配置，Agent 可以读取但不得把其中密钥写入文档、日志或提交。
 
-## Read Only When Triggered
+## 仅在触发条件满足时读取
 
 - 修改抽取流程、数据类型、解析器、涂抹或可视化逻辑时，阅读[架构与模块边界](references/architecture.md)。
 - 设置 macOS 本地环境、运行测试、调 lint、写不依赖 CUDA 的测试或使用 `.env` 时，阅读[macOS 本地开发](references/local-development.md)。
@@ -19,7 +19,7 @@
 
 不要一次性读取所有 reference。先根据任务选择最小相关文档，再回到代码确认事实。
 
-## Project Defaults
+## 项目默认规则
 
 - macOS 是默认开发环境。不要把“本地不能跑 CUDA 模型”当成阻塞；优先通过 `create_page_extractor_with_model()` 注入开发模型来测试抽取流程。
 - 真实 DeepSeek-OCR 后端需要 CUDA PyTorch、NVIDIA GPU 和模型缓存，只在专门的 GPU 环境验证。
