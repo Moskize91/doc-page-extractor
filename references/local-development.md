@@ -31,22 +31,20 @@ set -a && source .env && set +a
 
 `.env.template` 不得包含密钥。
 
-VGE/Conductor 新建 worktree 时，ignored 的 `.env` 不会自动随 git 带过去。`setup` 会按以下顺序创建 `.env`：
+VGE/Conductor 新建 worktree 时，ignored 的 `.env` 不会自动随 git 带过去。`setup` 会在缺失时从 `.env.template` 创建 `.env`。
 
 1. 如果 worktree 里已经有 `.env`，保留它。
 2. 否则复制 `.env.template`，并提示手动填写私有配置。
 
 Conductor 不会从仓库外的隐藏路径复制私有配置。需要真实远程 OCR 凭据时，应在对应 worktree 的 `.env` 中明确填写；`.env` 不属于仓库，不应提交或写入文档。
 
-## 后端选择
+## 后端配置
 
-`.env` 通过 `DOC_PAGE_EXTRACTOR_BACKEND` 表达互斥的 OCR 后端选择：
+`.env` 现在同时保存多个后端的私有配置，脚本或开发适配器按自己的 `--adapter` 参数读取对应字段：
 
-- `fixture`：默认 macOS 开发后端，使用固定响应或 fixture 文件，不加载 CUDA，也不访问网络。
-- `vendor`：OpenAI-compatible 远程 OCR 后端，适合在 macOS 上对接真实 OCR 能力。
-- `local`：本地 Hugging Face DeepSeek-OCR 后端，需要 CUDA 环境。
-
-即使 `.env` 中同时保留了 fixture、vendor 和 local 的字段，也只有当前 `DOC_PAGE_EXTRACTOR_BACKEND` 对应的一组字段应被脚本或开发适配器读取。
+- `DOC_PAGE_EXTRACTOR_DEEPSEEK_VENDOR_*`：DeepSeek OpenAI-compatible Vendor。
+- `DOC_PAGE_EXTRACTOR_BAIDU_*`：百度云 Unlimited-OCR。
+- `DOC_PAGE_EXTRACTOR_MODEL_PATH` 和 `DOC_PAGE_EXTRACTOR_LOCAL_ONLY`：DeepSeek 本地 Hugging Face 路径。
 
 ## 验证命令
 
@@ -59,15 +57,17 @@ poetry run pylint --disable=import-error doc_page_extractor
 
 除非任务明确要求真实后端实验，否则不要在 macOS 上运行 `main.py`、`download.py` 或 `PageExtractor.load_models()`。
 
-## Vendor OCR Sample
+## OCR Sample
 
-填写 `.env` 中的私有 Vendor 配置后，可以运行：
+填写 `.env` 中的私有配置后，可以运行：
 
 ```shell
-poetry run python scripts/vendor_ocr_sample.py
+poetry run python scripts/ocr_sample.py --adapter deepseek-vendor --image tests/images/friendly-title.png
+poetry run python scripts/ocr_sample.py --adapter baidu --image tests/images/friendly-title.png
+poetry run python scripts/ocr_sample.py --adapter both --image tests/images/friendly-title.png
 ```
 
-该脚本默认读取 `tests/images/friendly-title.png`，调用 OpenAI-compatible OCR endpoint，并通过 `create_page_extractor_with_model()` 走本项目抽取流程。成功输出会包含图片路径、layout 数量、前几个 `ref`/`det`、文本摘要和 token 用量。可以用 `--image path/to/image.png` 指定其他图片。
+该脚本默认读取 `tests/images/friendly-title.png`，分别调用 DeepSeek Vendor、百度云 OCR，或两者同时运行。成功输出会包含图片路径、layout 数量、前几个 layout 摘要、文本预览和耗时。可以用 `--image path/to/image.png` 指定其他图片。
 
 ## 开发后端模式
 

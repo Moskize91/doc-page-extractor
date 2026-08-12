@@ -8,22 +8,19 @@
 
 ## 开发后端与远程后端
 
-`create_page_extractor_with_model(model)` 是替换本地 CUDA 推理的受支持方式。注入对象必须实现 `DeepSeekOCRModel` 协议：
+`create_page_extractor_with_model(model)` 仍然是兼容入口，但新架构的中心是 `OCRAdapter`。新后端应优先实现：
 
 ```python
-download(revision)
-load()
-unload()
-generate(prompt, image_path, output_path, size, context, device_number) -> str
+extract_page(prompt, image_path, output_path, size, context, device_number) -> OCRPageResult
 ```
 
-对 fixture 或远程后端来说，`download()`、`load()` 和 `unload()` 可以是空实现。`generate()` 必须返回包含 `<|ref|>` 和 `<|det|>` 标签的 DeepSeek-OCR 兼容文本，这样现有解析器才能产出 `Layout`。
+DeepSeek 本地 CUDA 路径可以继续保留 `download()`、`load()` 和 `unload()`，但这些属于私有实现细节，不应进入通用 adapter 协议。DeepSeek Vendor 仍然可以返回 `<|ref|>` / `<|det|>` 兼容文本；百度云 adapter 直接把 `parse_result_url` 的 JSON 映射成项目统一布局。
 
-本地 `.env` 约定用 `DOC_PAGE_EXTRACTOR_BACKEND` 做互斥选择：
+本地 `.env` 不再使用单个互斥后端字段，而是同时保存多个后端配置：
 
-- `fixture` 使用固定 OCR 响应或 fixture 文件。
-- `vendor` 使用 OpenAI-compatible 远程 OCR 后端。
-- `local` 使用 `create_page_extractor()` 和本地 Hugging Face 模型缓存。
+- `DOC_PAGE_EXTRACTOR_DEEPSEEK_VENDOR_*`：DeepSeek OpenAI-compatible Vendor。
+- `DOC_PAGE_EXTRACTOR_BAIDU_*`：百度云 Unlimited-OCR。
+- `DOC_PAGE_EXTRACTOR_MODEL_PATH` 和 `DOC_PAGE_EXTRACTOR_LOCAL_ONLY`：DeepSeek 本地 Hugging Face 路径。
 
 这只是当前脚本和后续开发适配器的约定；库代码本身不会自动读取 `.env`。
 
@@ -31,10 +28,10 @@ generate(prompt, image_path, output_path, size, context, device_number) -> str
 
 - 上传或编码 `extractor.py` 生成的 `image_path`。
 - 除非任务明确要改 prompt，否则传递原始 `prompt` 参数。
-- 只返回解析器期望的 OCR 响应文本。
+- DeepSeek Vendor 只返回解析器期望的 OCR 响应文本。
 - 如果供应商返回 usage 信息，更新 `context.input_tokens` 和 `context.output_tokens`。
-- 当供应商的 token/计费失败语义接近 token 限制时，转换为 `TokenLimitError`。
-- 本地 sample 使用 `scripts/vendor_ocr_sample.py`，它是开发验证脚本，不是生产后端抽象。
+- 百度云 adapter 需要处理异步 submit/query/download 流程，并把 `parse_result_url` JSON 映射成统一布局。
+- 本地 sample 使用 `scripts/ocr_sample.py`，它是开发验证脚本，不是生产后端抽象。
 
 ## CUDA 路径规则
 
@@ -45,4 +42,4 @@ generate(prompt, image_path, output_path, size, context, device_number) -> str
 
 ## 兼容性说明
 
-下游项目可能依赖 `create_page_extractor_with_model()` 来保持自身进程 CPU-only。应把这个函数和 `DeepSeekOCRModel.generate()` 的签名视作公开兼容面。
+下游项目可能依赖 `create_page_extractor_with_model()` 来保持自身进程 CPU-only。应把这个函数视作公开兼容面；新开发应优先走 `OCRAdapter`。

@@ -1,9 +1,10 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from os import PathLike
 from pathlib import Path
-from typing import runtime_checkable, Protocol, Generator, Literal, Callable
+from typing import Any, TYPE_CHECKING, runtime_checkable, Protocol, Generator, Literal, Callable
 
-from PIL import Image
+if TYPE_CHECKING:
+    from PIL import Image
 
 
 DeepSeekOCRSize = Literal["tiny", "small", "base", "large", "gundam"]
@@ -14,6 +15,19 @@ class Layout:
     ref: str
     det: tuple[int, int, int, int]
     text: str | None
+    type: str | None = None
+    polygon: list[tuple[int, int]] | None = None
+    html: str | None = None
+    source: str | None = None
+    raw: dict[str, Any] | None = field(default=None, repr=False)
+
+
+@dataclass
+class OCRPageResult:
+    layouts: list[Layout]
+    source: str
+    raw_text: str | None = None
+    raw: dict[str, Any] | None = field(default=None, repr=False)
 
 
 @dataclass
@@ -36,12 +50,26 @@ class PageExtractor(Protocol):
 
     def extract(
         self,
-        image: Image.Image,
+        image: "Image.Image",
         size: DeepSeekOCRSize,
         stages: int = 1,
         context: ExtractionContext | None = None,
         device_number: int | None = None,
-    ) -> Generator[tuple[Image.Image, list[Layout]], None, None]:
+    ) -> Generator[tuple["Image.Image", list[Layout]], None, None]:
+        ...
+
+
+@runtime_checkable
+class OCRAdapter(Protocol):
+    def extract_page(
+        self,
+        prompt: str,
+        image_path: Path,
+        output_path: Path,
+        size: DeepSeekOCRSize,
+        context: ExtractionContext | None,
+        device_number: int | None,
+    ) -> OCRPageResult:
         ...
 
 

@@ -1,15 +1,29 @@
-import tempfile
 import sys
-
+import tempfile
 from os import PathLike
 from pathlib import Path
-from typing import cast, Generator, Iterable
+from typing import Generator, Iterable
+
 from PIL import Image
 
-from .model import DeepSeekOCRHugginfaceModel
-from .parser import ParsedItemKind, parse_ocr_response
+from .adapters.baidu import BaiduCloudOCRAdapter, BaiduCloudOCRConfig
+from .adapters.deepseek import (
+    DeepSeekLocalOCRAdapter,
+    DeepSeekModelOCRAdapter,
+    DeepSeekVendorOCRAdapter,
+    DeepSeekVendorOCRConfig,
+)
 from .redacter import background_color, redact
-from .types import Layout, PageExtractor, ExtractionContext, DeepSeekOCRModel, DeepSeekOCRSize
+from .types import (
+    DeepSeekOCRModel,
+    DeepSeekOCRSize,
+    ExtractionContext,
+    Layout,
+    OCRAdapter,
+    PageExtractor,
+)
+
+_DEFAULT_PROMPT = "<image>\n<|grounding|>Convert the document to markdown."
 
 
 def create_page_extractor(
@@ -17,29 +31,50 @@ def create_page_extractor(
     local_only: bool = False,
     enable_devices_numbers: Iterable[int] | None = None,
 ) -> PageExtractor:
-    model: DeepSeekOCRHugginfaceModel = DeepSeekOCRHugginfaceModel(
-        model_path=Path(model_path) if model_path else None,
-        local_only=local_only,
-        enable_devices_numbers=enable_devices_numbers,
+    return _PageExtractorImpls(
+        DeepSeekLocalOCRAdapter(
+            model_path=model_path,
+            local_only=local_only,
+            enable_devices_numbers=enable_devices_numbers,
+        )
     )
-    return _PageExtractorImpls(model)
 
 
 def create_page_extractor_with_model(model: DeepSeekOCRModel) -> PageExtractor:
     if not isinstance(model, DeepSeekOCRModel):
         raise TypeError("model must implement DeepSeekOCRModel protocol")
-    return _PageExtractorImpls(model)
+    return _PageExtractorImpls(DeepSeekModelOCRAdapter(model))
+
+
+def create_page_extractor_with_adapter(adapter: OCRAdapter) -> PageExtractor:
+    if not isinstance(adapter, OCRAdapter):
+        raise TypeError("adapter must implement OCRAdapter protocol")
+    return _PageExtractorImpls(adapter)
+
+
+def create_deepseek_vendor_page_extractor(
+    config: DeepSeekVendorOCRConfig,
+) -> PageExtractor:
+    return _PageExtractorImpls(DeepSeekVendorOCRAdapter(config))
+
+
+def create_baidu_page_extractor(config: BaiduCloudOCRConfig) -> PageExtractor:
+    return _PageExtractorImpls(BaiduCloudOCRAdapter(config))
 
 
 class _PageExtractorImpls:
-    def __init__(self, model: DeepSeekOCRModel) -> None:
-        self._model: DeepSeekOCRModel = model
+    def __init__(self, adapter: OCRAdapter) -> None:
+        self._adapter: OCRAdapter = adapter
 
     def download_models(self, revision: str | None = None) -> None:
-        self._model.download(revision)
+        downloader = getattr(self._adapter, "download", None)
+        if downloader is not None:
+            downloader(revision)
 
     def load_models(self) -> None:
-        self._model.load()
+        loader = getattr(self._adapter, "load", None)
+        if loader is not None:
+            loader()
 
     def extract(
         self,
@@ -66,8 +101,8 @@ class _PageExtractorImpls:
                 image_path = output_path / f"raw-{i+1}.png"
                 image.save(image_path, "PNG")
                 try:
-                    response = self._model.generate(
-                        prompt="<image>\n<|grounding|>Convert the document to markdown.",
+                    page_result = self._adapter.extract_page(
+                        prompt=_DEFAULT_PROMPT,
                         image_path=image_path,
                         output_path=output_path,
                         size=size,
@@ -77,10 +112,7 @@ class _PageExtractorImpls:
                 finally:
                     image_path.unlink(missing_ok=True)
 
-                layouts = [
-                    Layout(ref, det, text)
-                    for ref, det, text in self._parse_response(image, response)
-                ]
+                layouts = page_result.layouts
                 yield image, layouts
 
                 if i < stages - 1:
@@ -98,38 +130,20 @@ class _PageExtractorImpls:
             if temp_dir is not None:
                 temp_dir.cleanup()
 
-    def _parse_response(self, image: Image.Image, response: str) -> Generator[tuple[str, tuple[int, int, int, int], str | None], None, None]:
-        width, height = image.size
-        det: tuple[int, int, int, int] | None = None
-        ref: str | None = None
-
-        for kind, content in parse_ocr_response(response, width, height):
-            if kind == ParsedItemKind.TEXT:
-                if det is not None and ref is not None:
-                    yield ref, det, cast(str, content)
-                    det = None
-                    ref = None
-            if det is not None and ref is not None:
-                yield ref, det, None
-                det = None
-                ref = None
-            elif kind == ParsedItemKind.DET:
-                det = cast(tuple[int, int, int, int], content)
-            elif kind == ParsedItemKind.REF:
-                ref = cast(str, content)
-        if det is not None and ref is not None:
-            yield ref, det, None
-
-    def _redect_rectangles(self, image: Image.Image, dets: Iterable[tuple[int, int, int, int]]):
+    def _redect_rectangles(
+        self, image: Image.Image, dets: Iterable[tuple[int, int, int, int]]
+    ):
         # 将页面上 2/3 全部涂抹，并沿着 2/3 线向下涂抹到每一个识别为文字区块的底部
         # 这种方法旨在涂抹掉尽可能多的不是页脚的区域，以排除诸如页眉之类干扰识别页脚的内容
-        rate = float(2/3)
+        rate = float(2 / 3)
         width, height = image.size
         y_cutted = round(height * rate)
         yield (0, 0, width, y_cutted)
         yield from self._redact_button_rectangles(y_cutted, dets)
 
-    def _redact_button_rectangles(self, y_cutted: int, dets: Iterable[tuple[int, int, int, int]]):
+    def _redact_button_rectangles(
+        self, y_cutted: int, dets: Iterable[tuple[int, int, int, int]]
+    ):
         parts: list[tuple[int, int, int]] = []  # x1, x2, height
         for det in dets:
             x1, _, x2, y2 = det

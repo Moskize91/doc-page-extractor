@@ -27,13 +27,13 @@ cp .env.template .env
 set -a && source .env && set +a
 ```
 
-For VGE/Conductor worktrees, `setup` creates `.env` automatically. It copies `$DOC_PAGE_EXTRACTOR_ENV_FILE` when set, otherwise `~/.config/doc-page-extractor/.env` when present, otherwise `.env.template`.
+For VGE/Conductor worktrees, `setup` creates `.env` automatically from `.env.template` when missing.
 
-`DOC_PAGE_EXTRACTOR_BACKEND` is mutually exclusive:
+`.env` now stores multiple backend configurations at the same time:
 
-- `fixture`: local fixed-response backend; no CUDA and no network.
-- `vendor`: OpenAI-compatible remote OCR backend.
-- `local`: local Hugging Face DeepSeek-OCR backend; requires CUDA.
+- `DOC_PAGE_EXTRACTOR_DEEPSEEK_VENDOR_*` for the OpenAI-compatible DeepSeek Vendor.
+- `DOC_PAGE_EXTRACTOR_BAIDU_*` for Baidu Unlimited-OCR.
+- `DOC_PAGE_EXTRACTOR_MODEL_PATH` and `DOC_PAGE_EXTRACTOR_LOCAL_ONLY` for the local CUDA path.
 
 ## Development Workflow
 
@@ -77,15 +77,17 @@ class FixtureOCRModel:
 extractor = create_page_extractor_with_model(FixtureOCRModel())
 ```
 
-### Vendor OCR Sample
+### OCR Sample
 
-After filling private Vendor settings in `.env`, run:
+After filling private settings in `.env`, run:
 
 ```shell
-poetry run python scripts/vendor_ocr_sample.py
+poetry run python scripts/ocr_sample.py --adapter deepseek-vendor --image tests/images/friendly-title.png
+poetry run python scripts/ocr_sample.py --adapter baidu --image tests/images/friendly-title.png
+poetry run python scripts/ocr_sample.py --adapter both --image tests/images/friendly-title.png
 ```
 
-The sample reads `tests/images/friendly-title.png`, calls the configured OpenAI-compatible OCR endpoint, and routes the response through `create_page_extractor_with_model()`. Successful output includes the image path, layout count, the first few `ref`/`det` pairs, text previews, and token usage. Use `--image path/to/image.png` to try another image.
+The sample reads `tests/images/friendly-title.png`, runs the configured DeepSeek Vendor backend, the Baidu cloud backend, or both, and prints layout summaries, text previews, and elapsed time. Use `--image path/to/image.png` to try another image.
 
 ### Build Package
 
