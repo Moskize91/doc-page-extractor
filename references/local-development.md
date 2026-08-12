@@ -67,6 +67,16 @@ poetry run pylint --disable=import-error doc_page_extractor
 
 除非任务明确要求真实后端实验，否则不要在 macOS 上运行 `main.py`、`download.py` 或 `PageExtractor.load_models()`。
 
+## Vendor OCR Sample
+
+填写 `.env` 中的私有 Vendor 配置后，可以运行：
+
+```shell
+poetry run python scripts/vendor_ocr_sample.py
+```
+
+该脚本默认读取 `tests/images/friendly-title.png`，调用 OpenAI-compatible OCR endpoint，并通过 `create_page_extractor_with_model()` 走本项目抽取流程。成功输出会包含图片路径、layout 数量、前几个 `ref`/`det`、文本摘要和 token 用量。可以用 `--image path/to/image.png` 指定其他图片。
+
 ## 开发后端模式
 
 需要在无 CUDA 环境测试完整抽取循环时，使用 `create_page_extractor_with_model()`：

@@ -77,6 +77,16 @@ class FixtureOCRModel:
 extractor = create_page_extractor_with_model(FixtureOCRModel())
 ```
 
+### Vendor OCR Sample
+
+After filling private Vendor settings in `.env`, run:
+
+```shell
+poetry run python scripts/vendor_ocr_sample.py
+```
+
+The sample reads `tests/images/friendly-title.png`, calls the configured OpenAI-compatible OCR endpoint, and routes the response through `create_page_extractor_with_model()`. Successful output includes the image path, layout count, the first few `ref`/`det` pairs, text previews, and token usage. Use `--image path/to/image.png` to try another image.
+
 ### Build Package
 
 Clean old builds and create distribution files:
