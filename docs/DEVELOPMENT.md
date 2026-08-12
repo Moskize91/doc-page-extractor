@@ -27,6 +27,12 @@ cp .env.template .env
 set -a && source .env && set +a
 ```
 
+`DOC_PAGE_EXTRACTOR_BACKEND` is mutually exclusive:
+
+- `fixture`: local fixed-response backend; no CUDA and no network.
+- `vendor`: OpenAI-compatible remote OCR backend.
+- `local`: local Hugging Face DeepSeek-OCR backend; requires CUDA.
+
 ## Development Workflow
 
 ### Run Tests

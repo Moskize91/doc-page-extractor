@@ -19,6 +19,14 @@ generate(prompt, image_path, output_path, size, context, device_number) -> str
 
 对 fixture 或远程后端来说，`download()`、`load()` 和 `unload()` 可以是空实现。`generate()` 必须返回包含 `<|ref|>` 和 `<|det|>` 标签的 DeepSeek-OCR 兼容文本，这样现有解析器才能产出 `Layout`。
 
+本地 `.env` 约定用 `DOC_PAGE_EXTRACTOR_BACKEND` 做互斥选择：
+
+- `fixture` 使用固定 OCR 响应或 fixture 文件。
+- `vendor` 使用 OpenAI-compatible 远程 OCR 后端。
+- `local` 使用 `create_page_extractor()` 和本地 Hugging Face 模型缓存。
+
+这只是当前脚本和后续开发适配器的约定；库代码本身不会自动读取 `.env`。
+
 实现远程后端时：
 
 - 上传或编码 `extractor.py` 生成的 `image_path`。

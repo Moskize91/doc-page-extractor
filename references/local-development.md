@@ -31,6 +31,16 @@ set -a && source .env && set +a
 
 `.env.template` 不得包含密钥。
 
+## 后端选择
+
+`.env` 通过 `DOC_PAGE_EXTRACTOR_BACKEND` 表达互斥的 OCR 后端选择：
+
+- `fixture`：默认 macOS 开发后端，使用固定响应或 fixture 文件，不加载 CUDA，也不访问网络。
+- `vendor`：OpenAI-compatible 远程 OCR 后端，适合在 macOS 上对接真实 OCR 能力。
+- `local`：本地 Hugging Face DeepSeek-OCR 后端，需要 CUDA 环境。
+
+即使 `.env` 中同时保留了 fixture、vendor 和 local 的字段，也只有当前 `DOC_PAGE_EXTRACTOR_BACKEND` 对应的一组字段应被脚本或开发适配器读取。
+
 ## 验证命令
 
 macOS 默认检查：
