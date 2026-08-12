@@ -2,6 +2,10 @@
 /plot
 /models-cache
 /.venv
+.env
+.env.local
+.env.*.local
+!.env.template
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
