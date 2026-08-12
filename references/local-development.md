@@ -31,6 +31,21 @@ set -a && source .env && set +a
 
 `.env.template` 不得包含密钥。
 
+VGE/Conductor 新建 worktree 时，ignored 的 `.env` 不会自动随 git 带过去。`setup` 会按以下顺序创建 `.env`：
+
+1. 如果设置了 `DOC_PAGE_EXTRACTOR_ENV_FILE` 且文件存在，复制它。
+2. 否则如果 `~/.config/doc-page-extractor/.env` 存在，复制它。
+3. 否则复制 `.env.template`，并提示手动填写私有配置。
+
+推荐把长期可复用的私有配置放在：
+
+```shell
+mkdir -p ~/.config/doc-page-extractor
+cp .env ~/.config/doc-page-extractor/.env
+```
+
+该私有文件不属于仓库，不应提交或写入文档。
+
 ## 后端选择
 
 `.env` 通过 `DOC_PAGE_EXTRACTOR_BACKEND` 表达互斥的 OCR 后端选择：

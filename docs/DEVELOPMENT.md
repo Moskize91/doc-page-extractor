@@ -27,6 +27,8 @@ cp .env.template .env
 set -a && source .env && set +a
 ```
 
+For VGE/Conductor worktrees, `setup` creates `.env` automatically. It copies `$DOC_PAGE_EXTRACTOR_ENV_FILE` when set, otherwise `~/.config/doc-page-extractor/.env` when present, otherwise `.env.template`.
+
 `DOC_PAGE_EXTRACTOR_BACKEND` is mutually exclusive:
 
 - `fixture`: local fixed-response backend; no CUDA and no network.
