@@ -53,7 +53,23 @@ poetry run pylint --disable=import-error doc_page_extractor
 
 ### macOS Model-Free Development
 
-macOS development should use `create_page_extractor_with_model()` with a fixture or remote backend. Do not call `create_page_extractor().load_models()` unless you are on a CUDA-capable Linux/NVIDIA environment.
+macOS development should use `create_page_extractor_with_adapter()` for new backend work, or `create_page_extractor_with_model()` when testing the legacy DeepSeek model protocol. Do not call `create_page_extractor().load_models()` unless you are on a CUDA-capable Linux/NVIDIA environment.
+
+New adapter code should implement the unified OCR adapter protocol and return layout results directly:
+
+```python
+from doc_page_extractor import (
+    BaiduCloudOCRConfig,
+    DeepSeekVendorOCRConfig,
+    create_baidu_page_extractor,
+    create_deepseek_vendor_page_extractor,
+)
+
+deepseek = create_deepseek_vendor_page_extractor(DeepSeekVendorOCRConfig.from_env())
+baidu = create_baidu_page_extractor(BaiduCloudOCRConfig.from_env())
+```
+
+The legacy model protocol remains available for small fixtures:
 
 ```python
 from pathlib import Path

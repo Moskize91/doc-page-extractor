@@ -1,6 +1,6 @@
 # pylint: disable=undefined-all-variable
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 _LAZY_EXPORTS = {
     "AbortError": ("extraction_context", "AbortError"),

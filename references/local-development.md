@@ -71,7 +71,21 @@ poetry run python scripts/ocr_sample.py --adapter both --image tests/images/frie
 
 ## 开发后端模式
 
-需要在无 CUDA 环境测试完整抽取循环时，使用 `create_page_extractor_with_model()`：
+需要在无 CUDA 环境测试完整抽取循环时，新后端优先实现 `OCRAdapter`，并通过 `create_page_extractor_with_adapter()` 或专用工厂函数接入。DeepSeek Vendor 和百度云可直接使用：
+
+```python
+from doc_page_extractor import (
+    BaiduCloudOCRConfig,
+    DeepSeekVendorOCRConfig,
+    create_baidu_page_extractor,
+    create_deepseek_vendor_page_extractor,
+)
+
+deepseek = create_deepseek_vendor_page_extractor(DeepSeekVendorOCRConfig.from_env())
+baidu = create_baidu_page_extractor(BaiduCloudOCRConfig.from_env())
+```
+
+兼容旧 DeepSeek 模型协议或编写极小 fixture 时，也可以使用 `create_page_extractor_with_model()`：
 
 ```python
 from pathlib import Path
