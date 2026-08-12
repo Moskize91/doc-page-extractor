@@ -53,4 +53,3 @@ poetry run pylint --disable=import-error doc_page_extractor
 VGE uses `.conductor/settings.toml` for worktree lifecycle commands:
 
 - `setup` creates or updates the in-project `.venv` with Poetry.
-- `archive` is shown by VGE as cleanup and removes generated build and cache files while keeping `.venv` for faster reuse.

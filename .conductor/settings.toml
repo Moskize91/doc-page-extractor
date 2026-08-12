@@ -9,8 +9,3 @@ export VIRTUAL_ENV="$PWD/.venv"
 export PATH="$VIRTUAL_ENV/bin:$PATH"
 poetry install --only dev
 '''
-
-archive = '''
-rm -rf dist build *.egg-info .pytest_cache .mypy_cache .ruff_cache
-find . -type d -name __pycache__ -prune -exec rm -rf {} +
-'''
