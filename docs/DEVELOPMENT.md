@@ -50,8 +50,8 @@ poetry run pylint --disable=import-error doc_page_extractor
 
 ## VGE Worktree Workflow
 
-VGE uses `.conductor/config.yaml` for worktree lifecycle commands:
+VGE uses `.conductor/settings.toml` for worktree lifecycle commands:
 
 - `setup` creates or updates the in-project `.venv` with Poetry.
 - `run` executes the lightweight checks: parser tests and pylint.
-- `cleanup` removes generated build and cache files while keeping `.venv` for faster reuse.
+- `archive` is shown by VGE as cleanup and removes generated build and cache files while keeping `.venv` for faster reuse.
