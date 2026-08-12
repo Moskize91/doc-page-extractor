@@ -34,6 +34,7 @@ generate(prompt, image_path, output_path, size, context, device_number) -> str
 - 只返回解析器期望的 OCR 响应文本。
 - 如果供应商返回 usage 信息，更新 `context.input_tokens` 和 `context.output_tokens`。
 - 当供应商的 token/计费失败语义接近 token 限制时，转换为 `TokenLimitError`。
+- 本地 sample 使用 `scripts/vendor_ocr_sample.py`，它是开发验证脚本，不是生产后端抽象。
 
 ## CUDA 路径规则
 
