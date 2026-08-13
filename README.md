@@ -87,6 +87,9 @@ DOC_PAGE_EXTRACTOR_BAIDU_SK=
 DOC_PAGE_EXTRACTOR_BAIDU_BASE_URL=https://aip.baidubce.com
 ```
 
+Baidu images with a side longer than 8192 px are resized proportionally before
+upload. Returned layout coordinates are mapped back to the original image size.
+
 ## Extraction
 
 All backends return the same `PageExtractor` shape:
