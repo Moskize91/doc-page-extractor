@@ -21,6 +21,7 @@ from .types import (
     OCRPageResult,
     PageExtractor,
 )
+from .structure import build_structured_page
 
 if TYPE_CHECKING:
     from PIL import Image
@@ -49,6 +50,8 @@ def create_page_extractor_with_model(model: DeepSeekOCRModel) -> PageExtractor:
 
 
 def create_page_extractor_with_adapter(adapter: OCRAdapter) -> PageExtractor:
+    if not hasattr(adapter, "supports_multi_stage"):
+        setattr(adapter, "supports_multi_stage", True)
     if not isinstance(adapter, OCRAdapter):
         raise TypeError("adapter must implement OCRAdapter protocol")
     return _PageExtractorImpls(adapter)
@@ -140,6 +143,8 @@ class _PageExtractorImpls:
                     image_path.unlink(missing_ok=True)
 
                 layouts = page_result.layouts
+                if page_result.structured is None:
+                    page_result.structured = build_structured_page(layouts)
                 yield image, page_result
 
                 if i < stages - 1:
@@ -150,7 +155,7 @@ class _PageExtractorImpls:
                     image = redact(
                         image=image.copy(),
                         fill_color=fill_color,
-                        rectangles=self._redect_rectangles(
+                        rectangles=self._redact_rectangles(
                             image=image,
                             dets=(layout.det for layout in layouts),
                         ),
@@ -159,7 +164,7 @@ class _PageExtractorImpls:
             if temp_dir is not None:
                 temp_dir.cleanup()
 
-    def _redect_rectangles(
+    def _redact_rectangles(
         self, image: "Image.Image", dets: Iterable[tuple[int, int, int, int]]
     ):
         # 将页面上 2/3 全部涂抹，并沿着 2/3 线向下涂抹到每一个识别为文字区块的底部

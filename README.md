@@ -120,6 +120,8 @@ for page_image, result in extractor.extract_page_results(
     stages=1,
     context=context,
 ):
+    if result.structured is None:
+        continue
     for block in result.structured.blocks:
         if block.kind == LayoutKind.TABLE:
             print(block.html)

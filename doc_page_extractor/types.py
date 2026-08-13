@@ -107,6 +107,8 @@ class PageExtractor(Protocol):
 
 @runtime_checkable
 class OCRAdapter(Protocol):
+    supports_multi_stage: bool
+
     def extract_page(
         self,
         prompt: str,
