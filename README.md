@@ -2,7 +2,7 @@
 
 Document page extraction tool that converts page images into text layouts with pixel coordinates.
 
-The default backend remains local DeepSeek-OCR for existing users. Version 1.1 also adds a unified OCR adapter layer with DeepSeek OpenAI-compatible Vendor support and Baidu cloud OCR support.
+The default backend remains local DeepSeek-OCR for existing users. Version 1.1 adds a unified OCR adapter layer with DeepSeek OpenAI-compatible Vendor support and Baidu cloud OCR support.
 
 ## Installation
 
@@ -107,7 +107,27 @@ for page_image, layouts in extractor.extract(
         print(layout.det, layout.text)
 ```
 
-`Layout` keeps the original `ref`, `det`, and `text` fields. Version 1.1 adds optional metadata fields such as `type`, `polygon`, `html`, `source`, and `raw` for adapters that provide richer layout data.
+`Layout` keeps the original `ref`, `det`, and `text` fields. Version 1.1.1 also adds `kind`, a stable `LayoutKind` enum that callers should prefer over provider-specific labels. Adapter metadata remains available through optional fields such as `type`, `polygon`, `html`, `source`, and `raw`.
+
+Use `extract_page_results()` when you need the structured page model:
+
+```python
+from doc_page_extractor import LayoutKind
+
+for page_image, result in extractor.extract_page_results(
+    image=Image.open("page.png"),
+    size="gundam",
+    stages=1,
+    context=context,
+):
+    for block in result.structured.blocks:
+        if block.kind == LayoutKind.TABLE:
+            print(block.html)
+```
+
+The structured model groups asset captions with images, tables, and equations when possible. DeepSeek output is structured from flat OCR tags; Baidu Cloud OCR is normalized from Baidu's richer layout JSON into the same public kinds.
+
+Baidu Cloud OCR extracts footnotes directly. If `stages > 1` is requested with the Baidu adapter, the extractor emits a warning and runs a single stage because DeepSeek-style multi-stage redaction can erase Baidu footnote regions.
 
 ## Development
 

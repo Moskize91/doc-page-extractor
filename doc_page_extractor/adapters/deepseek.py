@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Generator, Iterable, Protocol, cast
 
 from ..parser import ParsedItemKind, parse_ocr_response
+from ..structure import build_structured_page, deepseek_ref_to_kind
 from ..types import (
     DeepSeekOCRModel,
     DeepSeekOCRSize,
@@ -29,12 +30,20 @@ def parse_deepseek_layouts(
     image: _ImageLike, response: str, source: str = "deepseek"
 ) -> list[Layout]:
     return [
-        Layout(ref=ref, det=det, text=text, source=source)
+        Layout(
+            ref=ref,
+            det=det,
+            text=text,
+            kind=deepseek_ref_to_kind(ref),
+            source=source,
+        )
         for ref, det, text in _parse_deepseek_response(image, response)
     ]
 
 
 class DeepSeekModelOCRAdapter:
+    supports_multi_stage = True
+
     def __init__(self, model: DeepSeekOCRModel, source: str = "deepseek") -> None:
         self._model = model
         self._source = source
@@ -69,6 +78,7 @@ class DeepSeekModelOCRAdapter:
         return OCRPageResult(
             layouts=layouts,
             source=self._source,
+            structured=build_structured_page(layouts),
             raw_text=response,
         )
 
@@ -140,6 +150,8 @@ class DeepSeekVendorOCRConfig:
 
 
 class DeepSeekVendorOCRAdapter:
+    supports_multi_stage = True
+
     def __init__(self, config: DeepSeekVendorOCRConfig) -> None:
         self._config = config
 
@@ -211,6 +223,7 @@ class DeepSeekVendorOCRAdapter:
         return OCRPageResult(
             layouts=layouts,
             source="deepseek-vendor",
+            structured=build_structured_page(layouts),
             raw_text=raw_text,
             raw={"usage": usage},
         )

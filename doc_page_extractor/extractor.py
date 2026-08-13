@@ -1,5 +1,6 @@
 import sys
 import tempfile
+import warnings
 from os import PathLike
 from pathlib import Path
 from typing import Generator, Iterable
@@ -20,6 +21,7 @@ from .types import (
     ExtractionContext,
     Layout,
     OCRAdapter,
+    OCRPageResult,
     PageExtractor,
 )
 
@@ -84,7 +86,32 @@ class _PageExtractorImpls:
         context: ExtractionContext | None = None,
         device_number: int | None = None,
     ) -> Generator[tuple[Image.Image, list[Layout]], None, None]:
+        for stage_image, page_result in self.extract_page_results(
+            image=image,
+            size=size,
+            stages=stages,
+            context=context,
+            device_number=device_number,
+        ):
+            yield stage_image, page_result.layouts
+
+    def extract_page_results(
+        self,
+        image: Image.Image,
+        size: DeepSeekOCRSize,
+        stages: int = 1,
+        context: ExtractionContext | None = None,
+        device_number: int | None = None,
+    ) -> Generator[tuple[Image.Image, OCRPageResult], None, None]:
         assert stages >= 1, "stages must be at least 1"
+        if stages > 1 and not getattr(self._adapter, "supports_multi_stage", True):
+            warnings.warn(
+                "This OCR adapter does not support multi-stage redaction; "
+                "using a single extraction stage.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+            stages = 1
 
         fill_color: tuple[int, int, int] | None = None
         output_path: Path | None = None
@@ -113,7 +140,7 @@ class _PageExtractorImpls:
                     image_path.unlink(missing_ok=True)
 
                 layouts = page_result.layouts
-                yield image, layouts
+                yield image, page_result
 
                 if i < stages - 1:
                     if fill_color is None:

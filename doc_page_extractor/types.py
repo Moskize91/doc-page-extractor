@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from enum import Enum
 from os import PathLike
 from pathlib import Path
 from typing import Any, TYPE_CHECKING, runtime_checkable, Protocol, Generator, Literal, Callable
@@ -8,6 +9,23 @@ if TYPE_CHECKING:
 
 
 DeepSeekOCRSize = Literal["tiny", "small", "base", "large", "gundam"]
+
+
+class LayoutKind(str, Enum):
+    TEXT = "text"
+    TITLE = "title"
+    IMAGE = "image"
+    IMAGE_CAPTION = "image_caption"
+    TABLE = "table"
+    TABLE_CAPTION = "table_caption"
+    EQUATION = "equation"
+    EQUATION_CAPTION = "equation_caption"
+    FOOTNOTE = "footnote"
+    HEADER = "header"
+    FOOTER = "footer"
+    PAGE_NUMBER = "page_number"
+    ASIDE = "aside"
+    UNKNOWN = "unknown"
 
 
 @dataclass
@@ -20,6 +38,23 @@ class Layout:
     html: str | None = None
     source: str | None = None
     raw: dict[str, Any] | None = field(default=None, repr=False)
+    kind: LayoutKind = LayoutKind.UNKNOWN
+
+
+@dataclass
+class PageBlock:
+    kind: LayoutKind
+    det: tuple[int, int, int, int]
+    text: str | None = None
+    html: str | None = None
+    layouts: list[Layout] = field(default_factory=list)
+    children: list["PageBlock"] = field(default_factory=list)
+
+
+@dataclass
+class StructuredPage:
+    blocks: list[PageBlock]
+    ignored: list[Layout] = field(default_factory=list)
 
 
 @dataclass
@@ -28,6 +63,7 @@ class OCRPageResult:
     source: str
     raw_text: str | None = None
     raw: dict[str, Any] | None = field(default=None, repr=False)
+    structured: StructuredPage | None = None
 
 
 @dataclass
@@ -56,6 +92,16 @@ class PageExtractor(Protocol):
         context: ExtractionContext | None = None,
         device_number: int | None = None,
     ) -> Generator[tuple["Image.Image", list[Layout]], None, None]:
+        ...
+
+    def extract_page_results(
+        self,
+        image: "Image.Image",
+        size: DeepSeekOCRSize,
+        stages: int = 1,
+        context: ExtractionContext | None = None,
+        device_number: int | None = None,
+    ) -> Generator[tuple["Image.Image", OCRPageResult], None, None]:
         ...
 
 
