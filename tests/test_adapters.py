@@ -130,11 +130,6 @@ class TestAdapters(unittest.TestCase):
                             "position": [100, 1100, 120, 30],
                             "type": "number",
                         },
-                        {
-                            "text": "209",
-                            "position": [20, 320, 30, 30],
-                            "type": "text",
-                        },
                     ]
                 }
             ]
@@ -151,10 +146,8 @@ class TestAdapters(unittest.TestCase):
         self.assertEqual(layouts[3].kind, LayoutKind.TABLE)
         self.assertEqual(layouts[4].kind, LayoutKind.PAGE_NUMBER)
         self.assertEqual(layouts[5].kind, LayoutKind.FOOTNOTE)
-        self.assertEqual(layouts[6].kind, LayoutKind.TEXT)
-        self.assertEqual(len(structured.ignored), 2)
+        self.assertEqual(len(structured.ignored), 1)
         self.assertEqual(structured.ignored[0].kind, LayoutKind.PAGE_NUMBER)
-        self.assertEqual(structured.ignored[1].text, "209")
         table_block = next(
             block for block in structured.blocks if block.kind == LayoutKind.TABLE
         )

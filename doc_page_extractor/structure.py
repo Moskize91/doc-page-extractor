@@ -29,7 +29,6 @@ _TABLE_CAPTION_PATTERNS = (
 )
 
 _FOOTNOTE_MARK_PATTERN = re.compile(r"^\s*[①②③④⑤⑥⑦⑧⑨⑩]\s*\S+")
-_SIDE_NUMBER_PATTERN = re.compile(r"^\s*\d+\s*$")
 
 
 def deepseek_ref_to_kind(ref: str | None) -> LayoutKind:
@@ -101,26 +100,18 @@ def legacy_ref_for_kind(kind: LayoutKind, fallback: str | None = None) -> str:
 
 
 def build_structured_page(layouts: Iterable[Layout]) -> StructuredPage:
-    layout_list = list(layouts)
-    body_left = _body_left(layout_list)
     blocks: list[PageBlock] = []
     ignored: list[Layout] = []
     pending_asset: PageBlock | None = None
     pending_captions: dict[LayoutKind, list[PageBlock]] = {}
 
-    for layout in layout_list:
+    for layout in layouts:
         kind = layout.kind
         if kind in _IGNORED_KINDS:
             ignored.append(layout)
             continue
-        if _is_side_number(layout, body_left):
-            ignored.append(layout)
-            continue
 
         if kind in _ASSET_KINDS:
-            if _is_noise_asset(layout):
-                ignored.append(layout)
-                continue
             pending_asset = _block_from_layout(layout)
             attached_captions = pending_captions.pop(kind, [])
             pending_asset.children.extend(attached_captions)
@@ -165,33 +156,3 @@ def _looks_like_table_caption(text: str | None) -> bool:
     if not text:
         return False
     return any(pattern.search(text) for pattern in _TABLE_CAPTION_PATTERNS)
-
-
-def _is_noise_asset(layout: Layout) -> bool:
-    x1, y1, x2, y2 = layout.det
-    area = max(0, x2 - x1) * max(0, y2 - y1)
-    has_content = bool((layout.text or "").strip() or (layout.html or "").strip())
-    return layout.kind in _ASSET_KINDS and area < 5000 and not has_content
-
-
-def _body_left(layouts: Iterable[Layout]) -> int | None:
-    candidates: list[int] = []
-    for layout in layouts:
-        if layout.kind not in {LayoutKind.TEXT, LayoutKind.TITLE}:
-            continue
-        x1, y1, x2, y2 = layout.det
-        area = max(0, x2 - x1) * max(0, y2 - y1)
-        if area > 20000:
-            candidates.append(x1)
-    return min(candidates) if candidates else None
-
-
-def _is_side_number(layout: Layout, body_left: int | None) -> bool:
-    if body_left is None or layout.kind != LayoutKind.TEXT:
-        return False
-    if not _SIDE_NUMBER_PATTERN.search(layout.text or ""):
-        return False
-    x1, y1, x2, y2 = layout.det
-    width = max(0, x2 - x1)
-    height = max(0, y2 - y1)
-    return width <= 100 and height <= 100 and x2 < body_left - 20
