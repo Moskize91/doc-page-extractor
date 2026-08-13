@@ -44,6 +44,18 @@ class TestAdapters(unittest.TestCase):
         self.assertEqual(structured.blocks[0].kind, LayoutKind.IMAGE)
         self.assertEqual(structured.blocks[0].children[0].kind, LayoutKind.IMAGE_CAPTION)
 
+    def test_deepseek_zero_area_layouts_are_ignored(self):
+        image = _StubImage(1000, 1000)
+        response = (
+            "<|ref|>text<|/ref|><|det|>[[0, 0, 0, 0]]<|/det|>0"
+            "<|ref|>text<|/ref|><|det|>[[100, 100, 200, 200]]<|/det|>ok"
+        )
+
+        layouts = parse_deepseek_layouts(image, response)
+
+        self.assertEqual(len(layouts), 1)
+        self.assertEqual(layouts[0].text, "ok")
+
     def test_baidu_layouts_from_json(self):
         parse_result = {
             "file_name": "friendly-title.png",
@@ -93,6 +105,11 @@ class TestAdapters(unittest.TestCase):
                             "type": "footnote",
                         },
                         {
+                            "text": "正文",
+                            "position": [100, 300, 400, 100],
+                            "type": "text",
+                        },
+                        {
                             "text": "第 六 表",
                             "position": [100, 100, 100, 30],
                             "type": "text",
@@ -108,6 +125,16 @@ class TestAdapters(unittest.TestCase):
                             "position": [500, 980, 10, 10],
                             "type": "number",
                         },
+                        {
+                            "text": "① element",
+                            "position": [100, 1100, 120, 30],
+                            "type": "number",
+                        },
+                        {
+                            "text": "209",
+                            "position": [20, 320, 30, 30],
+                            "type": "text",
+                        },
                     ]
                 }
             ]
@@ -118,14 +145,20 @@ class TestAdapters(unittest.TestCase):
 
         self.assertEqual(layouts[0].kind, LayoutKind.FOOTNOTE)
         self.assertEqual(layouts[0].ref, "text")
-        self.assertEqual(layouts[1].kind, LayoutKind.TABLE_CAPTION)
-        self.assertEqual(layouts[1].ref, "table_caption")
-        self.assertEqual(layouts[2].kind, LayoutKind.TABLE)
-        self.assertEqual(layouts[3].kind, LayoutKind.PAGE_NUMBER)
-        self.assertEqual(len(structured.ignored), 1)
+        self.assertEqual(layouts[1].kind, LayoutKind.TEXT)
+        self.assertEqual(layouts[2].kind, LayoutKind.TABLE_CAPTION)
+        self.assertEqual(layouts[2].ref, "table_caption")
+        self.assertEqual(layouts[3].kind, LayoutKind.TABLE)
+        self.assertEqual(layouts[4].kind, LayoutKind.PAGE_NUMBER)
+        self.assertEqual(layouts[5].kind, LayoutKind.FOOTNOTE)
+        self.assertEqual(layouts[6].kind, LayoutKind.TEXT)
+        self.assertEqual(len(structured.ignored), 2)
         self.assertEqual(structured.ignored[0].kind, LayoutKind.PAGE_NUMBER)
-        self.assertEqual(structured.blocks[1].kind, LayoutKind.TABLE)
-        self.assertEqual(structured.blocks[1].children[0].kind, LayoutKind.TABLE_CAPTION)
+        self.assertEqual(structured.ignored[1].text, "209")
+        table_block = next(
+            block for block in structured.blocks if block.kind == LayoutKind.TABLE
+        )
+        self.assertEqual(table_block.children[0].kind, LayoutKind.TABLE_CAPTION)
 
 
 if __name__ == "__main__":

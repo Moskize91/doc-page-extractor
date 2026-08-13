@@ -38,6 +38,7 @@ def parse_deepseek_layouts(
             source=source,
         )
         for ref, det, text in _parse_deepseek_response(image, response)
+        if _has_area(det)
     ]
 
 
@@ -252,6 +253,10 @@ def _parse_deepseek_response(
             ref = cast(str, content)
     if det is not None and ref is not None:
         yield ref, det, None
+
+
+def _has_area(det: tuple[int, int, int, int]) -> bool:
+    return det[2] > det[0] and det[3] > det[1]
 
 
 def _data_url(image_path: Path) -> str:

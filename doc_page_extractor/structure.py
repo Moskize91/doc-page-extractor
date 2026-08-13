@@ -28,6 +28,9 @@ _TABLE_CAPTION_PATTERNS = (
     re.compile(r"^\s*table\s+\d+\b", re.IGNORECASE),
 )
 
+_FOOTNOTE_MARK_PATTERN = re.compile(r"^\s*[①②③④⑤⑥⑦⑧⑨⑩]\s*\S+")
+_SIDE_NUMBER_PATTERN = re.compile(r"^\s*\d+\s*$")
+
 
 def deepseek_ref_to_kind(ref: str | None) -> LayoutKind:
     normalized = (ref or "").strip()
@@ -75,6 +78,8 @@ def baidu_type_to_kind(layout_type: str | None, text: str | None = None) -> Layo
     if normalized == "footer":
         return LayoutKind.FOOTER
     if normalized == "number":
+        if _FOOTNOTE_MARK_PATTERN.search(text or ""):
+            return LayoutKind.FOOTNOTE
         return LayoutKind.PAGE_NUMBER
     if normalized == "aside_text":
         return LayoutKind.ASIDE
@@ -96,14 +101,19 @@ def legacy_ref_for_kind(kind: LayoutKind, fallback: str | None = None) -> str:
 
 
 def build_structured_page(layouts: Iterable[Layout]) -> StructuredPage:
+    layout_list = list(layouts)
+    body_left = _body_left(layout_list)
     blocks: list[PageBlock] = []
     ignored: list[Layout] = []
     pending_asset: PageBlock | None = None
     pending_captions: dict[LayoutKind, list[PageBlock]] = {}
 
-    for layout in layouts:
+    for layout in layout_list:
         kind = layout.kind
         if kind in _IGNORED_KINDS:
+            ignored.append(layout)
+            continue
+        if _is_side_number(layout, body_left):
             ignored.append(layout)
             continue
 
@@ -162,3 +172,26 @@ def _is_noise_asset(layout: Layout) -> bool:
     area = max(0, x2 - x1) * max(0, y2 - y1)
     has_content = bool((layout.text or "").strip() or (layout.html or "").strip())
     return layout.kind in _ASSET_KINDS and area < 5000 and not has_content
+
+
+def _body_left(layouts: Iterable[Layout]) -> int | None:
+    candidates: list[int] = []
+    for layout in layouts:
+        if layout.kind not in {LayoutKind.TEXT, LayoutKind.TITLE}:
+            continue
+        x1, y1, x2, y2 = layout.det
+        area = max(0, x2 - x1) * max(0, y2 - y1)
+        if area > 20000:
+            candidates.append(x1)
+    return min(candidates) if candidates else None
+
+
+def _is_side_number(layout: Layout, body_left: int | None) -> bool:
+    if body_left is None or layout.kind != LayoutKind.TEXT:
+        return False
+    if not _SIDE_NUMBER_PATTERN.search(layout.text or ""):
+        return False
+    x1, y1, x2, y2 = layout.det
+    width = max(0, x2 - x1)
+    height = max(0, y2 - y1)
+    return width <= 100 and height <= 100 and x2 < body_left - 20
