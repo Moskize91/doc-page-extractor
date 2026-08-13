@@ -60,6 +60,7 @@ class BaiduCloudOCRConfig:
 
 class BaiduCloudOCRAdapter:
     supports_multi_stage = False
+    max_image_side = 8192
 
     def __init__(self, config: BaiduCloudOCRConfig) -> None:
         self._config = config

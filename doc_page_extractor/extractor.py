@@ -130,19 +130,31 @@ class _PageExtractorImpls:
             for i in range(stages):
                 image_path = output_path / f"raw-{i+1}.png"
                 image.save(image_path, "PNG")
+                prepared_image_path, scale_x, scale_y = _prepare_adapter_image(
+                    image=image,
+                    image_path=image_path,
+                    output_path=output_path,
+                    max_image_side=getattr(self._adapter, "max_image_side", None),
+                )
                 try:
                     page_result = self._adapter.extract_page(
                         prompt=_DEFAULT_PROMPT,
-                        image_path=image_path,
+                        image_path=prepared_image_path,
                         output_path=output_path,
                         size=size,
                         context=context,
                         device_number=device_number,
                     )
                 finally:
+                    if prepared_image_path != image_path:
+                        prepared_image_path.unlink(missing_ok=True)
                     image_path.unlink(missing_ok=True)
 
                 layouts = page_result.layouts
+                if scale_x != 1.0 or scale_y != 1.0:
+                    _scale_layout_coordinates(layouts, scale_x, scale_y)
+                    if page_result.structured is not None:
+                        page_result.structured = build_structured_page(layouts)
                 if page_result.structured is None:
                     page_result.structured = build_structured_page(layouts)
                 yield image, page_result
@@ -198,3 +210,44 @@ class _PageExtractorImpls:
             if left < right:
                 yield (left, y_cutted, right, y_cutted + height)
                 forbidden = right
+
+
+def _prepare_adapter_image(
+    image: "Image.Image",
+    image_path: Path,
+    output_path: Path,
+    max_image_side: int | None,
+) -> tuple[Path, float, float]:
+    if max_image_side is None:
+        return image_path, 1.0, 1.0
+
+    width, height = image.size
+    max_side = max(width, height)
+    if max_side <= max_image_side:
+        return image_path, 1.0, 1.0
+
+    ratio = max_image_side / max_side
+    resized_width = max(1, round(width * ratio))
+    resized_height = max(1, round(height * ratio))
+    resized_path = output_path / f"{image_path.stem}-resized.png"
+    resized = image.resize((resized_width, resized_height))
+    resized.save(resized_path, "PNG")
+
+    return resized_path, width / resized_width, height / resized_height
+
+
+def _scale_layout_coordinates(
+    layouts: list[Layout], scale_x: float, scale_y: float
+) -> None:
+    for layout in layouts:
+        x1, y1, x2, y2 = layout.det
+        layout.det = (
+            round(x1 * scale_x),
+            round(y1 * scale_y),
+            round(x2 * scale_x),
+            round(y2 * scale_y),
+        )
+        if layout.polygon is not None:
+            layout.polygon = [
+                (round(x * scale_x), round(y * scale_y)) for x, y in layout.polygon
+            ]

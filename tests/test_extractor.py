@@ -14,6 +14,27 @@ class _FakeImage:
         path.write_bytes(b"fake")
 
 
+class _FakeResizedImage:
+    def __init__(self, size: tuple[int, int]) -> None:
+        self.size = size
+        self.saved_paths: list[Path] = []
+
+    def save(self, path: Path, image_format: str) -> None:
+        del image_format
+        self.saved_paths.append(path)
+        path.write_bytes(b"resized")
+
+
+class _FakeResizableImage(_FakeResizedImage):
+    def __init__(self) -> None:
+        super().__init__((9000, 4500))
+        self.resize_size: tuple[int, int] | None = None
+
+    def resize(self, size: tuple[int, int]) -> _FakeResizedImage:
+        self.resize_size = size
+        return _FakeResizedImage(size)
+
+
 class _SingleStageAdapter:
     supports_multi_stage = False
 
@@ -51,6 +72,42 @@ class _LegacyAdapter:
         return OCRPageResult(
             layouts=[Layout(ref="text", det=(0, 0, 10, 10), text="ok")],
             source="legacy",
+        )
+
+
+class _MaxSideAdapter:
+    supports_multi_stage = True
+    max_image_side = 8192
+
+    def __init__(self) -> None:
+        self.image_path: Path | None = None
+
+    def extract_page(
+        self,
+        prompt: str,
+        image_path: Path,
+        output_path: Path,
+        size: str,
+        context: ExtractionContext | None,
+        device_number: int | None,
+    ) -> OCRPageResult:
+        del prompt, output_path, size, context, device_number
+        self.image_path = image_path
+        return OCRPageResult(
+            layouts=[
+                Layout(
+                    ref="text",
+                    det=(100, 200, 400, 600),
+                    text="ok",
+                    polygon=[
+                        (100, 200),
+                        (400, 200),
+                        (400, 600),
+                        (100, 600),
+                    ],
+                )
+            ],
+            source="max-side",
         )
 
 
@@ -94,6 +151,31 @@ class TestExtractor(unittest.TestCase):
         self.assertIsNotNone(structured)
         assert structured is not None
         self.assertEqual(structured.blocks[0].text, "ok")
+
+    def test_adapter_max_image_side_resizes_upload_and_maps_coordinates(self):
+        adapter = _MaxSideAdapter()
+        image = _FakeResizableImage()
+        extractor = create_page_extractor_with_adapter(adapter)
+
+        results = list(
+            extractor.extract_page_results(
+                image=image,  # type: ignore[arg-type]
+                size="tiny",
+                stages=1,
+                context=ExtractionContext(check_aborted=lambda: False),
+            )
+        )
+
+        self.assertEqual(image.resize_size, (8192, 4096))
+        self.assertIsNotNone(adapter.image_path)
+        assert adapter.image_path is not None
+        self.assertEqual(adapter.image_path.name, "raw-1-resized.png")
+        layout = results[0][1].layouts[0]
+        self.assertEqual(layout.det, (110, 220, 439, 659))
+        self.assertEqual(
+            layout.polygon,
+            [(110, 220), (439, 220), (439, 659), (110, 659)],
+        )
 
 
 if __name__ == "__main__":
