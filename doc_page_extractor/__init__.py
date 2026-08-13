@@ -1,6 +1,6 @@
 # pylint: disable=undefined-all-variable
 
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 
 _LAZY_EXPORTS = {
     "AbortError": ("extraction_context", "AbortError"),
@@ -15,9 +15,12 @@ _LAZY_EXPORTS = {
     "ExtractionAbortedError": ("extraction_context", "ExtractionAbortedError"),
     "ExtractionContext": ("types", "ExtractionContext"),
     "Layout": ("types", "Layout"),
+    "LayoutKind": ("types", "LayoutKind"),
     "OCRAdapter": ("types", "OCRAdapter"),
     "OCRPageResult": ("types", "OCRPageResult"),
+    "PageBlock": ("types", "PageBlock"),
     "PageExtractor": ("types", "PageExtractor"),
+    "StructuredPage": ("types", "StructuredPage"),
     "TokenLimitError": ("extraction_context", "TokenLimitError"),
     "create_baidu_page_extractor": ("extractor", "create_baidu_page_extractor"),
     "create_page_extractor": ("extractor", "create_page_extractor"),
@@ -50,6 +53,9 @@ __all__ = [
     "ExtractionAbortedError",
     "TokenLimitError",
     "Layout",
+    "LayoutKind",
+    "PageBlock",
+    "StructuredPage",
 ]
 
 

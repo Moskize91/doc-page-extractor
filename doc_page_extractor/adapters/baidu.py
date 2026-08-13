@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, TYPE_CHECKING
 
+from ..structure import baidu_type_to_kind, build_structured_page, legacy_ref_for_kind
 from ..types import DeepSeekOCRSize, ExtractionContext, Layout, OCRPageResult
 
 if TYPE_CHECKING:
@@ -58,6 +59,8 @@ class BaiduCloudOCRConfig:
 
 
 class BaiduCloudOCRAdapter:
+    supports_multi_stage = False
+
     def __init__(self, config: BaiduCloudOCRConfig) -> None:
         self._config = config
         self._access_token: str | None = None
@@ -84,6 +87,7 @@ class BaiduCloudOCRAdapter:
         return OCRPageResult(
             layouts=layouts,
             source="baidu",
+            structured=build_structured_page(layouts),
             raw={
                 "task_id": task_id,
                 "status": task_result.get("status"),
@@ -221,11 +225,13 @@ def parse_baidu_layouts(parse_result: dict[str, Any]) -> list[Layout]:
             text = _optional_str(item.get("text"))
             table_html = _optional_str(item.get("table_html"))
             html = table_html or (text if layout_type == "table" else None)
+            kind = baidu_type_to_kind(layout_type, text)
             layouts.append(
                 Layout(
-                    ref=layout_type or "baidu",
+                    ref=legacy_ref_for_kind(kind, layout_type or "baidu"),
                     det=det,
                     text=text,
+                    kind=kind,
                     type=layout_type,
                     polygon=_parse_polygon(item.get("polygon")),
                     html=html,

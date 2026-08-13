@@ -2,6 +2,8 @@ import unittest
 
 from doc_page_extractor.adapters.baidu import parse_baidu_layouts
 from doc_page_extractor.adapters.deepseek import parse_deepseek_layouts
+from doc_page_extractor.structure import build_structured_page
+from doc_page_extractor.types import LayoutKind
 
 
 class _StubImage:
@@ -21,7 +23,38 @@ class TestAdapters(unittest.TestCase):
         self.assertEqual(layout.ref, "标题")
         self.assertEqual(layout.det, (100, 200, 300, 400))
         self.assertEqual(layout.text, "正文")
+        self.assertEqual(layout.kind, LayoutKind.UNKNOWN)
         self.assertEqual(layout.source, "deepseek-vendor")
+
+    def test_deepseek_known_refs_are_typed(self):
+        image = _StubImage(1000, 1000)
+        response = (
+            "<|ref|>image<|/ref|><|det|>[[100, 100, 800, 500]]<|/det|>"
+            "image-body"
+            "<|ref|>image_caption<|/ref|><|det|>[[100, 520, 800, 600]]<|/det|>"
+            "图一"
+        )
+
+        layouts = parse_deepseek_layouts(image, response)
+        structured = build_structured_page(layouts)
+
+        self.assertEqual(layouts[0].kind, LayoutKind.IMAGE)
+        self.assertEqual(layouts[1].kind, LayoutKind.IMAGE_CAPTION)
+        self.assertEqual(len(structured.blocks), 1)
+        self.assertEqual(structured.blocks[0].kind, LayoutKind.IMAGE)
+        self.assertEqual(structured.blocks[0].children[0].kind, LayoutKind.IMAGE_CAPTION)
+
+    def test_deepseek_zero_area_layouts_are_ignored(self):
+        image = _StubImage(1000, 1000)
+        response = (
+            "<|ref|>text<|/ref|><|det|>[[0, 0, 0, 0]]<|/det|>0"
+            "<|ref|>text<|/ref|><|det|>[[100, 100, 200, 200]]<|/det|>ok"
+        )
+
+        layouts = parse_deepseek_layouts(image, response)
+
+        self.assertEqual(len(layouts), 1)
+        self.assertEqual(layouts[0].text, "ok")
 
     def test_baidu_layouts_from_json(self):
         parse_result = {
@@ -51,12 +84,74 @@ class TestAdapters(unittest.TestCase):
         layouts = parse_baidu_layouts(parse_result)
 
         self.assertEqual(len(layouts), 2)
-        self.assertEqual(layouts[0].ref, "paragraph_title")
+        self.assertEqual(layouts[0].ref, "sub_title")
         self.assertEqual(layouts[0].det, (161, 167, 518, 220))
         self.assertEqual(layouts[0].text, "第二章 鸿商巨贾")
+        self.assertEqual(layouts[0].kind, LayoutKind.TITLE)
         self.assertEqual(layouts[0].type, "paragraph_title")
         self.assertEqual(layouts[0].source, "baidu")
+        self.assertEqual(layouts[1].ref, "text")
+        self.assertEqual(layouts[1].kind, LayoutKind.TEXT)
         self.assertEqual(layouts[1].det, (158, 510, 1360, 1068))
+
+    def test_baidu_richer_types_collapse_to_stable_kinds(self):
+        parse_result = {
+            "pages": [
+                {
+                    "layouts": [
+                        {
+                            "text": "脚注内容",
+                            "position": [10, 900, 300, 40],
+                            "type": "footnote",
+                        },
+                        {
+                            "text": "正文",
+                            "position": [100, 300, 400, 100],
+                            "type": "text",
+                        },
+                        {
+                            "text": "第 六 表",
+                            "position": [100, 100, 100, 30],
+                            "type": "text",
+                        },
+                        {
+                            "text": "<table><tr><td>A</td></tr></table>",
+                            "position": [100, 140, 400, 200],
+                            "type": "table",
+                            "table_html": "<table><tr><td>A</td></tr></table>",
+                        },
+                        {
+                            "text": "1",
+                            "position": [500, 980, 10, 10],
+                            "type": "number",
+                        },
+                        {
+                            "text": "① element",
+                            "position": [100, 1100, 120, 30],
+                            "type": "number",
+                        },
+                    ]
+                }
+            ]
+        }
+
+        layouts = parse_baidu_layouts(parse_result)
+        structured = build_structured_page(layouts)
+
+        self.assertEqual(layouts[0].kind, LayoutKind.FOOTNOTE)
+        self.assertEqual(layouts[0].ref, "text")
+        self.assertEqual(layouts[1].kind, LayoutKind.TEXT)
+        self.assertEqual(layouts[2].kind, LayoutKind.TABLE_CAPTION)
+        self.assertEqual(layouts[2].ref, "table_caption")
+        self.assertEqual(layouts[3].kind, LayoutKind.TABLE)
+        self.assertEqual(layouts[4].kind, LayoutKind.PAGE_NUMBER)
+        self.assertEqual(layouts[5].kind, LayoutKind.FOOTNOTE)
+        self.assertEqual(len(structured.ignored), 1)
+        self.assertEqual(structured.ignored[0].kind, LayoutKind.PAGE_NUMBER)
+        table_block = next(
+            block for block in structured.blocks if block.kind == LayoutKind.TABLE
+        )
+        self.assertEqual(table_block.children[0].kind, LayoutKind.TABLE_CAPTION)
 
 
 if __name__ == "__main__":

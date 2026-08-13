@@ -92,6 +92,7 @@ def _run_extractor(adapter_name: str, extractor, image_path: Path, size: str, li
             {
                 "index": index + 1,
                 "ref": layout.ref,
+                "kind": layout.kind.value,
                 "det": layout.det,
                 "type": layout.type,
                 "text": _preview_text(layout.text),
@@ -107,6 +108,7 @@ def _run_extractor(adapter_name: str, extractor, image_path: Path, size: str, li
 def _layout_summary(layout: Any) -> dict[str, Any]:
     return {
         "ref": layout.ref,
+        "kind": layout.kind.value,
         "det": layout.det,
         "type": layout.type,
         "text": _preview_text(layout.text),

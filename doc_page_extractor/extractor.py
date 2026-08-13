@@ -1,10 +1,9 @@
 import sys
 import tempfile
+import warnings
 from os import PathLike
 from pathlib import Path
-from typing import Generator, Iterable
-
-from PIL import Image
+from typing import TYPE_CHECKING, Generator, Iterable
 
 from .adapters.baidu import BaiduCloudOCRAdapter, BaiduCloudOCRConfig
 from .adapters.deepseek import (
@@ -13,15 +12,19 @@ from .adapters.deepseek import (
     DeepSeekVendorOCRAdapter,
     DeepSeekVendorOCRConfig,
 )
-from .redacter import background_color, redact
 from .types import (
     DeepSeekOCRModel,
     DeepSeekOCRSize,
     ExtractionContext,
     Layout,
     OCRAdapter,
+    OCRPageResult,
     PageExtractor,
 )
+from .structure import build_structured_page
+
+if TYPE_CHECKING:
+    from PIL import Image
 
 _DEFAULT_PROMPT = "<image>\n<|grounding|>Convert the document to markdown."
 
@@ -47,6 +50,8 @@ def create_page_extractor_with_model(model: DeepSeekOCRModel) -> PageExtractor:
 
 
 def create_page_extractor_with_adapter(adapter: OCRAdapter) -> PageExtractor:
+    if not hasattr(adapter, "supports_multi_stage"):
+        setattr(adapter, "supports_multi_stage", True)
     if not isinstance(adapter, OCRAdapter):
         raise TypeError("adapter must implement OCRAdapter protocol")
     return _PageExtractorImpls(adapter)
@@ -78,13 +83,38 @@ class _PageExtractorImpls:
 
     def extract(
         self,
-        image: Image.Image,
+        image: "Image.Image",
         size: DeepSeekOCRSize,
         stages: int = 1,
         context: ExtractionContext | None = None,
         device_number: int | None = None,
-    ) -> Generator[tuple[Image.Image, list[Layout]], None, None]:
+    ) -> Generator[tuple["Image.Image", list[Layout]], None, None]:
+        for stage_image, page_result in self.extract_page_results(
+            image=image,
+            size=size,
+            stages=stages,
+            context=context,
+            device_number=device_number,
+        ):
+            yield stage_image, page_result.layouts
+
+    def extract_page_results(
+        self,
+        image: "Image.Image",
+        size: DeepSeekOCRSize,
+        stages: int = 1,
+        context: ExtractionContext | None = None,
+        device_number: int | None = None,
+    ) -> Generator[tuple["Image.Image", OCRPageResult], None, None]:
         assert stages >= 1, "stages must be at least 1"
+        if stages > 1 and not getattr(self._adapter, "supports_multi_stage", True):
+            warnings.warn(
+                "This OCR adapter does not support multi-stage redaction; "
+                "using a single extraction stage.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+            stages = 1
 
         fill_color: tuple[int, int, int] | None = None
         output_path: Path | None = None
@@ -113,15 +143,19 @@ class _PageExtractorImpls:
                     image_path.unlink(missing_ok=True)
 
                 layouts = page_result.layouts
-                yield image, layouts
+                if page_result.structured is None:
+                    page_result.structured = build_structured_page(layouts)
+                yield image, page_result
 
                 if i < stages - 1:
+                    from .redacter import background_color, redact
+
                     if fill_color is None:
                         fill_color = background_color(image)
                     image = redact(
                         image=image.copy(),
                         fill_color=fill_color,
-                        rectangles=self._redect_rectangles(
+                        rectangles=self._redact_rectangles(
                             image=image,
                             dets=(layout.det for layout in layouts),
                         ),
@@ -130,8 +164,8 @@ class _PageExtractorImpls:
             if temp_dir is not None:
                 temp_dir.cleanup()
 
-    def _redect_rectangles(
-        self, image: Image.Image, dets: Iterable[tuple[int, int, int, int]]
+    def _redact_rectangles(
+        self, image: "Image.Image", dets: Iterable[tuple[int, int, int, int]]
     ):
         # 将页面上 2/3 全部涂抹，并沿着 2/3 线向下涂抹到每一个识别为文字区块的底部
         # 这种方法旨在涂抹掉尽可能多的不是页脚的区域，以排除诸如页眉之类干扰识别页脚的内容
