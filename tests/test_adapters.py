@@ -93,7 +93,7 @@ class TestAdapters(unittest.TestCase):
                             "type": "footnote",
                         },
                         {
-                            "text": "第六表",
+                            "text": "第 六 表",
                             "position": [100, 100, 100, 30],
                             "type": "text",
                         },

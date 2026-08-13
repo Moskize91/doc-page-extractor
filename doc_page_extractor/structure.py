@@ -23,8 +23,8 @@ _IGNORED_KINDS = {
 }
 
 _TABLE_CAPTION_PATTERNS = (
-    re.compile(r"^\s*第[一二三四五六七八九十百千万零〇\d]+表\b"),
-    re.compile(r"^\s*表\s*[一二三四五六七八九十百千万零〇\d]+\b"),
+    re.compile(r"^\s*第\s*[一二三四五六七八九十百千万零〇\d\s]+\s*表\b"),
+    re.compile(r"^\s*表\s*[一二三四五六七八九十百千万零〇\d\s]+\b"),
     re.compile(r"^\s*table\s+\d+\b", re.IGNORECASE),
 )
 
@@ -108,6 +108,9 @@ def build_structured_page(layouts: Iterable[Layout]) -> StructuredPage:
             continue
 
         if kind in _ASSET_KINDS:
+            if _is_noise_asset(layout):
+                ignored.append(layout)
+                continue
             pending_asset = _block_from_layout(layout)
             attached_captions = pending_captions.pop(kind, [])
             pending_asset.children.extend(attached_captions)
@@ -152,3 +155,10 @@ def _looks_like_table_caption(text: str | None) -> bool:
     if not text:
         return False
     return any(pattern.search(text) for pattern in _TABLE_CAPTION_PATTERNS)
+
+
+def _is_noise_asset(layout: Layout) -> bool:
+    x1, y1, x2, y2 = layout.det
+    area = max(0, x2 - x1) * max(0, y2 - y1)
+    has_content = bool((layout.text or "").strip() or (layout.html or "").strip())
+    return layout.kind in _ASSET_KINDS and area < 5000 and not has_content
