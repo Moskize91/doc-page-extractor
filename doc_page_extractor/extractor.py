@@ -3,9 +3,7 @@ import tempfile
 import warnings
 from os import PathLike
 from pathlib import Path
-from typing import Generator, Iterable
-
-from PIL import Image
+from typing import TYPE_CHECKING, Generator, Iterable
 
 from .adapters.baidu import BaiduCloudOCRAdapter, BaiduCloudOCRConfig
 from .adapters.deepseek import (
@@ -24,6 +22,9 @@ from .types import (
     OCRPageResult,
     PageExtractor,
 )
+
+if TYPE_CHECKING:
+    from PIL import Image
 
 _DEFAULT_PROMPT = "<image>\n<|grounding|>Convert the document to markdown."
 
@@ -80,12 +81,12 @@ class _PageExtractorImpls:
 
     def extract(
         self,
-        image: Image.Image,
+        image: "Image.Image",
         size: DeepSeekOCRSize,
         stages: int = 1,
         context: ExtractionContext | None = None,
         device_number: int | None = None,
-    ) -> Generator[tuple[Image.Image, list[Layout]], None, None]:
+    ) -> Generator[tuple["Image.Image", list[Layout]], None, None]:
         for stage_image, page_result in self.extract_page_results(
             image=image,
             size=size,
@@ -97,12 +98,12 @@ class _PageExtractorImpls:
 
     def extract_page_results(
         self,
-        image: Image.Image,
+        image: "Image.Image",
         size: DeepSeekOCRSize,
         stages: int = 1,
         context: ExtractionContext | None = None,
         device_number: int | None = None,
-    ) -> Generator[tuple[Image.Image, OCRPageResult], None, None]:
+    ) -> Generator[tuple["Image.Image", OCRPageResult], None, None]:
         assert stages >= 1, "stages must be at least 1"
         if stages > 1 and not getattr(self._adapter, "supports_multi_stage", True):
             warnings.warn(
@@ -158,7 +159,7 @@ class _PageExtractorImpls:
                 temp_dir.cleanup()
 
     def _redect_rectangles(
-        self, image: Image.Image, dets: Iterable[tuple[int, int, int, int]]
+        self, image: "Image.Image", dets: Iterable[tuple[int, int, int, int]]
     ):
         # 将页面上 2/3 全部涂抹，并沿着 2/3 线向下涂抹到每一个识别为文字区块的底部
         # 这种方法旨在涂抹掉尽可能多的不是页脚的区域，以排除诸如页眉之类干扰识别页脚的内容
