@@ -2,10 +2,16 @@ import unittest
 import warnings
 from pathlib import Path
 
-from PIL import Image
-
 from doc_page_extractor import ExtractionContext, Layout, OCRPageResult
 from doc_page_extractor.extractor import create_page_extractor_with_adapter
+
+
+class _FakeImage:
+    size = (100, 100)
+
+    def save(self, path: Path, image_format: str) -> None:
+        del image_format
+        path.write_bytes(b"fake")
 
 
 class _SingleStageAdapter:
@@ -40,7 +46,7 @@ class TestExtractor(unittest.TestCase):
             warnings.simplefilter("always")
             results = list(
                 extractor.extract(
-                    image=Image.new("RGB", (100, 100), "white"),
+                    image=_FakeImage(),  # type: ignore[arg-type]
                     size="tiny",
                     stages=2,
                     context=ExtractionContext(check_aborted=lambda: False),
