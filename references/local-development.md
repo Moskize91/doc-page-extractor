@@ -67,7 +67,9 @@ poetry run python scripts/ocr_sample.py --adapter baidu --image tests/images/fri
 poetry run python scripts/ocr_sample.py --adapter both --image tests/images/friendly-title.png
 ```
 
-该脚本默认读取 `tests/images/friendly-title.png`，分别调用 DeepSeek Vendor、百度云 OCR，或两者同时运行。成功输出会包含图片路径、layout 数量、前几个 layout 摘要、文本预览和耗时。可以用 `--image path/to/image.png` 指定其他图片。
+该脚本默认读取 `tests/images/friendly-title.png`，分别调用 DeepSeek Vendor、百度云 OCR，或两者同时运行。成功输出会包含图片路径、layout 数量、前几个 layout 的 `ref`、稳定 `kind`、供应商原始 `type`、文本预览和耗时。可以用 `--image path/to/image.png` 指定其他图片。
+
+新代码应优先依赖 `Layout.kind` 判断跨供应商稳定语义。`Layout.ref` 是兼容旧 DeepSeek 风格 API 的字段；`Layout.type` 和 `Layout.raw` 保留供应商原始数据，不应当作稳定跨供应商契约。需要结构化页面结果时，使用 `extract_page_results()` 读取 `OCRPageResult.structured`；只需要旧式扁平 layout 列表时，继续使用 `extract()`。
 
 ## 开发后端模式
 

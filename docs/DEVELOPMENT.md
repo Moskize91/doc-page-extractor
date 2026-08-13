@@ -69,6 +69,16 @@ deepseek = create_deepseek_vendor_page_extractor(DeepSeekVendorOCRConfig.from_en
 baidu = create_baidu_page_extractor(BaiduCloudOCRConfig.from_env())
 ```
 
+### Layout Contract
+
+New code should prefer `Layout.kind` for stable layout semantics. `Layout.ref`
+is kept for backward compatibility with the original DeepSeek-style API, while
+`Layout.type` and `Layout.raw` preserve provider-specific data and should not be
+treated as stable cross-provider contracts.
+
+Use `extract_page_results()` when you need `OCRPageResult.structured`; keep using
+`extract()` when the legacy flat `list[Layout]` result is enough.
+
 The legacy model protocol remains available for small fixtures:
 
 ```python
@@ -103,7 +113,7 @@ poetry run python scripts/ocr_sample.py --adapter baidu --image tests/images/fri
 poetry run python scripts/ocr_sample.py --adapter both --image tests/images/friendly-title.png
 ```
 
-The sample reads `tests/images/friendly-title.png`, runs the configured DeepSeek Vendor backend, the Baidu cloud backend, or both, and prints layout summaries, text previews, and elapsed time. Use `--image path/to/image.png` to try another image.
+The sample reads `tests/images/friendly-title.png`, runs the configured DeepSeek Vendor backend, the Baidu cloud backend, or both, and prints layout summaries, including `ref`, `kind`, provider `type`, text previews, and elapsed time. Use `--image path/to/image.png` to try another image.
 
 ### Build Package
 
