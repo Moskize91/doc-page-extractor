@@ -12,7 +12,6 @@ from .adapters.deepseek import (
     DeepSeekVendorOCRAdapter,
     DeepSeekVendorOCRConfig,
 )
-from .redacter import background_color, redact
 from .types import (
     DeepSeekOCRModel,
     DeepSeekOCRSize,
@@ -144,6 +143,8 @@ class _PageExtractorImpls:
                 yield image, page_result
 
                 if i < stages - 1:
+                    from .redacter import background_color, redact
+
                     if fill_color is None:
                         fill_color = background_color(image)
                     image = redact(
