@@ -1,3 +1,5 @@
+import sys
+import types
 import unittest
 import warnings
 from pathlib import Path
@@ -9,7 +11,6 @@ from doc_page_extractor.extractor import (
     create_page_extractor,
     create_page_extractor_with_adapter,
 )
-
 
 class _FakeImage:
     size = (100, 100)
@@ -204,9 +205,10 @@ class TestExtractor(unittest.TestCase):
         class _DeepSeek2Model(_DeepSeek1Model):
             pass
 
-        with patch("doc_page_extractor.model.DeepSeekOCRHugginfaceModel", _DeepSeek1Model), patch(
-            "doc_page_extractor.model.DeepSeekOCR2HugginfaceModel", _DeepSeek2Model
-        ):
+        fake_model_module = types.ModuleType("doc_page_extractor.model")
+        fake_model_module.DeepSeekOCRHugginfaceModel = _DeepSeek1Model
+        fake_model_module.DeepSeekOCR2HugginfaceModel = _DeepSeek2Model
+        with patch.dict(sys.modules, {"doc_page_extractor.model": fake_model_module}):
             extractor1 = create_page_extractor(model_path="models-cache")
             extractor2 = create_ocr_page_extractor("deepseek-ocr2", model_path="models-cache")
 
