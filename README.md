@@ -7,12 +7,31 @@ that all return the same page layout shape.
 
 ## Installation
 
+Default installation supports vendor OCR backends and the common extraction
+pipeline without installing Hugging Face model runtime dependencies:
+
 ```bash
 pip install doc-page-extractor
 ```
 
-PyTorch is not installed automatically. You only need CUDA PyTorch when using a
-local Hugging Face OCR backend.
+Local Hugging Face OCR backends require the `local` extra and CUDA PyTorch.
+Install PyTorch for your CUDA version first, then install the local runtime:
+
+```bash
+# CUDA 12.1
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+
+# CUDA 11.8
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
+
+# CUDA 12.6
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu126
+
+pip install "doc-page-extractor[local]"
+```
+
+The package does not declare a CUDA-specific PyTorch wheel. Vendor-only users,
+including macOS users, should use the default install.
 
 ## Backends
 
@@ -36,18 +55,8 @@ extractor2 = create_deepseek_ocr_page_extractor(
 )
 ```
 
-Install CUDA PyTorch before using this backend:
-
-```bash
-# CUDA 12.1
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
-
-# CUDA 11.8
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
-
-# CUDA 12.6
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu126
-```
+Install the local runtime dependencies before using this backend. See
+[Installation](#installation).
 
 Check CUDA with:
 

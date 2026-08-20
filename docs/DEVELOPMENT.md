@@ -15,6 +15,17 @@ poetry install --only dev
 
 PyTorch and the model runtime dependencies are intentionally not installed for the default development setup. The lightweight test and lint workflow does not need to load the OCR model.
 
+For local Hugging Face OCR work on a CUDA machine, install CUDA PyTorch for the
+machine first, then install the local extra:
+
+```shell
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu126
+poetry install --with dev -E local
+```
+
+The repository does not choose a CUDA PyTorch wheel in dependency metadata.
+macOS/vendor development should stay on the default setup.
+
 For machine-specific local values, copy the environment template:
 
 ```shell

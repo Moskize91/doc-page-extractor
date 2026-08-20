@@ -15,6 +15,16 @@ poetry install --only dev
 
 这个环境刻意避开 CUDA PyTorch 和模型下载。它足够用于解析器测试、包导入检查、lint，以及使用开发模型的测试。
 
+需要真实本地 Hugging Face OCR 时，只在 CUDA/NVIDIA 环境安装 local extra。
+先安装匹配机器 CUDA 版本的 PyTorch，再安装项目 local 运行依赖：
+
+```shell
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu126
+poetry install --with dev -E local
+```
+
+不要在 macOS/vendor-only 开发环境安装 local extra。
+
 ## 本地环境文件
 
 把 `.env.template` 复制为 `.env`，填写本机私有配置：
