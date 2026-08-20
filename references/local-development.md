@@ -23,11 +23,7 @@ poetry install --only dev
 cp .env.template .env
 ```
 
-`.env` 会被 git 忽略。它可以包含私有 Vendor API 配置或本地模型路径。本库当前不会自动读取 `.env`；只有脚本或手动命令需要这些值时才 source：
-
-```shell
-set -a && source .env && set +a
-```
+`.env` 会被 git 忽略。它可以包含私有 Vendor API 配置或本地模型路径。本库当前不会自动读取 `.env`；本地调试脚本会在需要真实 OCR 配置时显式读取它。
 
 `.env.template` 不得包含密钥。
 
@@ -40,7 +36,7 @@ Conductor 不会从仓库外的隐藏路径复制私有配置。需要真实远�
 
 ## 后端配置
 
-`.env` 现在同时保存多个后端的私有配置，脚本或开发适配器按自己的 `--adapter` 参数读取对应字段：
+`.env` 现在同时保存多个后端的私有配置，调试脚本按自己的 `--adapter` 参数读取对应字段：
 
 - `DEEPSEEK_OCR_*`：DeepSeek OCR Vendor。
 - `DEEPSEEK_OCR2_*`：DeepSeek OCR 2 Vendor。
@@ -87,12 +83,25 @@ from doc_page_extractor import (
 )
 
 deepseek_ocr = create_deepseek_ocr_vendor_page_extractor(
-    DeepSeekOCRVendorConfig.from_env()
+    DeepSeekOCRVendorConfig(
+        base_url="https://example.test/openai",
+        api_key="...",
+        model="deepseek-ocr",
+    )
 )
 deepseek_ocr2 = create_deepseek_ocr2_vendor_page_extractor(
-    DeepSeekOCR2VendorConfig.from_env()
+    DeepSeekOCR2VendorConfig(
+        base_url="https://example.test/openai",
+        api_key="...",
+        model="deepseek-ocr2",
+    )
 )
-unlimited_ocr = create_unlimited_ocr_page_extractor(UnlimitedOCRConfig.from_env())
+unlimited_ocr = create_unlimited_ocr_page_extractor(
+    UnlimitedOCRConfig(
+        ak="...",
+        sk="...",
+    )
+)
 ```
 
 兼容旧 DeepSeek 模型协议或编写极小 fixture 时，也可以使用 `create_page_extractor_with_model()`：

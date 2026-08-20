@@ -21,11 +21,8 @@ For machine-specific local values, copy the environment template:
 cp .env.template .env
 ```
 
-`.env` is ignored by git. The package does not automatically load it; source it only for scripts or development adapters that need those values:
-
-```shell
-set -a && source .env && set +a
-```
+`.env` is ignored by git. The package does not automatically load it; local
+debugging scripts read it explicitly when they need private OCR settings.
 
 For VGE/Conductor worktrees, `setup` creates `.env` automatically from `.env.template` when missing.
 
@@ -69,12 +66,25 @@ from doc_page_extractor import (
 )
 
 deepseek_ocr = create_deepseek_ocr_vendor_page_extractor(
-    DeepSeekOCRVendorConfig.from_env()
+    DeepSeekOCRVendorConfig(
+        base_url="https://example.test/openai",
+        api_key="...",
+        model="deepseek-ocr",
+    )
 )
 deepseek_ocr2 = create_deepseek_ocr2_vendor_page_extractor(
-    DeepSeekOCR2VendorConfig.from_env()
+    DeepSeekOCR2VendorConfig(
+        base_url="https://example.test/openai",
+        api_key="...",
+        model="deepseek-ocr2",
+    )
 )
-unlimited_ocr = create_unlimited_ocr_page_extractor(UnlimitedOCRConfig.from_env())
+unlimited_ocr = create_unlimited_ocr_page_extractor(
+    UnlimitedOCRConfig(
+        ak="...",
+        sk="...",
+    )
+)
 ```
 
 ### Layout Contract

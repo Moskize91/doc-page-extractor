@@ -23,7 +23,7 @@ DeepSeek 本地 CUDA 路径可以继续保留 `download()`、`load()` 和 `unloa
 - `UNLIMITED_OCR_*`：Unlimited OCR。
 - `DEEPSEEK_LOCAL_MODEL_PATH` 和 `DEEPSEEK_LOCAL_ONLY`：DeepSeek 本地 Hugging Face 路径。
 
-这只是当前脚本和后续开发适配器的约定；库代码本身不会自动读取 `.env`。
+这只是当前本地调试脚本的约定；库代码本身不会自动读取 `.env`，也不会在普通 adapter 构造或导入路径读取环境变量。
 
 实现远程后端时：
 

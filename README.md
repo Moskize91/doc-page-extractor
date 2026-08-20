@@ -55,11 +55,16 @@ from doc_page_extractor import (
 )
 
 extractor = create_deepseek_ocr_vendor_page_extractor(
-    DeepSeekOCRVendorConfig.from_env()
+    DeepSeekOCRVendorConfig(
+        base_url="https://example.test/openai",
+        api_key="...",
+        model="deepseek-ocr",
+    )
 )
 ```
 
-Expected environment variables:
+The package does not read environment variables automatically. `.env.template`
+is only for local debugging scripts.
 
 ```dotenv
 DEEPSEEK_OCR_BASE_URL=
@@ -80,11 +85,16 @@ from doc_page_extractor import (
 )
 
 extractor = create_deepseek_ocr2_vendor_page_extractor(
-    DeepSeekOCR2VendorConfig.from_env()
+    DeepSeekOCR2VendorConfig(
+        base_url="https://example.test/openai",
+        api_key="...",
+        model="deepseek-ocr2",
+    )
 )
 ```
 
-Expected environment variables:
+The package does not read environment variables automatically. `.env.template`
+is only for local debugging scripts.
 
 ```dotenv
 DEEPSEEK_OCR2_BASE_URL=
@@ -101,10 +111,16 @@ Use this backend for Unlimited OCR:
 ```python
 from doc_page_extractor import UnlimitedOCRConfig, create_unlimited_ocr_page_extractor
 
-extractor = create_unlimited_ocr_page_extractor(UnlimitedOCRConfig.from_env())
+extractor = create_unlimited_ocr_page_extractor(
+    UnlimitedOCRConfig(
+        ak="...",
+        sk="...",
+    )
+)
 ```
 
-Expected environment variables:
+The package does not read environment variables automatically. `.env.template`
+is only for local debugging scripts.
 
 ```dotenv
 UNLIMITED_OCR_ACCESS_KEY=

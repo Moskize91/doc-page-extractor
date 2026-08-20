@@ -21,42 +21,6 @@ class UnlimitedOCRConfig:
     poll_interval_seconds: float = 2
     timeout_seconds: int = 180
 
-    @classmethod
-    def from_env(cls) -> "UnlimitedOCRConfig":
-        import os
-
-        def required(name: str) -> str:
-            value = os.environ.get(name, "").strip()
-            if not value:
-                raise SystemExit(f"Missing required environment variable: {name}")
-            return value
-
-        def optional_float(name: str, default: float) -> float:
-            value = os.environ.get(name, "").strip()
-            if not value:
-                return default
-            try:
-                return float(value)
-            except ValueError as exc:
-                raise SystemExit(f"{name} must be a float, got {value!r}") from exc
-
-        def optional_int(name: str, default: int) -> int:
-            value = os.environ.get(name, "").strip()
-            if not value:
-                return default
-            try:
-                return int(value)
-            except ValueError as exc:
-                raise SystemExit(f"{name} must be an integer, got {value!r}") from exc
-
-        return cls(
-            ak=required("UNLIMITED_OCR_ACCESS_KEY"),
-            sk=required("UNLIMITED_OCR_SECRET_KEY"),
-            base_url=os.environ.get("UNLIMITED_OCR_BASE_URL", "https://aip.baidubce.com").strip(),
-            poll_interval_seconds=optional_float("UNLIMITED_OCR_POLL_INTERVAL_SECONDS", 2.0),
-            timeout_seconds=optional_int("UNLIMITED_OCR_TIMEOUT_SECONDS", 180),
-        )
-
 
 class UnlimitedOCRAdapter:
     supports_multi_stage = False
