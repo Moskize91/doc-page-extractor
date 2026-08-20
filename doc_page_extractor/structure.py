@@ -91,20 +91,6 @@ def unlimited_ocr_type_to_kind(
     return LayoutKind.UNKNOWN
 
 
-def legacy_ref_for_kind(kind: LayoutKind, fallback: str | None = None) -> str:
-    if kind == LayoutKind.TITLE:
-        return "sub_title"
-    if kind == LayoutKind.FOOTNOTE:
-        return "text"
-    if kind == LayoutKind.PAGE_NUMBER:
-        return "text"
-    if kind in _IGNORED_KINDS:
-        return "text"
-    if kind == LayoutKind.UNKNOWN:
-        return fallback or "unknown"
-    return kind.value
-
-
 def build_structured_page(layouts: Iterable[Layout]) -> StructuredPage:
     blocks: list[PageBlock] = []
     ignored: list[Layout] = []

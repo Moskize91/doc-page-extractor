@@ -3,7 +3,6 @@
 _LAZY_EXPORTS = {
     "DeepSeekOCR2VendorAdapter": ("deepseek", "DeepSeekOCR2VendorAdapter"),
     "DeepSeekOCR2VendorConfig": ("deepseek", "DeepSeekOCR2VendorConfig"),
-    "DeepSeekModelOCRAdapter": ("deepseek", "DeepSeekModelOCRAdapter"),
     "DeepSeekOCRVendorAdapter": ("deepseek", "DeepSeekOCRVendorAdapter"),
     "DeepSeekOCRVendorConfig": ("deepseek", "DeepSeekOCRVendorConfig"),
     "UnlimitedOCRAdapter": ("unlimited", "UnlimitedOCRAdapter"),
@@ -15,7 +14,6 @@ _LAZY_EXPORTS = {
 __all__ = [
     "DeepSeekOCR2VendorAdapter",
     "DeepSeekOCR2VendorConfig",
-    "DeepSeekModelOCRAdapter",
     "DeepSeekOCRVendorAdapter",
     "DeepSeekOCRVendorConfig",
     "UnlimitedOCRAdapter",

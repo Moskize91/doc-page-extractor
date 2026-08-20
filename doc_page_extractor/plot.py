@@ -47,7 +47,7 @@ def plot(image: Image, layouts: Iterable[Layout]) -> Image:
         x1, y1, _, _ = layout.det
         _draw_text(
             position=(x1, y1),
-            text=f"{i + 1}. {layout.ref.strip()}",
+            text=f"{i + 1}. {layout.kind.value}",
             font=layout_font,
             bold=True,
             color=_FRAGMENT_COLOR,

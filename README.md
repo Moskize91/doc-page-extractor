@@ -14,14 +14,15 @@ PyTorch is not installed automatically. You only need CUDA PyTorch when using th
 
 ## Backends
 
-### Local DeepSeek-OCR
+### Local DeepSeek OCR
 
-This is the default and keeps the existing API behavior:
+Use `create_ocr_page_extractor()` for local DeepSeek OCR models:
 
 ```python
-from doc_page_extractor import create_page_extractor
+from doc_page_extractor import create_ocr_page_extractor
 
-extractor = create_page_extractor()
+extractor = create_ocr_page_extractor(ocr_model="deepseek-ocr")
+ocr2_extractor = create_ocr_page_extractor(ocr_model="deepseek-ocr2")
 ```
 
 Install CUDA PyTorch before using this backend:
@@ -46,7 +47,7 @@ python -c "import torch; print(torch.cuda.is_available())"
 
 ### DeepSeek OCR Vendor
 
-Use this backend when DeepSeek OCR is exposed through an OpenAI-compatible endpoint:
+Use this backend when DeepSeek OCR is exposed through an OpenAI-style endpoint:
 
 ```python
 from doc_page_extractor import (
@@ -78,7 +79,7 @@ DEEPSEEK_OCR_TIMEOUT_SECONDS=180
 
 ### DeepSeek OCR 2 Vendor
 
-Use this backend for DeepSeek OCR 2 through an OpenAI-compatible endpoint:
+Use this backend for DeepSeek OCR 2 through an OpenAI-style endpoint:
 
 ```python
 from doc_page_extractor import (
@@ -147,19 +148,19 @@ from doc_page_extractor import ExtractionContext
 
 context = ExtractionContext(check_aborted=lambda: False)
 
-for page_image, layouts in extractor.extract(
+for page_image, result in extractor.extract_page_results(
     image=Image.open("page.png"),
     size="gundam",
     stages=1,
     context=context,
 ):
-    for layout in layouts:
-        print(layout.det, layout.text)
+    for layout in result.layouts:
+        print(layout.kind, layout.det, layout.text)
 ```
 
-`Layout` keeps the original `ref`, `det`, and `text` fields. Version 1.1.1 also adds `kind`, a stable `LayoutKind` enum that callers should prefer over provider-specific labels. Adapter metadata remains available through optional fields such as `type`, `polygon`, `html`, `source`, and `raw`.
+`Layout.kind` is the stable layout semantic. Adapter metadata remains available through optional fields such as `type`, `polygon`, `html`, `source`, and `raw`.
 
-Use `extract_page_results()` when you need the structured page model:
+Structured page blocks are available on each `OCRPageResult`:
 
 ```python
 from doc_page_extractor import LayoutKind

@@ -8,18 +8,18 @@ from .adapters.unlimited import UnlimitedOCRAdapter, UnlimitedOCRConfig
 from .adapters.deepseek import (
     DeepSeekOCR2VendorAdapter,
     DeepSeekOCR2VendorConfig,
-    DeepSeekModelOCRAdapter,
     DeepSeekOCRVendorAdapter,
     DeepSeekOCRVendorConfig,
+    _DeepSeekLocalAdapter,
     parse_deepseek_ocr2_layouts,
     parse_deepseek_ocr_layouts,
 )
 from .types import (
     DeepSeekOCRSize,
+    DeepSeekBackend,
     ExtractionContext,
     Layout,
     OCRAdapter,
-    OCRModelName,
     OCRPageResult,
     PageExtractor,
 )
@@ -32,7 +32,7 @@ _DEFAULT_PROMPT = "<image>\n<|grounding|>Convert the document to markdown."
 
 
 def create_ocr_page_extractor(
-    ocr_model: OCRModelName = "deepseek-ocr",
+    ocr_model: DeepSeekBackend = "deepseek-ocr",
     model_path: Path | str | None = None,
     local_only: bool = False,
     enable_devices_numbers: Iterable[int] | None = None,
@@ -59,7 +59,7 @@ def create_ocr_page_extractor(
         raise ValueError(f"Unsupported OCR model: {ocr_model}")
 
     return _PageExtractorImpls(
-        DeepSeekModelOCRAdapter(
+        _DeepSeekLocalAdapter(
             model,
             source=ocr_model,
             parse_layouts=parse_layouts,
@@ -68,8 +68,6 @@ def create_ocr_page_extractor(
 
 
 def create_page_extractor_with_adapter(adapter: OCRAdapter) -> PageExtractor:
-    if not hasattr(adapter, "supports_multi_stage"):
-        setattr(adapter, "supports_multi_stage", True)
     if not isinstance(adapter, OCRAdapter):
         raise TypeError("adapter must implement OCRAdapter protocol")
     return _PageExtractorImpls(adapter)
@@ -97,32 +95,11 @@ class _PageExtractorImpls:
     def __init__(self, adapter: OCRAdapter) -> None:
         self._adapter: OCRAdapter = adapter
 
-    def download_models(self, revision: str | None = None) -> None:
-        downloader = getattr(self._adapter, "download", None)
-        if downloader is not None:
-            downloader(revision)
+    def download_ocr_model(self, revision: str | None = None) -> None:
+        self._adapter.download(revision)
 
-    def load_models(self) -> None:
-        loader = getattr(self._adapter, "load", None)
-        if loader is not None:
-            loader()
-
-    def extract(
-        self,
-        image: "Image.Image",
-        size: DeepSeekOCRSize,
-        stages: int = 1,
-        context: ExtractionContext | None = None,
-        device_number: int | None = None,
-    ) -> Generator[tuple["Image.Image", list[Layout]], None, None]:
-        for stage_image, page_result in self.extract_page_results(
-            image=image,
-            size=size,
-            stages=stages,
-            context=context,
-            device_number=device_number,
-        ):
-            yield stage_image, page_result.layouts
+    def load_ocr_model(self) -> None:
+        self._adapter.load()
 
     def extract_page_results(
         self,
@@ -133,7 +110,7 @@ class _PageExtractorImpls:
         device_number: int | None = None,
     ) -> Generator[tuple["Image.Image", OCRPageResult], None, None]:
         assert stages >= 1, "stages must be at least 1"
-        if stages > 1 and not getattr(self._adapter, "supports_multi_stage", True):
+        if stages > 1 and not self._adapter.allows_multi_stage:
             warnings.warn(
                 "This OCR adapter does not support multi-stage redaction; "
                 "using a single extraction stage.",

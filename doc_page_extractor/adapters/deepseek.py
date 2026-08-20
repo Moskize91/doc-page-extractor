@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Callable, Generator, Protocol, cast
 
 from ..parser import ParsedItemKind, parse_ocr_response
 from ..structure import build_structured_page, deepseek_ref_to_kind
-from ..types import DeepSeekOCRSize, ExtractionContext, Layout, LayoutKind, OCRPageResult, OCRModel
+from ..types import DeepSeekOCRSize, ExtractionContext, Layout, LayoutKind, OCRPageResult
 
 _DEFAULT_VENDOR_MAX_TOKENS = 8000
 _LINE_BLOCK_PATTERN = re.compile(
@@ -27,49 +27,68 @@ class _ImageLike(Protocol):
 DeepSeekLayoutParser = Callable[[_ImageLike, str, str], list[Layout]]
 
 
+class _LocalDeepSeekModel(Protocol):
+    def download(self, revision: str | None) -> None:
+        ...
+
+    def load(self) -> None:
+        ...
+
+    def generate(
+        self,
+        prompt: str,
+        image_path: Path,
+        output_path: Path,
+        size: DeepSeekOCRSize,
+        context: ExtractionContext | None,
+        device_number: int | None,
+    ) -> str:
+        ...
+
+
 def parse_deepseek_ocr_layouts(
     image: _ImageLike, response: str, source: str = "deepseek-ocr-vendor"
 ) -> list[Layout]:
     return [
-        _deepseek_layout(ref=ref, det=det, text=text, source=source)
-        for ref, det, text in _parse_deepseek_ocr_response(image, response)
+        _deepseek_layout(label=label, det=det, text=text, source=source)
+        for label, det, text in _parse_deepseek_ocr_response(image, response)
         if _has_area(det)
-        ]
+    ]
 
 
 def parse_deepseek_ocr2_layouts(
     image: _ImageLike, response: str, source: str = "deepseek-ocr2-vendor"
 ) -> list[Layout]:
     return [
-        _deepseek_layout(ref=ref, det=det, text=text, source=source)
-        for ref, det, text in _parse_deepseek_ocr2_response(image, response)
+        _deepseek_layout(label=label, det=det, text=text, source=source)
+        for label, det, text in _parse_deepseek_ocr2_response(image, response)
         if _has_area(det)
     ]
 
 
 def _deepseek_layout(
-    ref: str,
+    label: str,
     det: tuple[int, int, int, int],
     text: str | None,
     source: str,
 ) -> Layout:
-    kind = deepseek_ref_to_kind(ref, text)
+    kind = deepseek_ref_to_kind(label, text)
     return Layout(
-        ref=ref,
         det=det,
         text=text,
+        type=label,
         html=text if kind == LayoutKind.TABLE and _looks_like_html_table(text) else None,
         kind=kind,
         source=source,
     )
 
 
-class DeepSeekModelOCRAdapter:
-    supports_multi_stage = True
+class _DeepSeekLocalAdapter:
+    allows_multi_stage = True
 
     def __init__(
         self,
-        model: OCRModel,
+        model: _LocalDeepSeekModel,
         source: str = "deepseek-ocr",
         parse_layouts: DeepSeekLayoutParser = parse_deepseek_ocr_layouts,
     ) -> None:
@@ -135,10 +154,16 @@ class DeepSeekOCR2VendorConfig:
 
 
 class DeepSeekOCRVendorAdapter:
-    supports_multi_stage = True
+    allows_multi_stage = True
 
     def __init__(self, config: DeepSeekOCRVendorConfig) -> None:
         self._config = config
+
+    def download(self, revision: str | None) -> None:
+        del revision
+
+    def load(self) -> None:
+        pass
 
     def extract_page(
         self,
@@ -215,10 +240,16 @@ class DeepSeekOCRVendorAdapter:
 
 
 class DeepSeekOCR2VendorAdapter:
-    supports_multi_stage = True
+    allows_multi_stage = True
 
     def __init__(self, config: DeepSeekOCR2VendorConfig) -> None:
         self._config = config
+
+    def download(self, revision: str | None) -> None:
+        del revision
+
+    def load(self) -> None:
+        pass
 
     def extract_page(
         self,

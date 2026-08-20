@@ -2,19 +2,19 @@
 
 ## 默认后端
 
-`create_page_extractor()` 会创建 `DeepSeekOCRHugginfaceModel`。这个后端通过 Hugging Face 下载并加载 `deepseek-ai/DeepSeek-OCR`，运行时需要 CUDA。
+`create_ocr_page_extractor()` 会根据 `ocr_model` 创建本地 DeepSeek OCR 后端。`deepseek-ocr` 使用 `DeepSeekOCRHuggingFaceModel`，`deepseek-ocr2` 使用 `DeepSeekOCR2HuggingFaceModel`。本地后端通过 Hugging Face 下载并加载模型，运行时需要 CUDA。
 
 从 API 角度看，模型缓存路径是可选的；生产部署应显式提供。使用 `local_only=True` 时，必须提供 `model_path`，且其中需要包含 DeepSeek-OCR 的 Hugging Face 缓存结构。
 
 ## 开发后端与远程后端
 
-`create_page_extractor_with_model(model)` 仍然是兼容入口，但新架构的中心是 `OCRAdapter`。新后端应优先实现：
+后端中心是 `OCRAdapter`。新后端应实现：
 
 ```python
 extract_page(prompt, image_path, output_path, size, context, device_number) -> OCRPageResult
 ```
 
-DeepSeek 本地 CUDA 路径可以继续保留 `download()`、`load()` 和 `unload()`，但这些属于私有实现细节，不应进入通用 adapter 协议。`DeepSeekOCRVendorAdapter` 解析 `<|ref|>` / `<|det|>` 兼容文本；`DeepSeekOCR2VendorAdapter` 解析 OCR 2 的行块输出；`UnlimitedOCRAdapter` 直接把 `parse_result_url` 的 JSON 映射成项目统一布局。
+Adapter 协议还要求实现 `download()`、`load()` 和 `allows_multi_stage`，让 `PageExtractor` 能用显式接口处理生命周期和多阶段能力。`DeepSeekOCRVendorAdapter` 解析 OCR 1 的 `<|ref|>` / `<|det|>` 输出；`DeepSeekOCR2VendorAdapter` 解析 OCR 2 的行块输出；`UnlimitedOCRAdapter` 直接把 `parse_result_url` 的 JSON 映射成项目统一布局。
 
 本地 `.env` 不再使用单个互斥后端字段，而是同时保存多个后端配置：
 
@@ -41,7 +41,3 @@ DeepSeek 本地 CUDA 路径可以继续保留 `download()`、`load()` 和 `unloa
 - `check_env()` 的 warning 不是完整运行时保护；无 CUDA 的硬失败发生在 `_ensure_models()`。
 - 普通 import、测试、lint 或包构建过程中不得下载模型。
 - `download.py` 和 `main.py` 是真实后端手动脚本，不应成为 macOS 开发的必要步骤。
-
-## 兼容性说明
-
-下游项目可能依赖 `create_page_extractor_with_model()` 来保持自身进程 CPU-only。应把这个函数视作公开兼容面；新开发应优先走 `OCRAdapter`。

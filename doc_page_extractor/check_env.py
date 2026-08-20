@@ -38,7 +38,7 @@ def check_env() -> None:
   2. Your NVIDIA GPU driver is outdated. Update it from:
      https://www.nvidia.com/download/index.aspx
 
-  3. You don't have a CUDA-compatible GPU.
+  3. Your GPU does not support CUDA.
 
   To verify your setup, run: nvidia-smi
 

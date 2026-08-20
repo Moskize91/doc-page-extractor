@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, TYPE_CHECKING
 
-from ..structure import unlimited_ocr_type_to_kind, build_structured_page, legacy_ref_for_kind
+from ..structure import unlimited_ocr_type_to_kind, build_structured_page
 from ..types import DeepSeekOCRSize, ExtractionContext, Layout, OCRPageResult
 
 if TYPE_CHECKING:
@@ -23,12 +23,18 @@ class UnlimitedOCRConfig:
 
 
 class UnlimitedOCRAdapter:
-    supports_multi_stage = False
+    allows_multi_stage = False
     max_image_side = 8192
 
     def __init__(self, config: UnlimitedOCRConfig) -> None:
         self._config = config
         self._access_token: str | None = None
+
+    def download(self, revision: str | None) -> None:
+        del revision
+
+    def load(self) -> None:
+        pass
 
     def extract_page(
         self,
@@ -199,7 +205,6 @@ def parse_unlimited_ocr_layouts(parse_result: dict[str, Any]) -> list[Layout]:
             kind = unlimited_ocr_type_to_kind(layout_type, text)
             layouts.append(
                 Layout(
-                    ref=legacy_ref_for_kind(kind, layout_type or "unlimited-ocr"),
                     det=det,
                     text=text,
                     kind=kind,

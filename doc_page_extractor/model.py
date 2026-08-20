@@ -41,7 +41,7 @@ class _Models:
     llms: list[AutoModel]
 
 
-class HuggingFaceOCRModel:
+class HuggingFaceBackend:
     def __init__(
         self,
         model_name: str,
@@ -159,7 +159,7 @@ class HuggingFaceOCRModel:
                         f"Local model not found at {self._model_path}. "
                         f"Expected Hugging Face cache structure: "
                         f"{self._cache_model_dir()}/snapshots/[hash]/. "
-                        f"Please run download_models() first to download the model."
+                        f"Please run download_ocr_model() first to download the model."
                     )
             else:
                 cache_dir = self._cache_dir()
@@ -256,7 +256,7 @@ class HuggingFaceOCRModel:
         return self._device_number_to_index
 
 
-class DeepSeekOCRHuggingFaceModel(HuggingFaceOCRModel):
+class DeepSeekOCRHuggingFaceModel(HuggingFaceBackend):
     def __init__(
         self,
         model_path: Path | None,
@@ -271,7 +271,7 @@ class DeepSeekOCRHuggingFaceModel(HuggingFaceOCRModel):
         )
 
 
-class DeepSeekOCR2HuggingFaceModel(HuggingFaceOCRModel):
+class DeepSeekOCR2HuggingFaceModel(HuggingFaceBackend):
     def __init__(
         self,
         model_path: Path | None,
