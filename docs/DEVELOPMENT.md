@@ -51,9 +51,9 @@ poetry run pylint --disable=import-error doc_page_extractor
 
 ### macOS Model-Free Development
 
-macOS development should use `create_page_extractor_with_adapter()` for new backend work, or `create_page_extractor_with_model()` when testing the legacy DeepSeek model protocol. Do not call `create_page_extractor().load_models()` unless you are on a CUDA-capable Linux/NVIDIA environment.
+macOS development should use `create_page_extractor_with_adapter()` for remote backend work and fake adapters. Do not call `create_ocr_page_extractor().load_ocr_model()` unless you are on a CUDA-capable Linux/NVIDIA environment.
 
-New adapter code should implement the unified OCR adapter protocol and return layout results directly:
+Adapter code implements the OCR adapter protocol and returns page results directly:
 
 ```python
 from doc_page_extractor import (
@@ -89,36 +89,20 @@ unlimited_ocr = create_unlimited_ocr_page_extractor(
 
 ### Layout Contract
 
-New code should prefer `Layout.kind` for stable layout semantics. `Layout.ref`
-is kept for backward compatibility with the original DeepSeek-style API, while
-`Layout.type` and `Layout.raw` preserve provider-specific data and should not be
-treated as stable cross-provider contracts.
-
-Use `extract_page_results()` when you need `OCRPageResult.structured`; keep using
-`extract()` when the legacy flat `list[Layout]` result is enough.
-
-The legacy model protocol remains available for small fixtures:
+`Layout.kind` is the stable layout semantic. `Layout.type` and `Layout.raw`
+preserve provider-specific data and should not be treated as stable
+cross-provider contracts.
 
 ```python
-from pathlib import Path
-from doc_page_extractor import create_page_extractor_with_model
+from PIL import Image
 
-
-class FixtureOCRModel:
-    def download(self, revision: str | None) -> None:
-        pass
-
-    def load(self) -> None:
-        pass
-
-    def unload(self) -> None:
-        pass
-
-    def generate(self, prompt, image_path: Path, output_path: Path, size, context, device_number) -> str:
-        return "<|ref|>sample<|/ref|><|det|>[[100, 100, 500, 200]]<|/det|>hello"
-
-
-extractor = create_page_extractor_with_model(FixtureOCRModel())
+for image, result in extractor.extract_page_results(
+    image=Image.open("page.png"),
+    size="gundam",
+    stages=1,
+):
+    for layout in result.layouts:
+        print(layout.kind, layout.det, layout.text)
 ```
 
 ### OCR Sample
@@ -131,7 +115,7 @@ poetry run python scripts/ocr_sample.py --adapter deepseek-ocr2-vendor --image t
 poetry run python scripts/ocr_sample.py --adapter unlimited-ocr --image tests/images/friendly-title.png
 ```
 
-The sample reads `tests/images/friendly-title.png`, runs the configured OCR adapter, and prints layout summaries, including `ref`, `kind`, provider `type`, text previews, and elapsed time. Use `--image path/to/image.png` to try another image.
+The sample reads `tests/images/friendly-title.png`, runs the configured OCR adapter, and prints layout summaries, including `kind`, provider `type`, text previews, and elapsed time. Use `--image path/to/image.png` to try another image.
 
 ### Build Package
 

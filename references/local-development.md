@@ -52,7 +52,7 @@ poetry run python test.py
 poetry run pylint --disable=import-error doc_page_extractor
 ```
 
-除非任务明确要求真实后端实验，否则不要在 macOS 上运行 `main.py`、`download.py` 或 `PageExtractor.load_models()`。
+除非任务明确要求真实后端实验，否则不要在 macOS 上运行 `main.py`、`download.py` 或 `PageExtractor.load_ocr_model()`。
 
 ## OCR Sample
 
@@ -64,9 +64,9 @@ poetry run python scripts/ocr_sample.py --adapter deepseek-ocr2-vendor --image t
 poetry run python scripts/ocr_sample.py --adapter unlimited-ocr --image tests/images/friendly-title.png
 ```
 
-该脚本默认读取 `tests/images/friendly-title.png`，调用指定 OCR adapter。成功输出会包含图片路径、layout 数量、前几个 layout 的 `ref`、稳定 `kind`、供应商原始 `type`、文本预览和耗时。可以用 `--image path/to/image.png` 指定其他图片。
+该脚本默认读取 `tests/images/friendly-title.png`，调用指定 OCR adapter。成功输出会包含图片路径、layout 数量、前几个 layout 的稳定 `kind`、供应商原始 `type`、文本预览和耗时。可以用 `--image path/to/image.png` 指定其他图片。
 
-新代码应优先依赖 `Layout.kind` 判断跨供应商稳定语义。`Layout.ref` 是兼容旧 DeepSeek 风格 API 的字段；`Layout.type` 和 `Layout.raw` 保留供应商原始数据，不应当作稳定跨供应商契约。需要结构化页面结果时，使用 `extract_page_results()` 读取 `OCRPageResult.structured`；只需要旧式扁平 layout 列表时，继续使用 `extract()`。
+新代码应依赖 `Layout.kind` 判断跨供应商稳定语义。`Layout.type` 和 `Layout.raw` 保留供应商原始数据，不应当作稳定跨供应商契约。使用 `extract_page_results()` 读取 `OCRPageResult` 和可选的 `structured` 页面结构。
 
 ## 开发后端模式
 
@@ -104,33 +104,36 @@ unlimited_ocr = create_unlimited_ocr_page_extractor(
 )
 ```
 
-兼容旧 DeepSeek 模型协议或编写极小 fixture 时，也可以使用 `create_page_extractor_with_model()`：
+需要在无 CUDA 环境覆盖抽取循环时，可以编写极小 `OCRAdapter` fixture：
 
 ```python
 from pathlib import Path
 
-from doc_page_extractor import create_page_extractor_with_model
+from doc_page_extractor import Layout, OCRPageResult, create_page_extractor_with_adapter
 
 
-class FixtureOCRModel:
+class FixtureOCRAdapter:
+    allows_multi_stage = True
+
     def download(self, revision: str | None) -> None:
-        pass
+        del revision
 
     def load(self) -> None:
         pass
 
-    def unload(self) -> None:
-        pass
+    def extract_page(self, prompt, image_path: Path, output_path: Path, size, context, device_number) -> OCRPageResult:
+        del prompt, image_path, output_path, size, context, device_number
+        return OCRPageResult(
+            layouts=[Layout(det=(10, 10, 50, 50), text="hello")],
+            source="fixture",
+        )
 
-    def generate(self, prompt, image_path: Path, output_path: Path, size, context, device_number) -> str:
-        return "<|ref|>sample<|/ref|><|det|>[[100, 100, 500, 200]]<|/det|>hello"
 
-
-extractor = create_page_extractor_with_model(FixtureOCRModel())
+extractor = create_page_extractor_with_adapter(FixtureOCRAdapter())
 ```
 
 这会覆盖图片保存、响应解析、布局构造、阶段涂抹；如果 fixture 更新了 `context`，也能覆盖 token 统计。
 
 ## macOS 不能验证的内容
 
-macOS 检查不能验证 CUDA 可用性、显存行为、Hugging Face remote code 兼容性、`flash_attn` 或多 GPU 设备路由。这些需要 Linux/NVIDIA 环境。
+macOS 检查不能验证 CUDA 可用性、显存行为、Hugging Face remote code 运行情况、`flash_attn` 或多 GPU 设备路由。这些需要 Linux/NVIDIA 环境。

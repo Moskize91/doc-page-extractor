@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 
 DeepSeekOCRSize = Literal["tiny", "small", "base", "large", "gundam"]
-OCRModelName = Literal["deepseek-ocr", "deepseek-ocr2"]
+DeepSeekBackend = Literal["deepseek-ocr", "deepseek-ocr2"]
 
 
 class LayoutKind(str, Enum):
@@ -31,7 +31,6 @@ class LayoutKind(str, Enum):
 
 @dataclass
 class Layout:
-    ref: str
     det: tuple[int, int, int, int]
     text: str | None
     type: str | None = None
@@ -79,20 +78,10 @@ class ExtractionContext:
 
 @runtime_checkable
 class PageExtractor(Protocol):
-    def download_models(self, revision: str | None = None) -> None:
+    def download_ocr_model(self, revision: str | None = None) -> None:
         ...
 
-    def load_models(self) -> None:
-        ...
-
-    def extract(
-        self,
-        image: "Image.Image",
-        size: DeepSeekOCRSize,
-        stages: int = 1,
-        context: ExtractionContext | None = None,
-        device_number: int | None = None,
-    ) -> Generator[tuple["Image.Image", list[Layout]], None, None]:
+    def load_ocr_model(self) -> None:
         ...
 
     def extract_page_results(
@@ -108,7 +97,13 @@ class PageExtractor(Protocol):
 
 @runtime_checkable
 class OCRAdapter(Protocol):
-    supports_multi_stage: bool
+    allows_multi_stage: bool
+
+    def download(self, revision: str | None) -> None:
+        ...
+
+    def load(self) -> None:
+        ...
 
     def extract_page(
         self,
@@ -119,27 +114,4 @@ class OCRAdapter(Protocol):
         context: ExtractionContext | None,
         device_number: int | None,
     ) -> OCRPageResult:
-        ...
-
-
-@runtime_checkable
-class OCRModel(Protocol):
-    def download(self, revision: str | None) -> None:
-        ...
-
-    def load(self) -> None:
-        ...
-
-    def unload(self) -> None:
-        ...
-
-    def generate(
-        self,
-        prompt: str,
-        image_path: Path,
-        output_path: Path,
-        size: DeepSeekOCRSize,
-        context: ExtractionContext | None,
-        device_number: int | None,
-    ) -> str:
         ...

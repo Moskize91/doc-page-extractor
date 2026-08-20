@@ -22,7 +22,7 @@ that reads stopping_criteria from thread-local storage. This allows:
 - Timeout control for long-running inference
 - User-triggered cancellation
 - No modification to downloaded model files
-- Automatic compatibility with model updates
+- Tolerates model updates without editing cached files
 
 THREAD SAFETY:
 --------------

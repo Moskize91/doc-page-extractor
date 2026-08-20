@@ -26,7 +26,7 @@ def main() -> None:
         local_only=args.local_only,
     )
     begin_at = time.time()
-    extractor.load_models()
+    extractor.load_ocr_model()
     print(f"Models loaded in {time.time() - begin_at:.2f} seconds.")
 
     def check_aborted() -> bool:
@@ -42,8 +42,8 @@ def main() -> None:
     context = ExtractionContext(check_aborted=check_aborted)
 
     print("Starting extraction...")
-    for i, (image, layouts) in enumerate(
-        extractor.extract(
+    for i, (image, page_result) in enumerate(
+        extractor.extract_page_results(
             image=Image.open(image_dir_path / image_name),
             size=args.size,
             stages=args.stages,
@@ -51,8 +51,12 @@ def main() -> None:
         )
     ):
         print("Layouts:")
+        layouts = page_result.layouts
         for layout in layouts:
-            print(f"  Ref: {layout.ref}, Det: {layout.det}, Text: {layout.text}")
+            print(
+                f"  Kind: {layout.kind.value}, Det: {layout.det}, "
+                f"Text: {layout.text}"
+            )
         image = plot(image.copy(), layouts)
         output_path = plot_dir / f"{name_stem}_{i}{name_suffix}"
         image.save(output_path)

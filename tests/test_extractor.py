@@ -52,10 +52,16 @@ class _FakeResizableImage(_FakeResizedImage):
 
 
 class _SingleStageAdapter:
-    supports_multi_stage = False
+    allows_multi_stage = False
 
     def __init__(self) -> None:
         self.calls = 0
+
+    def download(self, revision: str | None) -> None:
+        del revision
+
+    def load(self) -> None:
+        pass
 
     def extract_page(
         self,
@@ -69,34 +75,23 @@ class _SingleStageAdapter:
         del prompt, image_path, output_path, size, context, device_number
         self.calls += 1
         return OCRPageResult(
-            layouts=[Layout(ref="text", det=(0, 0, 10, 10), text="ok")],
+            layouts=[Layout(det=(0, 0, 10, 10), text="ok")],
             source="single-stage",
         )
 
 
-class _LegacyAdapter:
-    def extract_page(
-        self,
-        prompt: str,
-        image_path: Path,
-        output_path: Path,
-        size: str,
-        context: ExtractionContext | None,
-        device_number: int | None,
-    ) -> OCRPageResult:
-        del prompt, image_path, output_path, size, context, device_number
-        return OCRPageResult(
-            layouts=[Layout(ref="text", det=(0, 0, 10, 10), text="ok")],
-            source="legacy",
-        )
-
-
 class _MaxSideAdapter:
-    supports_multi_stage = True
+    allows_multi_stage = True
     max_image_side = 8192
 
     def __init__(self) -> None:
         self.image_path: Path | None = None
+
+    def download(self, revision: str | None) -> None:
+        del revision
+
+    def load(self) -> None:
+        pass
 
     def extract_page(
         self,
@@ -112,7 +107,6 @@ class _MaxSideAdapter:
         return OCRPageResult(
             layouts=[
                 Layout(
-                    ref="text",
                     det=(100, 200, 400, 600),
                     text="ok",
                     polygon=[
@@ -135,7 +129,7 @@ class TestExtractor(unittest.TestCase):
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always")
             results = list(
-                extractor.extract(
+                extractor.extract_page_results(
                     image=_FakeImage(),  # type: ignore[arg-type]
                     size="tiny",
                     stages=2,
@@ -145,28 +139,17 @@ class TestExtractor(unittest.TestCase):
 
         self.assertEqual(adapter.calls, 1)
         self.assertEqual(len(results), 1)
-        self.assertEqual(results[0][1][0].text, "ok")
+        self.assertEqual(results[0][1].layouts[0].text, "ok")
         self.assertEqual(len(caught), 1)
         self.assertEqual(caught[0].category, RuntimeWarning)
 
-    def test_legacy_adapter_gets_default_multi_stage_flag_and_structured_result(self):
-        adapter = _LegacyAdapter()
-        extractor = create_page_extractor_with_adapter(adapter)  # type: ignore[arg-type]
+    def test_adapter_protocol_requires_lifecycle_and_stage_capability(self):
+        class _IncompleteAdapter:
+            def extract_page(self) -> None:
+                pass
 
-        results = list(
-            extractor.extract_page_results(
-                image=_FakeImage(),  # type: ignore[arg-type]
-                size="tiny",
-                stages=1,
-                context=ExtractionContext(check_aborted=lambda: False),
-            )
-        )
-
-        self.assertTrue(adapter.supports_multi_stage)  # type: ignore[attr-defined]
-        structured = results[0][1].structured
-        self.assertIsNotNone(structured)
-        assert structured is not None
-        self.assertEqual(structured.blocks[0].text, "ok")
+        with self.assertRaises(TypeError):
+            create_page_extractor_with_adapter(_IncompleteAdapter())  # type: ignore[arg-type]
 
     def test_adapter_max_image_side_resizes_upload_and_maps_coordinates(self):
         adapter = _MaxSideAdapter()

@@ -186,13 +186,13 @@ def _run_extractor(adapter_name: str, extractor, image_path: Path, size: str, li
     context = ExtractionContext(check_aborted=lambda: False)
     started = time.monotonic()
     layouts: list[Any] = []
-    for _, stage_layouts in extractor.extract(
+    for _, page_result in extractor.extract_page_results(
         image=Image.open(image_path),
         size=size,  # type: ignore[arg-type]
         stages=1,
         context=context,
     ):
-        layouts = stage_layouts
+        layouts = page_result.layouts
     elapsed = round(time.monotonic() - started, 3)
     payload = {
         "adapter": adapter_name,
@@ -206,7 +206,6 @@ def _run_extractor(adapter_name: str, extractor, image_path: Path, size: str, li
         "layouts": [
             {
                 "index": index + 1,
-                "ref": layout.ref,
                 "kind": layout.kind.value,
                 "det": layout.det,
                 "type": layout.type,
@@ -222,7 +221,6 @@ def _run_extractor(adapter_name: str, extractor, image_path: Path, size: str, li
 
 def _layout_summary(layout: Any) -> dict[str, Any]:
     return {
-        "ref": layout.ref,
         "kind": layout.kind.value,
         "det": layout.det,
         "type": layout.type,

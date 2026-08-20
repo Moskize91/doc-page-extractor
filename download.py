@@ -22,7 +22,7 @@ def main() -> None:
         local_only=False,
     )
     begin_at = time.time()
-    extractor.download_models(args.revision or _default_revision(args.ocr_model))
+    extractor.download_ocr_model(args.revision or _default_revision(args.ocr_model))
     print(f"Models downloaded cost {time.time() - begin_at:.2f} seconds.")
 
 

@@ -17,7 +17,7 @@ class _StubImage:
 
 
 class TestAdapters(unittest.TestCase):
-    def test_deepseek_ocr2_vendor_config_accepts_openai_compatible_settings(self):
+    def test_deepseek_ocr2_vendor_config_accepts_openai_style_settings(self):
         config = DeepSeekOCR2VendorConfig(
             base_url="https://example.test/openai",
             api_key="test-key",
@@ -46,10 +46,10 @@ class TestAdapters(unittest.TestCase):
 
         self.assertEqual(len(layouts), 1)
         layout = layouts[0]
-        self.assertEqual(layout.ref, "标题")
         self.assertEqual(layout.det, (100, 200, 300, 400))
         self.assertEqual(layout.text, "正文")
         self.assertEqual(layout.kind, LayoutKind.TEXT)
+        self.assertEqual(layout.type, "标题")
         self.assertEqual(layout.source, "deepseek-ocr-vendor")
 
     def test_deepseek_layouts_from_ocr2_line_blocks(self):
@@ -67,10 +67,10 @@ class TestAdapters(unittest.TestCase):
         )
 
         self.assertEqual(len(layouts), 2)
-        self.assertEqual(layouts[0].ref, "text")
         self.assertEqual(layouts[0].det, (202, 693, 1754, 1458))
         self.assertEqual(layouts[0].text, "1774 年爆发的北美革命。")
         self.assertEqual(layouts[0].kind, LayoutKind.TEXT)
+        self.assertEqual(layouts[0].type, "text")
         self.assertEqual(layouts[1].text, "不过，此举产生的效果适得其反。")
 
     def test_deepseek_known_refs_are_typed(self):
@@ -155,13 +155,11 @@ class TestAdapters(unittest.TestCase):
         layouts = parse_unlimited_ocr_layouts(parse_result)
 
         self.assertEqual(len(layouts), 2)
-        self.assertEqual(layouts[0].ref, "sub_title")
         self.assertEqual(layouts[0].det, (161, 167, 518, 220))
         self.assertEqual(layouts[0].text, "第二章 鸿商巨贾")
         self.assertEqual(layouts[0].kind, LayoutKind.TITLE)
         self.assertEqual(layouts[0].type, "paragraph_title")
         self.assertEqual(layouts[0].source, "unlimited-ocr")
-        self.assertEqual(layouts[1].ref, "text")
         self.assertEqual(layouts[1].kind, LayoutKind.TEXT)
         self.assertEqual(layouts[1].det, (158, 510, 1360, 1068))
 
@@ -210,10 +208,8 @@ class TestAdapters(unittest.TestCase):
         structured = build_structured_page(layouts)
 
         self.assertEqual(layouts[0].kind, LayoutKind.FOOTNOTE)
-        self.assertEqual(layouts[0].ref, "text")
         self.assertEqual(layouts[1].kind, LayoutKind.TEXT)
         self.assertEqual(layouts[2].kind, LayoutKind.TABLE_CAPTION)
-        self.assertEqual(layouts[2].ref, "table_caption")
         self.assertEqual(layouts[3].kind, LayoutKind.TABLE)
         self.assertEqual(layouts[4].kind, LayoutKind.PAGE_NUMBER)
         self.assertEqual(layouts[5].kind, LayoutKind.FOOTNOTE)
