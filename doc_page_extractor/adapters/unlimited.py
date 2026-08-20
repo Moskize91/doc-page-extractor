@@ -18,7 +18,7 @@ _LOCAL_PROMPT = "<image>document parsing."
 _LOCAL_DET_PATTERN = re.compile(
     r"<\|det\|>\s*"
     r"(?P<type>[A-Za-z_][\w-]*)"
-    r"\s*(?P<coords>\[[\s\S]*?\])?"
+    r"(?P<coords>[\s\S]*?)"
     r"\s*<\|/det\|>",
 )
 
@@ -338,6 +338,9 @@ def _parse_local_dets(
     height: int,
 ) -> list[tuple[int, int, int, int]]:
     if raw_coords is None:
+        return []
+    raw_coords = raw_coords.strip()
+    if not raw_coords:
         return []
     try:
         parsed = ast.literal_eval(raw_coords)

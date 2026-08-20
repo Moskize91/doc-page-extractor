@@ -243,7 +243,7 @@ class TestAdapters(unittest.TestCase):
     def test_unlimited_ocr_local_layouts_from_det_blocks(self):
         image = _StubImage(999, 1998)
         response = (
-            "<|det|>title [100, 100, 500, 200]<|/det|>Chapter 1\n"
+            "<|det|>title [[100, 100, 500, 200]]<|/det|>Chapter 1\n"
             "<|det|>text [100, 220, 800, 400]<|/det|>Line one\n"
             "Line two\n"
             "<|det|>table [100, 500, 800, 900]<|/det|>"

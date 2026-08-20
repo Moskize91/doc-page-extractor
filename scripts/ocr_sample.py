@@ -351,7 +351,8 @@ def _optional_bool_env(name: str, default: bool) -> bool:
 
 
 def _local_model_path(project_root: Path, env_name: str) -> Path:
-    configured = Path(os.environ.get(env_name, "models-cache").strip())
+    configured_value = os.environ.get(env_name, "").strip() or "models-cache"
+    configured = Path(configured_value)
     return configured if configured.is_absolute() else project_root / configured
 
 
