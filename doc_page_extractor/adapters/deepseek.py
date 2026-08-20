@@ -13,6 +13,7 @@ from ..types import (
     DeepSeekOCRSize,
     ExtractionContext,
     Layout,
+    LayoutKind,
     OCRPageResult,
 )
 
@@ -37,13 +38,7 @@ def parse_deepseek_ocr_layouts(
     image: _ImageLike, response: str, source: str = "deepseek-ocr-vendor"
 ) -> list[Layout]:
     return [
-        Layout(
-            ref=ref,
-            det=det,
-            text=text,
-            kind=deepseek_ref_to_kind(ref),
-            source=source,
-        )
+        _deepseek_layout(ref=ref, det=det, text=text, source=source)
         for ref, det, text in _parse_deepseek_ocr_response(image, response)
         if _has_area(det)
         ]
@@ -53,16 +48,27 @@ def parse_deepseek_ocr2_layouts(
     image: _ImageLike, response: str, source: str = "deepseek-ocr2-vendor"
 ) -> list[Layout]:
     return [
-        Layout(
-            ref=ref,
-            det=det,
-            text=text,
-            kind=deepseek_ref_to_kind(ref),
-            source=source,
-        )
+        _deepseek_layout(ref=ref, det=det, text=text, source=source)
         for ref, det, text in _parse_deepseek_ocr2_response(image, response)
         if _has_area(det)
     ]
+
+
+def _deepseek_layout(
+    ref: str,
+    det: tuple[int, int, int, int],
+    text: str | None,
+    source: str,
+) -> Layout:
+    kind = deepseek_ref_to_kind(ref, text)
+    return Layout(
+        ref=ref,
+        det=det,
+        text=text,
+        html=text if kind == LayoutKind.TABLE and _looks_like_html_table(text) else None,
+        kind=kind,
+        source=source,
+    )
 
 
 class DeepSeekModelOCRAdapter:
@@ -464,6 +470,10 @@ def _parse_deepseek_ocr2_line_blocks(
 
 def _has_area(det: tuple[int, int, int, int]) -> bool:
     return det[2] > det[0] and det[3] > det[1]
+
+
+def _looks_like_html_table(text: str | None) -> bool:
+    return bool(text and text.lstrip().lower().startswith("<table"))
 
 
 def _vendor_chat_completions_url(base_url: str) -> str:

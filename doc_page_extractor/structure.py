@@ -31,7 +31,7 @@ _TABLE_CAPTION_PATTERNS = (
 _FOOTNOTE_MARK_PATTERN = re.compile(r"^\s*[①②③④⑤⑥⑦⑧⑨⑩]\s*\S+")
 
 
-def deepseek_ref_to_kind(ref: str | None) -> LayoutKind:
+def deepseek_ref_to_kind(ref: str | None, text: str | None = None) -> LayoutKind:
     normalized = (ref or "").strip()
     if normalized in {"text", "正文"}:
         return LayoutKind.TEXT
@@ -40,6 +40,10 @@ def deepseek_ref_to_kind(ref: str | None) -> LayoutKind:
     if normalized in {"image", "figure"}:
         return LayoutKind.IMAGE
     if normalized in {"image_caption", "figure_caption"}:
+        return LayoutKind.IMAGE_CAPTION
+    if normalized == "figure_title":
+        if _looks_like_table_caption(text):
+            return LayoutKind.TABLE_CAPTION
         return LayoutKind.IMAGE_CAPTION
     if normalized in {"table"}:
         return LayoutKind.TABLE

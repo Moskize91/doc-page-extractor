@@ -92,6 +92,30 @@ class TestAdapters(unittest.TestCase):
         self.assertEqual(structured.blocks[0].kind, LayoutKind.IMAGE)
         self.assertEqual(structured.blocks[0].children[0].kind, LayoutKind.IMAGE_CAPTION)
 
+    def test_deepseek_ocr2_figure_titles_are_caption_kinds(self):
+        image = _StubImage(1000, 1000)
+        response = (
+            "figure_title[[100, 100, 500, 120]]\n"
+            "第六表\n\n"
+            "table[[100, 130, 500, 300]]\n"
+            "<table><tr><td>A</td></tr></table>\n\n"
+            "image[[100, 400, 500, 700]]\n\n"
+            "figure_title[[100, 710, 500, 740]]\n"
+            "Figure 1.6: muscle length"
+        )
+
+        layouts = parse_deepseek_ocr2_layouts(image, response)
+        structured = build_structured_page(layouts)
+
+        self.assertEqual(layouts[0].kind, LayoutKind.TABLE_CAPTION)
+        self.assertEqual(layouts[1].kind, LayoutKind.TABLE)
+        self.assertEqual(layouts[1].html, "<table><tr><td>A</td></tr></table>")
+        self.assertEqual(layouts[3].kind, LayoutKind.IMAGE_CAPTION)
+        self.assertEqual(structured.blocks[0].kind, LayoutKind.TABLE)
+        self.assertEqual(structured.blocks[0].children[0].kind, LayoutKind.TABLE_CAPTION)
+        self.assertEqual(structured.blocks[1].kind, LayoutKind.IMAGE)
+        self.assertEqual(structured.blocks[1].children[0].kind, LayoutKind.IMAGE_CAPTION)
+
     def test_deepseek_zero_area_layouts_are_ignored(self):
         image = _StubImage(1000, 1000)
         response = (
