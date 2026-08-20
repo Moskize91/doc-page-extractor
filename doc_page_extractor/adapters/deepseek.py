@@ -416,16 +416,17 @@ def _parse_deepseek_ocr_response(
 def _parse_deepseek_ocr2_response(
     image: _ImageLike, response: str
 ) -> Generator[tuple[str, tuple[int, int, int, int], str | None], None, None]:
-    del image
     if not _LINE_BLOCK_PATTERN.search(response):
         return
 
-    yield from _parse_deepseek_ocr2_line_blocks(response)
+    yield from _parse_deepseek_ocr2_line_blocks(image, response)
 
 
 def _parse_deepseek_ocr2_line_blocks(
+    image: _ImageLike,
     response: str,
 ) -> Generator[tuple[str, tuple[int, int, int, int], str | None], None, None]:
+    width, height = image.size
     ref: str | None = None
     det: tuple[int, int, int, int] | None = None
     text_parts: list[str] = []
@@ -444,11 +445,15 @@ def _parse_deepseek_ocr2_line_blocks(
         if matched:
             yield from flush()
             ref = matched.group("ref")
+            x1_norm = int(matched.group("x1"))
+            y1_norm = int(matched.group("y1"))
+            x2_norm = int(matched.group("x2"))
+            y2_norm = int(matched.group("y2"))
             det = (
-                int(matched.group("x1")),
-                int(matched.group("y1")),
-                int(matched.group("x2")),
-                int(matched.group("y2")),
+                round(x1_norm / 1000 * width),
+                round(y1_norm / 1000 * height),
+                round(x2_norm / 1000 * width),
+                round(y2_norm / 1000 * height),
             )
             continue
         if ref is not None and det is not None:

@@ -54,7 +54,7 @@ class TestAdapters(unittest.TestCase):
         self.assertEqual(layout.source, "deepseek-ocr-vendor")
 
     def test_deepseek_layouts_from_ocr2_line_blocks(self):
-        image = _StubImage(1000, 1000)
+        image = _StubImage(2000, 3000)
         response = (
             "text[[101, 231, 877, 486]]\n"
             "1774 年爆发的北美革命。"
@@ -69,7 +69,7 @@ class TestAdapters(unittest.TestCase):
 
         self.assertEqual(len(layouts), 2)
         self.assertEqual(layouts[0].ref, "text")
-        self.assertEqual(layouts[0].det, (101, 231, 877, 486))
+        self.assertEqual(layouts[0].det, (202, 693, 1754, 1458))
         self.assertEqual(layouts[0].text, "1774 年爆发的北美革命。")
         self.assertEqual(layouts[0].kind, LayoutKind.TEXT)
         self.assertEqual(layouts[1].text, "不过，此举产生的效果适得其反。")
