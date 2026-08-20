@@ -20,6 +20,7 @@ from doc_page_extractor import (
     ExtractionContext,
     UnlimitedOCRAdapter,
     UnlimitedOCRConfig,
+    create_ocr_page_extractor,
     create_page_extractor_with_adapter,
 )
 
@@ -43,6 +44,16 @@ def main() -> None:
         _print_result(result)
         return
 
+    if args.adapter == "deepseek-ocr-local":
+        result = _run_deepseek_ocr_local(project_root, image_path, args.size, args.limit)
+        _print_result(result)
+        return
+
+    if args.adapter == "deepseek-ocr2-local":
+        result = _run_deepseek_ocr2_local(project_root, image_path, args.size, args.limit)
+        _print_result(result)
+        return
+
     if args.adapter == "unlimited-ocr":
         result = _run_unlimited_ocr(image_path, args.size, args.limit)
         _print_result(result)
@@ -55,12 +66,20 @@ def main() -> None:
         deepseek_ocr2_result = _run_deepseek_ocr2_vendor(
             image_path, args.size, args.limit
         )
+        deepseek_ocr_local_result = _run_deepseek_ocr_local(
+            project_root, image_path, args.size, args.limit
+        )
+        deepseek_ocr2_local_result = _run_deepseek_ocr2_local(
+            project_root, image_path, args.size, args.limit
+        )
         unlimited_ocr_result = _run_unlimited_ocr(image_path, args.size, args.limit)
         print(json.dumps({
             "adapter": "all",
             "image": str(image_path),
             "deepseek_ocr_vendor": deepseek_ocr_result,
             "deepseek_ocr2_vendor": deepseek_ocr2_result,
+            "deepseek_ocr_local": deepseek_ocr_local_result,
+            "deepseek_ocr2_local": deepseek_ocr2_local_result,
             "unlimited_ocr": unlimited_ocr_result,
         }, ensure_ascii=False, indent=2))
         return
@@ -82,6 +101,28 @@ def _run_deepseek_ocr2_vendor(
     config = DeepSeekOCR2VendorConfig.from_env()
     extractor = create_page_extractor_with_adapter(DeepSeekOCR2VendorAdapter(config))
     return _run_extractor("deepseek-ocr2-vendor", extractor, image_path, size, limit)
+
+
+def _run_deepseek_ocr_local(
+    project_root: Path, image_path: Path, size: str, limit: int
+) -> dict[str, Any]:
+    extractor = create_ocr_page_extractor(
+        ocr_model="deepseek-ocr",
+        model_path=project_root / "models-cache",
+        local_only=True,
+    )
+    return _run_extractor("deepseek-ocr-local", extractor, image_path, size, limit)
+
+
+def _run_deepseek_ocr2_local(
+    project_root: Path, image_path: Path, size: str, limit: int
+) -> dict[str, Any]:
+    extractor = create_ocr_page_extractor(
+        ocr_model="deepseek-ocr2",
+        model_path=project_root / "models-cache",
+        local_only=True,
+    )
+    return _run_extractor("deepseek-ocr2-local", extractor, image_path, size, limit)
 
 
 def _run_unlimited_ocr(image_path: Path, size: str, limit: int) -> dict[str, Any]:
@@ -149,6 +190,8 @@ def _parse_args() -> argparse.Namespace:
         choices=(
             "deepseek-ocr-vendor",
             "deepseek-ocr2-vendor",
+            "deepseek-ocr-local",
+            "deepseek-ocr2-local",
             "unlimited-ocr",
             "all",
         ),
@@ -178,7 +221,7 @@ def _parse_args() -> argparse.Namespace:
 
 def _load_dotenv(path: Path) -> None:
     if not path.exists():
-        raise SystemExit(f"Missing {path}. Copy .env.template to .env and fill OCR settings first.")
+        return
     for raw_line in path.read_text(encoding="utf-8").splitlines():
         line = raw_line.strip()
         if not line or line.startswith("#") or "=" not in line:

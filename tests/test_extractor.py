@@ -1,9 +1,14 @@
 import unittest
 import warnings
 from pathlib import Path
+from unittest.mock import patch
 
 from doc_page_extractor import ExtractionContext, Layout, OCRPageResult
-from doc_page_extractor.extractor import create_page_extractor_with_adapter
+from doc_page_extractor.extractor import (
+    create_ocr_page_extractor,
+    create_page_extractor,
+    create_page_extractor_with_adapter,
+)
 
 
 class _FakeImage:
@@ -176,6 +181,37 @@ class TestExtractor(unittest.TestCase):
             layout.polygon,
             [(110, 220), (439, 220), (439, 659), (110, 659)],
         )
+
+    def test_ocr_page_extractor_selects_requested_model(self):
+        class _DeepSeek1Model:
+            def __init__(self, *args, **kwargs) -> None:
+                self.args = args
+                self.kwargs = kwargs
+
+            def download(self, revision: str | None) -> None:
+                del revision
+
+            def load(self) -> None:
+                pass
+
+            def unload(self) -> None:
+                pass
+
+            def generate(self, *args, **kwargs) -> str:
+                del args, kwargs
+                return "<|ref|>text<|/ref|><|det|>[[1, 1, 10, 10]]<|/det|>ok"
+
+        class _DeepSeek2Model(_DeepSeek1Model):
+            pass
+
+        with patch("doc_page_extractor.model.DeepSeekOCRHugginfaceModel", _DeepSeek1Model), patch(
+            "doc_page_extractor.model.DeepSeekOCR2HugginfaceModel", _DeepSeek2Model
+        ):
+            extractor1 = create_page_extractor(model_path="models-cache")
+            extractor2 = create_ocr_page_extractor("deepseek-ocr2", model_path="models-cache")
+
+        self.assertIsInstance(extractor1._adapter._model, _DeepSeek1Model)  # type: ignore[attr-defined]
+        self.assertIsInstance(extractor2._adapter._model, _DeepSeek2Model)  # type: ignore[attr-defined]
 
 
 if __name__ == "__main__":

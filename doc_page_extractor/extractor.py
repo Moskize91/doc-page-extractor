@@ -9,14 +9,14 @@ from .adapters.unlimited import UnlimitedOCRAdapter, UnlimitedOCRConfig
 from .adapters.deepseek import (
     DeepSeekOCR2VendorAdapter,
     DeepSeekOCR2VendorConfig,
-    DeepSeekOCRLocalAdapter,
     DeepSeekModelOCRAdapter,
     DeepSeekOCRVendorAdapter,
     DeepSeekOCRVendorConfig,
 )
 from .types import (
-    DeepSeekOCRModel,
     DeepSeekOCRSize,
+    OCRModel,
+    OCRModelName,
     ExtractionContext,
     Layout,
     OCRAdapter,
@@ -36,18 +36,45 @@ def create_page_extractor(
     local_only: bool = False,
     enable_devices_numbers: Iterable[int] | None = None,
 ) -> PageExtractor:
-    return _PageExtractorImpls(
-        DeepSeekOCRLocalAdapter(
-            model_path=model_path,
-            local_only=local_only,
-            enable_devices_numbers=enable_devices_numbers,
-        )
+    return create_ocr_page_extractor(
+        ocr_model="deepseek-ocr",
+        model_path=model_path,
+        local_only=local_only,
+        enable_devices_numbers=enable_devices_numbers,
     )
 
 
-def create_page_extractor_with_model(model: DeepSeekOCRModel) -> PageExtractor:
-    if not isinstance(model, DeepSeekOCRModel):
-        raise TypeError("model must implement DeepSeekOCRModel protocol")
+def create_ocr_page_extractor(
+    ocr_model: OCRModelName = "deepseek-ocr",
+    model_path: PathLike | str | None = None,
+    local_only: bool = False,
+    enable_devices_numbers: Iterable[int] | None = None,
+) -> PageExtractor:
+    if ocr_model == "deepseek-ocr":
+        from .model import DeepSeekOCRHugginfaceModel
+
+        model = DeepSeekOCRHugginfaceModel(
+            model_path=Path(model_path) if model_path else None,
+            local_only=local_only,
+            enable_devices_numbers=enable_devices_numbers,
+        )
+    elif ocr_model == "deepseek-ocr2":
+        from .model import DeepSeekOCR2HugginfaceModel
+
+        model = DeepSeekOCR2HugginfaceModel(
+            model_path=Path(model_path) if model_path else None,
+            local_only=local_only,
+            enable_devices_numbers=enable_devices_numbers,
+        )
+    else:
+        raise ValueError(f"Unsupported OCR model: {ocr_model}")
+
+    return _PageExtractorImpls(DeepSeekModelOCRAdapter(model, source=ocr_model))
+
+
+def create_page_extractor_with_model(model: OCRModel) -> PageExtractor:
+    if not isinstance(model, OCRModel):
+        raise TypeError("model must implement OCRModel protocol")
     return _PageExtractorImpls(DeepSeekModelOCRAdapter(model))
 
 
