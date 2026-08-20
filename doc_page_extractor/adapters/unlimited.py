@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, TYPE_CHECKING
 
-from ..structure import baidu_type_to_kind, build_structured_page, legacy_ref_for_kind
+from ..structure import unlimited_ocr_type_to_kind, build_structured_page, legacy_ref_for_kind
 from ..types import DeepSeekOCRSize, ExtractionContext, Layout, OCRPageResult
 
 if TYPE_CHECKING:
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class BaiduCloudOCRConfig:
+class UnlimitedOCRConfig:
     ak: str
     sk: str
     base_url: str = "https://aip.baidubce.com"
@@ -22,7 +22,7 @@ class BaiduCloudOCRConfig:
     timeout_seconds: int = 180
 
     @classmethod
-    def from_env(cls) -> "BaiduCloudOCRConfig":
+    def from_env(cls) -> "UnlimitedOCRConfig":
         import os
 
         def required(name: str) -> str:
@@ -50,19 +50,19 @@ class BaiduCloudOCRConfig:
                 raise SystemExit(f"{name} must be an integer, got {value!r}") from exc
 
         return cls(
-            ak=required("DOC_PAGE_EXTRACTOR_BAIDU_AK"),
-            sk=required("DOC_PAGE_EXTRACTOR_BAIDU_SK"),
-            base_url=os.environ.get("DOC_PAGE_EXTRACTOR_BAIDU_BASE_URL", "https://aip.baidubce.com").strip(),
-            poll_interval_seconds=optional_float("DOC_PAGE_EXTRACTOR_BAIDU_POLL_INTERVAL_SECONDS", 2.0),
-            timeout_seconds=optional_int("DOC_PAGE_EXTRACTOR_BAIDU_TIMEOUT_SECONDS", 180),
+            ak=required("DOC_PAGE_EXTRACTOR_UNLIMITED_OCR_AK"),
+            sk=required("DOC_PAGE_EXTRACTOR_UNLIMITED_OCR_SK"),
+            base_url=os.environ.get("DOC_PAGE_EXTRACTOR_UNLIMITED_OCR_BASE_URL", "https://aip.baidubce.com").strip(),
+            poll_interval_seconds=optional_float("DOC_PAGE_EXTRACTOR_UNLIMITED_OCR_POLL_INTERVAL_SECONDS", 2.0),
+            timeout_seconds=optional_int("DOC_PAGE_EXTRACTOR_UNLIMITED_OCR_TIMEOUT_SECONDS", 180),
         )
 
 
-class BaiduCloudOCRAdapter:
+class UnlimitedOCRAdapter:
     supports_multi_stage = False
     max_image_side = 8192
 
-    def __init__(self, config: BaiduCloudOCRConfig) -> None:
+    def __init__(self, config: UnlimitedOCRConfig) -> None:
         self._config = config
         self._access_token: str | None = None
 
@@ -81,13 +81,15 @@ class BaiduCloudOCRAdapter:
         task_result = self._wait_for_task(token, task_id, context)
         parse_url = str(task_result.get("parse_result_url") or "")
         if not parse_url:
-            raise RuntimeError(f"Baidu OCR task {task_id} did not return parse_result_url.")
+            raise RuntimeError(
+                f"Unlimited OCR task {task_id} did not return parse_result_url."
+            )
 
         parse_result = self._download_parse_result(parse_url)
-        layouts = parse_baidu_layouts(parse_result)
+        layouts = parse_unlimited_ocr_layouts(parse_result)
         return OCRPageResult(
             layouts=layouts,
-            source="baidu",
+            source="unlimited-ocr",
             structured=build_structured_page(layouts),
             raw={
                 "task_id": task_id,
@@ -105,7 +107,7 @@ class BaiduCloudOCRAdapter:
             f"{self._config.base_url.rstrip('/')}/oauth/2.0/token",
             headers={
                 "Accept": "application/json",
-                "User-Agent": "doc-page-extractor-baidu/1.0",
+                "User-Agent": "doc-page-extractor-unlimited-ocr/1.0",
             },
             data={
                 "grant_type": "client_credentials",
@@ -116,13 +118,15 @@ class BaiduCloudOCRAdapter:
         )
         if response.status_code >= 400:
             raise RuntimeError(
-                f"Baidu token request failed with HTTP {response.status_code}: "
+                f"Unlimited OCR token request failed with HTTP {response.status_code}: "
                 f"{response.text[:500]}"
             )
         data = response.json()
         token = str(data.get("access_token") or "")
         if not token:
-            raise RuntimeError(f"Baidu token response did not include access_token: {data}")
+            raise RuntimeError(
+                f"Unlimited OCR token response did not include access_token: {data}"
+            )
         self._access_token = token
         return token
 
@@ -134,7 +138,7 @@ class BaiduCloudOCRAdapter:
             headers={
                 "Content-Type": "application/x-www-form-urlencoded",
                 "Accept": "application/json",
-                "User-Agent": "doc-page-extractor-baidu/1.0",
+                "User-Agent": "doc-page-extractor-unlimited-ocr/1.0",
             },
             data={
                 "file_data": base64.b64encode(image_path.read_bytes()).decode("ascii"),
@@ -145,7 +149,9 @@ class BaiduCloudOCRAdapter:
         data = self._checked_response(response, "submit")
         task_id = str((data.get("result") or {}).get("task_id") or "")
         if not task_id:
-            raise RuntimeError(f"Baidu submit response did not include task_id: {data}")
+            raise RuntimeError(
+                f"Unlimited OCR submit response did not include task_id: {data}"
+            )
         return task_id
 
     def _wait_for_task(
@@ -165,7 +171,7 @@ class BaiduCloudOCRAdapter:
                 headers={
                     "Content-Type": "application/x-www-form-urlencoded",
                     "Accept": "application/json",
-                    "User-Agent": "doc-page-extractor-baidu/1.0",
+                    "User-Agent": "doc-page-extractor-unlimited-ocr/1.0",
                 },
                 data={"task_id": task_id},
                 timeout=self._config.timeout_seconds,
@@ -176,9 +182,9 @@ class BaiduCloudOCRAdapter:
             if status == "success" or result.get("parse_result_url"):
                 return result
             if status == "failed":
-                raise RuntimeError(f"Baidu OCR task {task_id} failed: {result}")
+                raise RuntimeError(f"Unlimited OCR task {task_id} failed: {result}")
             if time.monotonic() >= deadline:
-                raise TimeoutError(f"Baidu OCR task {task_id} timed out.")
+                raise TimeoutError(f"Unlimited OCR task {task_id} timed out.")
             time.sleep(self._config.poll_interval_seconds)
 
     def _download_parse_result(self, url: str) -> dict[str, Any]:
@@ -186,12 +192,12 @@ class BaiduCloudOCRAdapter:
 
         response = requests.get(
             url,
-            headers={"User-Agent": "doc-page-extractor-baidu/1.0"},
+            headers={"User-Agent": "doc-page-extractor-unlimited-ocr/1.0"},
             timeout=self._config.timeout_seconds,
         )
         if response.status_code >= 400:
             raise RuntimeError(
-                f"Baidu parse result download failed with HTTP {response.status_code}: "
+                f"Unlimited OCR parse result download failed with HTTP {response.status_code}: "
                 f"{response.text[:500]}"
             )
         return json.loads(response.content.decode("utf-8"))
@@ -204,16 +210,16 @@ class BaiduCloudOCRAdapter:
     def _checked_response(response: Any, action: str) -> dict[str, Any]:
         if response.status_code >= 400:
             raise RuntimeError(
-                f"Baidu {action} request failed with HTTP {response.status_code}: "
+                f"Unlimited OCR {action} request failed with HTTP {response.status_code}: "
                 f"{response.text[:500]}"
             )
         data = response.json()
         if int(data.get("error_code") or 0) != 0:
-            raise RuntimeError(f"Baidu {action} request failed: {data}")
+            raise RuntimeError(f"Unlimited OCR {action} request failed: {data}")
         return data
 
 
-def parse_baidu_layouts(parse_result: dict[str, Any]) -> list[Layout]:
+def parse_unlimited_ocr_layouts(parse_result: dict[str, Any]) -> list[Layout]:
     layouts: list[Layout] = []
     for page in parse_result.get("pages") or []:
         for item in page.get("layouts") or []:
@@ -226,17 +232,17 @@ def parse_baidu_layouts(parse_result: dict[str, Any]) -> list[Layout]:
             text = _optional_str(item.get("text"))
             table_html = _optional_str(item.get("table_html"))
             html = table_html or (text if layout_type == "table" else None)
-            kind = baidu_type_to_kind(layout_type, text)
+            kind = unlimited_ocr_type_to_kind(layout_type, text)
             layouts.append(
                 Layout(
-                    ref=legacy_ref_for_kind(kind, layout_type or "baidu"),
+                    ref=legacy_ref_for_kind(kind, layout_type or "unlimited-ocr"),
                     det=det,
                     text=text,
                     kind=kind,
                     type=layout_type,
                     polygon=_parse_polygon(item.get("polygon")),
                     html=html,
-                    source="baidu",
+                    source="unlimited-ocr",
                     raw=item if isinstance(item, dict) else None,
                 )
             )

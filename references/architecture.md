@@ -11,7 +11,7 @@
 - `types.py` 定义公开协议和数据结构。这里的变更会影响下游库。`Layout.ref` 是兼容字段，新增代码应优先使用 `Layout.kind`。
 - `extractor.py` 负责高层抽取循环：保存页面图片、调用 `OCRAdapter.extract_page`、产出 `Layout`，并在多阶段抽取时涂抹已识别区域。
 - `adapters/` 存放后端适配器。DeepSeek 本地 CUDA、DeepSeek OpenAI-compatible Vendor、百度云 OCR 都应在这里转换成统一布局。
-- `structure.py` 负责把 DeepSeek/Baidu 的标签坍缩成稳定枚举，并构造 `StructuredPage`。这里可以吸收下游项目中通用的图、表格、公式与 caption 关联逻辑。
+- `structure.py` 负责把 DeepSeek/Unlimited OCR 的标签坍缩成稳定枚举，并构造 `StructuredPage`。这里可以吸收下游项目中通用的图、表格、公式与 caption 关联逻辑。
 - `model.py` 负责 Hugging Face DeepSeek-OCR 本地 CUDA 实现。这是 DeepSeek local adapter 的实现细节，应和纯解析/后处理代码保持隔离。
 - `parser.py` 解析 DeepSeek `<|ref|>` 和 `<|det|>` 标签，并把归一化坐标缩放成图片像素坐标。它不负责解析百度云 JSON。
 - `redacter.py` 计算接近纸张背景的填充色，并在阶段之间涂抹区域。

@@ -1,7 +1,13 @@
 import unittest
+from unittest.mock import patch
 
-from doc_page_extractor.adapters.baidu import parse_baidu_layouts
-from doc_page_extractor.adapters.deepseek import parse_deepseek_layouts
+from doc_page_extractor.adapters.unlimited import parse_unlimited_ocr_layouts
+from doc_page_extractor.adapters.deepseek import (
+    DeepSeekOCR2VendorConfig,
+    _vendor_chat_completions_url,
+    parse_deepseek_ocr2_layouts,
+    parse_deepseek_ocr_layouts,
+)
 from doc_page_extractor.structure import build_structured_page
 from doc_page_extractor.types import LayoutKind
 
@@ -12,11 +18,32 @@ class _StubImage:
 
 
 class TestAdapters(unittest.TestCase):
+    def test_deepseek_ocr2_vendor_defaults_to_ppio_settings(self):
+        with patch.dict(
+            "os.environ",
+            {"DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_API_KEY": "test-key"},
+            clear=False,
+        ):
+            config = DeepSeekOCR2VendorConfig.from_env()
+
+        self.assertEqual(config.base_url, "https://api.ppio.com/openai")
+        self.assertEqual(config.model, "deepseek/deepseek-ocr-2")
+
+    def test_vendor_chat_completions_url_accepts_both_base_forms(self):
+        self.assertEqual(
+            _vendor_chat_completions_url("https://api.ppio.com/openai"),
+            "https://api.ppio.com/openai/v1/chat/completions",
+        )
+        self.assertEqual(
+            _vendor_chat_completions_url("https://api.ppio.com/openai/v1"),
+            "https://api.ppio.com/openai/v1/chat/completions",
+        )
+
     def test_deepseek_layouts_from_token_response(self):
         image = _StubImage(1000, 1000)
         response = "<|ref|>标题<|/ref|><|det|>[[100, 200, 300, 400]]<|/det|>正文"
 
-        layouts = parse_deepseek_layouts(image, response, source="deepseek-vendor")
+        layouts = parse_deepseek_ocr_layouts(image, response, source="deepseek-ocr-vendor")
 
         self.assertEqual(len(layouts), 1)
         layout = layouts[0]
@@ -24,7 +51,28 @@ class TestAdapters(unittest.TestCase):
         self.assertEqual(layout.det, (100, 200, 300, 400))
         self.assertEqual(layout.text, "正文")
         self.assertEqual(layout.kind, LayoutKind.UNKNOWN)
-        self.assertEqual(layout.source, "deepseek-vendor")
+        self.assertEqual(layout.source, "deepseek-ocr-vendor")
+
+    def test_deepseek_layouts_from_ocr2_line_blocks(self):
+        image = _StubImage(1000, 1000)
+        response = (
+            "text[[101, 231, 877, 486]]\n"
+            "1774 年爆发的北美革命。"
+            "\n\n"
+            "text[[102, 494, 877, 785]]\n"
+            "不过，此举产生的效果适得其反。"
+        )
+
+        layouts = parse_deepseek_ocr2_layouts(
+            image, response, source="deepseek-ocr2-vendor"
+        )
+
+        self.assertEqual(len(layouts), 2)
+        self.assertEqual(layouts[0].ref, "text")
+        self.assertEqual(layouts[0].det, (101, 231, 877, 486))
+        self.assertEqual(layouts[0].text, "1774 年爆发的北美革命。")
+        self.assertEqual(layouts[0].kind, LayoutKind.TEXT)
+        self.assertEqual(layouts[1].text, "不过，此举产生的效果适得其反。")
 
     def test_deepseek_known_refs_are_typed(self):
         image = _StubImage(1000, 1000)
@@ -35,7 +83,7 @@ class TestAdapters(unittest.TestCase):
             "图一"
         )
 
-        layouts = parse_deepseek_layouts(image, response)
+        layouts = parse_deepseek_ocr_layouts(image, response)
         structured = build_structured_page(layouts)
 
         self.assertEqual(layouts[0].kind, LayoutKind.IMAGE)
@@ -51,12 +99,12 @@ class TestAdapters(unittest.TestCase):
             "<|ref|>text<|/ref|><|det|>[[100, 100, 200, 200]]<|/det|>ok"
         )
 
-        layouts = parse_deepseek_layouts(image, response)
+        layouts = parse_deepseek_ocr_layouts(image, response)
 
         self.assertEqual(len(layouts), 1)
         self.assertEqual(layouts[0].text, "ok")
 
-    def test_baidu_layouts_from_json(self):
+    def test_unlimited_ocr_layouts_from_json(self):
         parse_result = {
             "file_name": "friendly-title.png",
             "pages": [
@@ -81,7 +129,7 @@ class TestAdapters(unittest.TestCase):
             ],
         }
 
-        layouts = parse_baidu_layouts(parse_result)
+        layouts = parse_unlimited_ocr_layouts(parse_result)
 
         self.assertEqual(len(layouts), 2)
         self.assertEqual(layouts[0].ref, "sub_title")
@@ -89,12 +137,12 @@ class TestAdapters(unittest.TestCase):
         self.assertEqual(layouts[0].text, "第二章 鸿商巨贾")
         self.assertEqual(layouts[0].kind, LayoutKind.TITLE)
         self.assertEqual(layouts[0].type, "paragraph_title")
-        self.assertEqual(layouts[0].source, "baidu")
+        self.assertEqual(layouts[0].source, "unlimited-ocr")
         self.assertEqual(layouts[1].ref, "text")
         self.assertEqual(layouts[1].kind, LayoutKind.TEXT)
         self.assertEqual(layouts[1].det, (158, 510, 1360, 1068))
 
-    def test_baidu_richer_types_collapse_to_stable_kinds(self):
+    def test_unlimited_ocr_richer_types_collapse_to_stable_kinds(self):
         parse_result = {
             "pages": [
                 {
@@ -135,7 +183,7 @@ class TestAdapters(unittest.TestCase):
             ]
         }
 
-        layouts = parse_baidu_layouts(parse_result)
+        layouts = parse_unlimited_ocr_layouts(parse_result)
         structured = build_structured_page(layouts)
 
         self.assertEqual(layouts[0].kind, LayoutKind.FOOTNOTE)

@@ -1,23 +1,29 @@
 # pylint: disable=undefined-all-variable
 
 _LAZY_EXPORTS = {
-    "BaiduCloudOCRAdapter": ("baidu", "BaiduCloudOCRAdapter"),
-    "BaiduCloudOCRConfig": ("baidu", "BaiduCloudOCRConfig"),
-    "DeepSeekLocalOCRAdapter": ("deepseek", "DeepSeekLocalOCRAdapter"),
+    "DeepSeekOCR2VendorAdapter": ("deepseek", "DeepSeekOCR2VendorAdapter"),
+    "DeepSeekOCR2VendorConfig": ("deepseek", "DeepSeekOCR2VendorConfig"),
+    "DeepSeekOCRLocalAdapter": ("deepseek", "DeepSeekOCRLocalAdapter"),
     "DeepSeekModelOCRAdapter": ("deepseek", "DeepSeekModelOCRAdapter"),
-    "DeepSeekVendorOCRAdapter": ("deepseek", "DeepSeekVendorOCRAdapter"),
-    "DeepSeekVendorOCRConfig": ("deepseek", "DeepSeekVendorOCRConfig"),
-    "parse_deepseek_layouts": ("deepseek", "parse_deepseek_layouts"),
+    "DeepSeekOCRVendorAdapter": ("deepseek", "DeepSeekOCRVendorAdapter"),
+    "DeepSeekOCRVendorConfig": ("deepseek", "DeepSeekOCRVendorConfig"),
+    "UnlimitedOCRAdapter": ("unlimited", "UnlimitedOCRAdapter"),
+    "UnlimitedOCRConfig": ("unlimited", "UnlimitedOCRConfig"),
+    "parse_deepseek_ocr2_layouts": ("deepseek", "parse_deepseek_ocr2_layouts"),
+    "parse_deepseek_ocr_layouts": ("deepseek", "parse_deepseek_ocr_layouts"),
 }
 
 __all__ = [
-    "BaiduCloudOCRAdapter",
-    "BaiduCloudOCRConfig",
-    "DeepSeekLocalOCRAdapter",
+    "DeepSeekOCR2VendorAdapter",
+    "DeepSeekOCR2VendorConfig",
+    "DeepSeekOCRLocalAdapter",
     "DeepSeekModelOCRAdapter",
-    "DeepSeekVendorOCRAdapter",
-    "DeepSeekVendorOCRConfig",
-    "parse_deepseek_layouts",
+    "DeepSeekOCRVendorAdapter",
+    "DeepSeekOCRVendorConfig",
+    "UnlimitedOCRAdapter",
+    "UnlimitedOCRConfig",
+    "parse_deepseek_ocr2_layouts",
+    "parse_deepseek_ocr_layouts",
 ]
 
 

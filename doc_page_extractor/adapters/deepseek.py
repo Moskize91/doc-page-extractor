@@ -1,5 +1,6 @@
 import base64
 import json
+import re
 from dataclasses import dataclass
 from os import PathLike
 from pathlib import Path
@@ -16,6 +17,12 @@ from ..types import (
 )
 
 _DEFAULT_VENDOR_MAX_TOKENS = 8000
+_DEFAULT_VENDOR_BASE_URL = "https://api.ppio.com/openai"
+_DEFAULT_VENDOR_MODEL = "deepseek/deepseek-ocr-2"
+_LINE_BLOCK_PATTERN = re.compile(
+    r"^(?P<ref>[A-Za-z_]+)\[\[(?P<x1>\d+),\s*(?P<y1>\d+),\s*(?P<x2>\d+),\s*(?P<y2>\d+)\]\]\s*$",
+    re.MULTILINE,
+)
 
 if TYPE_CHECKING:
     from PIL import Image
@@ -26,8 +33,8 @@ class _ImageLike(Protocol):
     size: tuple[int, int]
 
 
-def parse_deepseek_layouts(
-    image: _ImageLike, response: str, source: str = "deepseek"
+def parse_deepseek_ocr_layouts(
+    image: _ImageLike, response: str, source: str = "deepseek-ocr-vendor"
 ) -> list[Layout]:
     return [
         Layout(
@@ -37,7 +44,23 @@ def parse_deepseek_layouts(
             kind=deepseek_ref_to_kind(ref),
             source=source,
         )
-        for ref, det, text in _parse_deepseek_response(image, response)
+        for ref, det, text in _parse_deepseek_ocr_response(image, response)
+        if _has_area(det)
+        ]
+
+
+def parse_deepseek_ocr2_layouts(
+    image: _ImageLike, response: str, source: str = "deepseek-ocr2-vendor"
+) -> list[Layout]:
+    return [
+        Layout(
+            ref=ref,
+            det=det,
+            text=text,
+            kind=deepseek_ref_to_kind(ref),
+            source=source,
+        )
+        for ref, det, text in _parse_deepseek_ocr2_response(image, response)
         if _has_area(det)
     ]
 
@@ -45,7 +68,7 @@ def parse_deepseek_layouts(
 class DeepSeekModelOCRAdapter:
     supports_multi_stage = True
 
-    def __init__(self, model: DeepSeekOCRModel, source: str = "deepseek") -> None:
+    def __init__(self, model: DeepSeekOCRModel, source: str = "deepseek-ocr") -> None:
         self._model = model
         self._source = source
 
@@ -75,7 +98,7 @@ class DeepSeekModelOCRAdapter:
         from PIL import Image
 
         with Image.open(image_path) as image:
-            layouts = parse_deepseek_layouts(image, response, source=self._source)
+            layouts = parse_deepseek_ocr_layouts(image, response, source=self._source)
         return OCRPageResult(
             layouts=layouts,
             source=self._source,
@@ -84,7 +107,7 @@ class DeepSeekModelOCRAdapter:
         )
 
 
-class DeepSeekLocalOCRAdapter(DeepSeekModelOCRAdapter):
+class DeepSeekOCRLocalAdapter(DeepSeekModelOCRAdapter):
     def __init__(
         self,
         model_path: PathLike | str | None = None,
@@ -98,11 +121,11 @@ class DeepSeekLocalOCRAdapter(DeepSeekModelOCRAdapter):
             local_only=local_only,
             enable_devices_numbers=enable_devices_numbers,
         )
-        super().__init__(model, source="deepseek-local")
+        super().__init__(model, source="deepseek-ocr-local")
 
 
 @dataclass
-class DeepSeekVendorOCRConfig:
+class DeepSeekOCRVendorConfig:
     base_url: str
     api_key: str
     model: str
@@ -112,7 +135,7 @@ class DeepSeekVendorOCRConfig:
     timeout_seconds: int = 180
 
     @classmethod
-    def from_env(cls) -> "DeepSeekVendorOCRConfig":
+    def from_env(cls) -> "DeepSeekOCRVendorConfig":
         import os
 
         def required(name: str) -> str:
@@ -140,20 +163,77 @@ class DeepSeekVendorOCRConfig:
                 raise SystemExit(f"{name} must be an integer, got {value!r}") from exc
 
         return cls(
-            base_url=required("DOC_PAGE_EXTRACTOR_DEEPSEEK_VENDOR_BASE_URL"),
-            api_key=required("DOC_PAGE_EXTRACTOR_DEEPSEEK_VENDOR_API_KEY"),
-            model=required("DOC_PAGE_EXTRACTOR_DEEPSEEK_VENDOR_MODEL"),
-            temperature=optional_float("DOC_PAGE_EXTRACTOR_DEEPSEEK_VENDOR_TEMPERATURE"),
-            top_p=optional_float("DOC_PAGE_EXTRACTOR_DEEPSEEK_VENDOR_TOP_P"),
-            max_tokens=optional_int("DOC_PAGE_EXTRACTOR_DEEPSEEK_VENDOR_MAX_TOKENS", 8000),
-            timeout_seconds=optional_int("DOC_PAGE_EXTRACTOR_DEEPSEEK_VENDOR_TIMEOUT_SECONDS", 180),
+            base_url=required("DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR_VENDOR_BASE_URL"),
+            api_key=required("DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR_VENDOR_API_KEY"),
+            model=required("DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR_VENDOR_MODEL"),
+            temperature=optional_float("DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR_VENDOR_TEMPERATURE"),
+            top_p=optional_float("DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR_VENDOR_TOP_P"),
+            max_tokens=optional_int("DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR_VENDOR_MAX_TOKENS", 8000),
+            timeout_seconds=optional_int("DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR_VENDOR_TIMEOUT_SECONDS", 180),
         )
 
 
-class DeepSeekVendorOCRAdapter:
+@dataclass
+class DeepSeekOCR2VendorConfig:
+    api_key: str
+    base_url: str = _DEFAULT_VENDOR_BASE_URL
+    model: str = _DEFAULT_VENDOR_MODEL
+    temperature: float | None = None
+    top_p: float | None = None
+    max_tokens: int = _DEFAULT_VENDOR_MAX_TOKENS
+    timeout_seconds: int = 180
+
+    @classmethod
+    def from_env(cls) -> "DeepSeekOCR2VendorConfig":
+        import os
+
+        def required(name: str) -> str:
+            value = os.environ.get(name, "").strip()
+            if not value:
+                raise SystemExit(f"Missing required environment variable: {name}")
+            return value
+
+        def optional_float(name: str) -> float | None:
+            value = os.environ.get(name, "").strip()
+            if not value:
+                return None
+            try:
+                return float(value)
+            except ValueError as exc:
+                raise SystemExit(f"{name} must be a float, got {value!r}") from exc
+
+        def optional_int(name: str, default: int) -> int:
+            value = os.environ.get(name, "").strip()
+            if not value:
+                return default
+            try:
+                return int(value)
+            except ValueError as exc:
+                raise SystemExit(f"{name} must be an integer, got {value!r}") from exc
+
+        return cls(
+            base_url=os.environ.get(
+                "DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_BASE_URL",
+                _DEFAULT_VENDOR_BASE_URL,
+            ).strip()
+            or _DEFAULT_VENDOR_BASE_URL,
+            api_key=required("DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_API_KEY"),
+            model=os.environ.get(
+                "DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_MODEL",
+                _DEFAULT_VENDOR_MODEL,
+            ).strip()
+            or _DEFAULT_VENDOR_MODEL,
+            temperature=optional_float("DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_TEMPERATURE"),
+            top_p=optional_float("DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_TOP_P"),
+            max_tokens=optional_int("DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_MAX_TOKENS", 8000),
+            timeout_seconds=optional_int("DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_TIMEOUT_SECONDS", 180),
+        )
+
+
+class DeepSeekOCRVendorAdapter:
     supports_multi_stage = True
 
-    def __init__(self, config: DeepSeekVendorOCRConfig) -> None:
+    def __init__(self, config: DeepSeekOCRVendorConfig) -> None:
         self._config = config
 
     def extract_page(
@@ -191,12 +271,12 @@ class DeepSeekVendorOCRAdapter:
         import requests
 
         response = requests.post(
-            f"{self._config.base_url.rstrip('/')}/chat/completions",
+            _vendor_chat_completions_url(self._config.base_url),
             headers={
                 "Authorization": f"Bearer {self._config.api_key}",
                 "Content-Type": "application/json",
                 "Accept": "application/json",
-                "User-Agent": "doc-page-extractor-deepseek-vendor/1.0",
+                "User-Agent": "doc-page-extractor-deepseek-ocr-vendor/1.0",
             },
             json=payload,
             timeout=self._config.timeout_seconds,
@@ -218,19 +298,97 @@ class DeepSeekVendorOCRAdapter:
         from PIL import Image
 
         with Image.open(image_path) as image:
-            layouts = parse_deepseek_layouts(
-                image, raw_text, source="deepseek-vendor"
+            layouts = parse_deepseek_ocr_layouts(
+                image, raw_text, source="deepseek-ocr-vendor"
             )
         return OCRPageResult(
             layouts=layouts,
-            source="deepseek-vendor",
+            source="deepseek-ocr-vendor",
             structured=build_structured_page(layouts),
             raw_text=raw_text,
             raw={"usage": usage},
         )
 
 
-def _parse_deepseek_response(
+class DeepSeekOCR2VendorAdapter:
+    supports_multi_stage = True
+
+    def __init__(self, config: DeepSeekOCR2VendorConfig) -> None:
+        self._config = config
+
+    def extract_page(
+        self,
+        prompt: str,
+        image_path: Path,
+        output_path: Path,
+        size: DeepSeekOCRSize,
+        context: ExtractionContext | None,
+        device_number: int | None,
+    ) -> OCRPageResult:
+        del output_path, size, device_number
+        payload: dict[str, Any] = {
+            "model": self._config.model,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": _data_url(image_path)},
+                        },
+                        {"type": "text", "text": prompt},
+                    ],
+                }
+            ],
+            "max_tokens": self._config.max_tokens,
+            "stream": False,
+        }
+        if self._config.temperature is not None:
+            payload["temperature"] = self._config.temperature
+        if self._config.top_p is not None:
+            payload["top_p"] = self._config.top_p
+
+        import requests
+
+        response = requests.post(
+            _vendor_chat_completions_url(self._config.base_url),
+            headers={
+                "Authorization": f"Bearer {self._config.api_key}",
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "User-Agent": "doc-page-extractor-deepseek-ocr2-vendor/1.0",
+            },
+            json=payload,
+            timeout=self._config.timeout_seconds,
+        )
+        if response.status_code >= 400:
+            _raise_vendor_error(response)
+
+        data = response.json()
+        usage = data.get("usage") or {}
+        if context is not None:
+            context.input_tokens += int(usage.get("prompt_tokens") or 0)
+            context.output_tokens += int(usage.get("completion_tokens") or 0)
+
+        choices = data.get("choices") or []
+        raw_text = ""
+        if choices:
+            raw_text = str((choices[0].get("message") or {}).get("content") or "")
+
+        from PIL import Image
+
+        with Image.open(image_path) as image:
+            layouts = parse_deepseek_ocr2_layouts(image, raw_text)
+        return OCRPageResult(
+            layouts=layouts,
+            source="deepseek-ocr2-vendor",
+            structured=build_structured_page(layouts),
+            raw_text=raw_text,
+            raw={"usage": usage},
+        )
+
+
+def _parse_deepseek_ocr_response(
     image: _ImageLike, response: str
 ) -> Generator[tuple[str, tuple[int, int, int, int], str | None], None, None]:
     width, height = image.size
@@ -255,8 +413,59 @@ def _parse_deepseek_response(
         yield ref, det, None
 
 
+def _parse_deepseek_ocr2_response(
+    image: _ImageLike, response: str
+) -> Generator[tuple[str, tuple[int, int, int, int], str | None], None, None]:
+    del image
+    if not _LINE_BLOCK_PATTERN.search(response):
+        return
+
+    yield from _parse_deepseek_ocr2_line_blocks(response)
+
+
+def _parse_deepseek_ocr2_line_blocks(
+    response: str,
+) -> Generator[tuple[str, tuple[int, int, int, int], str | None], None, None]:
+    ref: str | None = None
+    det: tuple[int, int, int, int] | None = None
+    text_parts: list[str] = []
+
+    def flush() -> Generator[tuple[str, tuple[int, int, int, int], str | None], None, None]:
+        nonlocal ref, det, text_parts
+        if ref is not None and det is not None:
+            text = "\n".join(text_parts).strip("\n") or None
+            yield ref, det, text
+        ref = None
+        det = None
+        text_parts = []
+
+    for line in response.splitlines():
+        matched = _LINE_BLOCK_PATTERN.match(line)
+        if matched:
+            yield from flush()
+            ref = matched.group("ref")
+            det = (
+                int(matched.group("x1")),
+                int(matched.group("y1")),
+                int(matched.group("x2")),
+                int(matched.group("y2")),
+            )
+            continue
+        if ref is not None and det is not None:
+            text_parts.append(line)
+
+    yield from flush()
+
+
 def _has_area(det: tuple[int, int, int, int]) -> bool:
     return det[2] > det[0] and det[3] > det[1]
+
+
+def _vendor_chat_completions_url(base_url: str) -> str:
+    normalized = base_url.rstrip("/")
+    if normalized.endswith("/v1"):
+        return f"{normalized}/chat/completions"
+    return f"{normalized}/v1/chat/completions"
 
 
 def _data_url(image_path: Path) -> str:

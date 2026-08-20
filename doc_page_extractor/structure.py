@@ -54,7 +54,9 @@ def deepseek_ref_to_kind(ref: str | None) -> LayoutKind:
     return LayoutKind.UNKNOWN
 
 
-def baidu_type_to_kind(layout_type: str | None, text: str | None = None) -> LayoutKind:
+def unlimited_ocr_type_to_kind(
+    layout_type: str | None, text: str | None = None
+) -> LayoutKind:
     normalized = (layout_type or "").strip()
     if normalized == "text":
         if _looks_like_table_caption(text):

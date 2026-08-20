@@ -31,8 +31,9 @@ For VGE/Conductor worktrees, `setup` creates `.env` automatically from `.env.tem
 
 `.env` now stores multiple backend configurations at the same time:
 
-- `DOC_PAGE_EXTRACTOR_DEEPSEEK_VENDOR_*` for the OpenAI-compatible DeepSeek Vendor.
-- `DOC_PAGE_EXTRACTOR_BAIDU_*` for Baidu Unlimited-OCR.
+- `DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR_VENDOR_*` for DeepSeek OCR Vendor.
+- `DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_*` for DeepSeek OCR 2 Vendor.
+- `DOC_PAGE_EXTRACTOR_UNLIMITED_OCR_*` for Unlimited OCR.
 - `DOC_PAGE_EXTRACTOR_MODEL_PATH` and `DOC_PAGE_EXTRACTOR_LOCAL_ONLY` for the local CUDA path.
 
 ## Development Workflow
@@ -59,14 +60,21 @@ New adapter code should implement the unified OCR adapter protocol and return la
 
 ```python
 from doc_page_extractor import (
-    BaiduCloudOCRConfig,
-    DeepSeekVendorOCRConfig,
-    create_baidu_page_extractor,
-    create_deepseek_vendor_page_extractor,
+    DeepSeekOCR2VendorConfig,
+    DeepSeekOCRVendorConfig,
+    UnlimitedOCRConfig,
+    create_deepseek_ocr2_vendor_page_extractor,
+    create_deepseek_ocr_vendor_page_extractor,
+    create_unlimited_ocr_page_extractor,
 )
 
-deepseek = create_deepseek_vendor_page_extractor(DeepSeekVendorOCRConfig.from_env())
-baidu = create_baidu_page_extractor(BaiduCloudOCRConfig.from_env())
+deepseek_ocr = create_deepseek_ocr_vendor_page_extractor(
+    DeepSeekOCRVendorConfig.from_env()
+)
+deepseek_ocr2 = create_deepseek_ocr2_vendor_page_extractor(
+    DeepSeekOCR2VendorConfig.from_env()
+)
+unlimited_ocr = create_unlimited_ocr_page_extractor(UnlimitedOCRConfig.from_env())
 ```
 
 ### Layout Contract
@@ -108,12 +116,12 @@ extractor = create_page_extractor_with_model(FixtureOCRModel())
 After filling private settings in `.env`, run:
 
 ```shell
-poetry run python scripts/ocr_sample.py --adapter deepseek-vendor --image tests/images/friendly-title.png
-poetry run python scripts/ocr_sample.py --adapter baidu --image tests/images/friendly-title.png
-poetry run python scripts/ocr_sample.py --adapter both --image tests/images/friendly-title.png
+poetry run python scripts/ocr_sample.py --adapter deepseek-ocr-vendor --image tests/images/friendly-title.png
+poetry run python scripts/ocr_sample.py --adapter deepseek-ocr2-vendor --image tests/images/friendly-title.png
+poetry run python scripts/ocr_sample.py --adapter unlimited-ocr --image tests/images/friendly-title.png
 ```
 
-The sample reads `tests/images/friendly-title.png`, runs the configured DeepSeek Vendor backend, the Baidu cloud backend, or both, and prints layout summaries, including `ref`, `kind`, provider `type`, text previews, and elapsed time. Use `--image path/to/image.png` to try another image.
+The sample reads `tests/images/friendly-title.png`, runs the configured OCR adapter, and prints layout summaries, including `ref`, `kind`, provider `type`, text previews, and elapsed time. Use `--image path/to/image.png` to try another image.
 
 ### Build Package
 

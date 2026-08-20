@@ -2,7 +2,7 @@
 
 Document page extraction tool that converts page images into text layouts with pixel coordinates.
 
-The default backend remains local DeepSeek-OCR for existing users. Version 1.1 adds a unified OCR adapter layer with DeepSeek OpenAI-compatible Vendor support and Baidu cloud OCR support.
+The default backend remains local DeepSeek OCR. Version 1.1 adds a unified OCR adapter layer with DeepSeek OCR Vendor, DeepSeek OCR 2 Vendor, and Unlimited OCR support.
 
 ## Installation
 
@@ -50,44 +50,69 @@ Use this backend when DeepSeek OCR is exposed through an OpenAI-compatible endpo
 
 ```python
 from doc_page_extractor import (
-    DeepSeekVendorOCRConfig,
-    create_deepseek_vendor_page_extractor,
+    DeepSeekOCRVendorConfig,
+    create_deepseek_ocr_vendor_page_extractor,
 )
 
-extractor = create_deepseek_vendor_page_extractor(
-    DeepSeekVendorOCRConfig.from_env()
+extractor = create_deepseek_ocr_vendor_page_extractor(
+    DeepSeekOCRVendorConfig.from_env()
 )
 ```
 
 Expected environment variables:
 
 ```dotenv
-DOC_PAGE_EXTRACTOR_DEEPSEEK_VENDOR_BASE_URL=
-DOC_PAGE_EXTRACTOR_DEEPSEEK_VENDOR_API_KEY=
-DOC_PAGE_EXTRACTOR_DEEPSEEK_VENDOR_MODEL=deepseek-ocr
-DOC_PAGE_EXTRACTOR_DEEPSEEK_VENDOR_TEMPERATURE=0.0
-DOC_PAGE_EXTRACTOR_DEEPSEEK_VENDOR_TOP_P=0.7
+DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR_VENDOR_BASE_URL=
+DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR_VENDOR_API_KEY=
+DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR_VENDOR_MODEL=deepseek-ocr
+DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR_VENDOR_TEMPERATURE=0.0
+DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR_VENDOR_TOP_P=0.7
 ```
 
-### Baidu Cloud OCR
+### DeepSeek OCR 2 Vendor
 
-Use this backend for Baidu Unlimited-OCR through Baidu Cloud:
+Use this backend for DeepSeek OCR 2 through an OpenAI-compatible endpoint:
 
 ```python
-from doc_page_extractor import BaiduCloudOCRConfig, create_baidu_page_extractor
+from doc_page_extractor import (
+    DeepSeekOCR2VendorConfig,
+    create_deepseek_ocr2_vendor_page_extractor,
+)
 
-extractor = create_baidu_page_extractor(BaiduCloudOCRConfig.from_env())
+extractor = create_deepseek_ocr2_vendor_page_extractor(
+    DeepSeekOCR2VendorConfig.from_env()
+)
 ```
 
 Expected environment variables:
 
 ```dotenv
-DOC_PAGE_EXTRACTOR_BAIDU_AK=
-DOC_PAGE_EXTRACTOR_BAIDU_SK=
-DOC_PAGE_EXTRACTOR_BAIDU_BASE_URL=https://aip.baidubce.com
+DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_BASE_URL=https://api.ppio.com/openai
+DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_API_KEY=
+DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_MODEL=deepseek/deepseek-ocr-2
+DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_TEMPERATURE=0.0
+DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_TOP_P=0.7
 ```
 
-Baidu images with a side longer than 8192 px are resized proportionally before
+### Unlimited OCR
+
+Use this backend for Unlimited OCR:
+
+```python
+from doc_page_extractor import UnlimitedOCRConfig, create_unlimited_ocr_page_extractor
+
+extractor = create_unlimited_ocr_page_extractor(UnlimitedOCRConfig.from_env())
+```
+
+Expected environment variables:
+
+```dotenv
+DOC_PAGE_EXTRACTOR_UNLIMITED_OCR_AK=
+DOC_PAGE_EXTRACTOR_UNLIMITED_OCR_SK=
+DOC_PAGE_EXTRACTOR_UNLIMITED_OCR_BASE_URL=https://aip.baidubce.com
+```
+
+Unlimited OCR images with a side longer than 8192 px are resized proportionally before
 upload. Returned layout coordinates are mapped back to the original image size.
 
 ## Extraction
@@ -130,9 +155,9 @@ for page_image, result in extractor.extract_page_results(
             print(block.html)
 ```
 
-The structured model groups asset captions with images, tables, and equations when possible. DeepSeek output is structured from flat OCR tags; Baidu Cloud OCR is normalized from Baidu's richer layout JSON into the same public kinds.
+The structured model groups asset captions with images, tables, and equations when possible. DeepSeek output is structured from flat OCR tags; DeepSeek OCR 2 output is structured from line blocks; Unlimited OCR is normalized from richer layout JSON into the same public kinds.
 
-Baidu Cloud OCR extracts footnotes directly. If `stages > 1` is requested with the Baidu adapter, the extractor emits a warning and runs a single stage because DeepSeek-style multi-stage redaction can erase Baidu footnote regions.
+Unlimited OCR extracts footnotes directly. If `stages > 1` is requested with the Unlimited OCR adapter, the extractor emits a warning and runs a single stage because DeepSeek-style multi-stage redaction can erase footnote regions.
 
 ## Development
 
@@ -143,14 +168,14 @@ Useful local commands:
 ```shell
 poetry run python test.py
 poetry run pylint --disable=import-error doc_page_extractor
-poetry run python scripts/ocr_sample.py --adapter both --image tests/images/friendly-title.png
+poetry run python scripts/ocr_sample.py --adapter deepseek-ocr2-vendor --image tests/images/friendly-title.png
 ```
 
 ## Requirements
 
 - Python >= 3.10, < 3.14
 - CUDA-capable NVIDIA GPU only when using local DeepSeek-OCR
-- Remote OCR credentials only when using DeepSeek Vendor or Baidu Cloud OCR
+- Remote OCR credentials only when using vendor OCR backends
 
 ## Dependencies & Licenses
 
