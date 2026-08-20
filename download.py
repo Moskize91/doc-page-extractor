@@ -12,9 +12,13 @@ _REVISION = "9f30c71f441d010e5429c532364a86705536c53a"
 
 def main() -> None:
     args = _parse_args()
+    project_root = Path(__file__).parent
+    model_path = args.model_path
+    if not model_path.is_absolute():
+        model_path = project_root / model_path
     extractor = create_ocr_page_extractor(
         ocr_model=args.ocr_model,
-        model_path=args.model_path,
+        model_path=model_path,
         local_only=False,
     )
     begin_at = time.time()

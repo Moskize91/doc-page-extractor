@@ -1,7 +1,6 @@
 import sys
 import tempfile
 import warnings
-from os import PathLike
 from pathlib import Path
 from typing import TYPE_CHECKING, Generator, Iterable
 
@@ -15,11 +14,10 @@ from .adapters.deepseek import (
 )
 from .types import (
     DeepSeekOCRSize,
-    OCRModel,
-    OCRModelName,
     ExtractionContext,
     Layout,
     OCRAdapter,
+    OCRModelName,
     OCRPageResult,
     PageExtractor,
 )
@@ -31,38 +29,25 @@ if TYPE_CHECKING:
 _DEFAULT_PROMPT = "<image>\n<|grounding|>Convert the document to markdown."
 
 
-def create_page_extractor(
-    model_path: PathLike | str | None = None,
-    local_only: bool = False,
-    enable_devices_numbers: Iterable[int] | None = None,
-) -> PageExtractor:
-    return create_ocr_page_extractor(
-        ocr_model="deepseek-ocr",
-        model_path=model_path,
-        local_only=local_only,
-        enable_devices_numbers=enable_devices_numbers,
-    )
-
-
 def create_ocr_page_extractor(
     ocr_model: OCRModelName = "deepseek-ocr",
-    model_path: PathLike | str | None = None,
+    model_path: Path | str | None = None,
     local_only: bool = False,
     enable_devices_numbers: Iterable[int] | None = None,
 ) -> PageExtractor:
     if ocr_model == "deepseek-ocr":
-        from .model import DeepSeekOCRHugginfaceModel
+        from .model import DeepSeekOCRHuggingFaceModel
 
-        model = DeepSeekOCRHugginfaceModel(
-            model_path=Path(model_path) if model_path else None,
+        model = DeepSeekOCRHuggingFaceModel(
+            model_path=Path(model_path) if model_path is not None else None,
             local_only=local_only,
             enable_devices_numbers=enable_devices_numbers,
         )
     elif ocr_model == "deepseek-ocr2":
-        from .model import DeepSeekOCR2HugginfaceModel
+        from .model import DeepSeekOCR2HuggingFaceModel
 
-        model = DeepSeekOCR2HugginfaceModel(
-            model_path=Path(model_path) if model_path else None,
+        model = DeepSeekOCR2HuggingFaceModel(
+            model_path=Path(model_path) if model_path is not None else None,
             local_only=local_only,
             enable_devices_numbers=enable_devices_numbers,
         )
@@ -70,12 +55,6 @@ def create_ocr_page_extractor(
         raise ValueError(f"Unsupported OCR model: {ocr_model}")
 
     return _PageExtractorImpls(DeepSeekModelOCRAdapter(model, source=ocr_model))
-
-
-def create_page_extractor_with_model(model: OCRModel) -> PageExtractor:
-    if not isinstance(model, OCRModel):
-        raise TypeError("model must implement OCRModel protocol")
-    return _PageExtractorImpls(DeepSeekModelOCRAdapter(model))
 
 
 def create_page_extractor_with_adapter(adapter: OCRAdapter) -> PageExtractor:

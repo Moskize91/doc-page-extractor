@@ -8,7 +8,6 @@ from unittest.mock import patch
 from doc_page_extractor import ExtractionContext, Layout, OCRPageResult
 from doc_page_extractor.extractor import (
     create_ocr_page_extractor,
-    create_page_extractor,
     create_page_extractor_with_adapter,
 )
 
@@ -206,10 +205,10 @@ class TestExtractor(unittest.TestCase):
             pass
 
         fake_model_module = types.ModuleType("doc_page_extractor.model")
-        fake_model_module.DeepSeekOCRHugginfaceModel = _DeepSeek1Model
-        fake_model_module.DeepSeekOCR2HugginfaceModel = _DeepSeek2Model
+        fake_model_module.DeepSeekOCRHuggingFaceModel = _DeepSeek1Model
+        fake_model_module.DeepSeekOCR2HuggingFaceModel = _DeepSeek2Model
         with patch.dict(sys.modules, {"doc_page_extractor.model": fake_model_module}):
-            extractor1 = create_page_extractor(model_path="models-cache")
+            extractor1 = create_ocr_page_extractor("deepseek-ocr", model_path="models-cache")
             extractor2 = create_ocr_page_extractor("deepseek-ocr2", model_path="models-cache")
 
         self.assertIsInstance(extractor1._adapter._model, _DeepSeek1Model)  # type: ignore[attr-defined]

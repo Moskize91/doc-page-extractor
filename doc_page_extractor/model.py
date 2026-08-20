@@ -256,7 +256,7 @@ class HuggingFaceOCRModel:
         return self._device_number_to_index
 
 
-class DeepSeekOCRHugginfaceModel(HuggingFaceOCRModel):
+class DeepSeekOCRHuggingFaceModel(HuggingFaceOCRModel):
     def __init__(
         self,
         model_path: Path | None,
@@ -271,7 +271,7 @@ class DeepSeekOCRHugginfaceModel(HuggingFaceOCRModel):
         )
 
 
-class DeepSeekOCR2HugginfaceModel(HuggingFaceOCRModel):
+class DeepSeekOCR2HuggingFaceModel(HuggingFaceOCRModel):
     def __init__(
         self,
         model_path: Path | None,

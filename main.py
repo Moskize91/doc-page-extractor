@@ -17,9 +17,12 @@ def main() -> None:
     project_root = Path(__file__).parent
     image_dir_path = project_root / "tests" / "images"
     image_name = f"{args.image_stem}.png"
+    model_path = args.model_path
+    if not model_path.is_absolute():
+        model_path = project_root / model_path
     extractor = create_ocr_page_extractor(
         ocr_model=args.ocr_model,
-        model_path=args.model_path,
+        model_path=model_path,
         local_only=args.local_only,
     )
     begin_at = time.time()

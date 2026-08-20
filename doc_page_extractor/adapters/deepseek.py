@@ -2,20 +2,12 @@ import base64
 import json
 import re
 from dataclasses import dataclass
-from os import PathLike
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Generator, Iterable, Protocol, cast
+from typing import TYPE_CHECKING, Any, Generator, Protocol, cast
 
 from ..parser import ParsedItemKind, parse_ocr_response
 from ..structure import build_structured_page, deepseek_ref_to_kind
-from ..types import (
-    DeepSeekOCRModel,
-    DeepSeekOCRSize,
-    ExtractionContext,
-    Layout,
-    LayoutKind,
-    OCRPageResult,
-)
+from ..types import DeepSeekOCRSize, ExtractionContext, Layout, LayoutKind, OCRPageResult, OCRModel
 
 _DEFAULT_VENDOR_MAX_TOKENS = 8000
 _LINE_BLOCK_PATTERN = re.compile(
@@ -72,7 +64,7 @@ def _deepseek_layout(
 class DeepSeekModelOCRAdapter:
     supports_multi_stage = True
 
-    def __init__(self, model: DeepSeekOCRModel, source: str = "deepseek-ocr") -> None:
+    def __init__(self, model: OCRModel, source: str = "deepseek-ocr") -> None:
         self._model = model
         self._source = source
 
@@ -109,23 +101,6 @@ class DeepSeekModelOCRAdapter:
             structured=build_structured_page(layouts),
             raw_text=response,
         )
-
-
-class DeepSeekOCRLocalAdapter(DeepSeekModelOCRAdapter):
-    def __init__(
-        self,
-        model_path: PathLike | str | None = None,
-        local_only: bool = False,
-        enable_devices_numbers: Iterable[int] | None = None,
-    ) -> None:
-        from ..model import DeepSeekOCRHugginfaceModel
-
-        model = DeepSeekOCRHugginfaceModel(
-            model_path=Path(model_path) if model_path else None,
-            local_only=local_only,
-            enable_devices_numbers=enable_devices_numbers,
-        )
-        super().__init__(model, source="deepseek-ocr-local")
 
 
 @dataclass

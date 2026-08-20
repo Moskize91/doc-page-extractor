@@ -143,8 +143,3 @@ class OCRModel(Protocol):
         device_number: int | None,
     ) -> str:
         ...
-
-
-@runtime_checkable
-class DeepSeekOCRModel(OCRModel, Protocol):
-    ...
