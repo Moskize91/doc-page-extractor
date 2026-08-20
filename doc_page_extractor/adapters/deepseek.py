@@ -18,8 +18,6 @@ from ..types import (
 )
 
 _DEFAULT_VENDOR_MAX_TOKENS = 8000
-_DEFAULT_VENDOR_BASE_URL = "https://api.ppio.com/openai"
-_DEFAULT_VENDOR_MODEL = "deepseek/deepseek-ocr-2"
 _LINE_BLOCK_PATTERN = re.compile(
     r"^(?P<ref>[A-Za-z_]+)\[\[(?P<x1>\d+),\s*(?P<y1>\d+),\s*(?P<x2>\d+),\s*(?P<y2>\d+)\]\]\s*$",
     re.MULTILINE,
@@ -181,9 +179,9 @@ class DeepSeekOCRVendorConfig:
 
 @dataclass
 class DeepSeekOCR2VendorConfig:
+    base_url: str
     api_key: str
-    base_url: str = _DEFAULT_VENDOR_BASE_URL
-    model: str = _DEFAULT_VENDOR_MODEL
+    model: str
     temperature: float | None = None
     top_p: float | None = None
     max_tokens: int = _DEFAULT_VENDOR_MAX_TOKENS
@@ -218,17 +216,9 @@ class DeepSeekOCR2VendorConfig:
                 raise SystemExit(f"{name} must be an integer, got {value!r}") from exc
 
         return cls(
-            base_url=os.environ.get(
-                "DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_BASE_URL",
-                _DEFAULT_VENDOR_BASE_URL,
-            ).strip()
-            or _DEFAULT_VENDOR_BASE_URL,
+            base_url=required("DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_BASE_URL"),
             api_key=required("DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_API_KEY"),
-            model=os.environ.get(
-                "DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_MODEL",
-                _DEFAULT_VENDOR_MODEL,
-            ).strip()
-            or _DEFAULT_VENDOR_MODEL,
+            model=required("DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_MODEL"),
             temperature=optional_float("DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_TEMPERATURE"),
             top_p=optional_float("DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_TOP_P"),
             max_tokens=optional_int("DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_MAX_TOKENS", 8000),

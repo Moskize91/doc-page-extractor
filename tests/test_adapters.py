@@ -18,25 +18,29 @@ class _StubImage:
 
 
 class TestAdapters(unittest.TestCase):
-    def test_deepseek_ocr2_vendor_defaults_to_ppio_settings(self):
+    def test_deepseek_ocr2_vendor_reads_openai_compatible_settings(self):
         with patch.dict(
             "os.environ",
-            {"DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_API_KEY": "test-key"},
+            {
+                "DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_BASE_URL": "https://example.test/openai",
+                "DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_API_KEY": "test-key",
+                "DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_MODEL": "deepseek-ocr2",
+            },
             clear=False,
         ):
             config = DeepSeekOCR2VendorConfig.from_env()
 
-        self.assertEqual(config.base_url, "https://api.ppio.com/openai")
-        self.assertEqual(config.model, "deepseek/deepseek-ocr-2")
+        self.assertEqual(config.base_url, "https://example.test/openai")
+        self.assertEqual(config.model, "deepseek-ocr2")
 
     def test_vendor_chat_completions_url_accepts_both_base_forms(self):
         self.assertEqual(
-            _vendor_chat_completions_url("https://api.ppio.com/openai"),
-            "https://api.ppio.com/openai/v1/chat/completions",
+            _vendor_chat_completions_url("https://example.test/openai"),
+            "https://example.test/openai/v1/chat/completions",
         )
         self.assertEqual(
-            _vendor_chat_completions_url("https://api.ppio.com/openai/v1"),
-            "https://api.ppio.com/openai/v1/chat/completions",
+            _vendor_chat_completions_url("https://example.test/openai/v1"),
+            "https://example.test/openai/v1/chat/completions",
         )
 
     def test_deepseek_layouts_from_token_response(self):
