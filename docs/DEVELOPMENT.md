@@ -128,9 +128,13 @@ After filling private settings in `.env`, run:
 poetry run python scripts/ocr_sample.py --adapter deepseek-ocr-vendor --image tests/images/friendly-title.png
 poetry run python scripts/ocr_sample.py --adapter deepseek-ocr2-vendor --image tests/images/friendly-title.png
 poetry run python scripts/ocr_sample.py --adapter unlimited-ocr-vendor --image tests/images/friendly-title.png
+poetry run python scripts/ocr_sample.py --adapter deepseek-ocr-local --image tests/images/friendly-title.png
+poetry run python scripts/ocr_sample.py --adapter deepseek-ocr2-local --image tests/images/friendly-title.png
+poetry run python scripts/ocr_sample.py --adapter unlimited-ocr-local --image tests/images/friendly-title.png
 ```
 
 The sample reads `tests/images/friendly-title.png`, runs the configured OCR adapter, and prints layout summaries, including `kind`, provider `type`, text previews, and elapsed time. Use `--image path/to/image.png` to try another image.
+`--adapter all` runs all six backends in one pass, so it includes the local CUDA paths as well as the vendor paths.
 
 ### Build Package
 

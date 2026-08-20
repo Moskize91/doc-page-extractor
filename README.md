@@ -241,6 +241,8 @@ poetry run pylint --disable=import-error doc_page_extractor
 poetry run python scripts/ocr_sample.py --adapter unlimited-ocr-vendor --image tests/images/friendly-title.png
 ```
 
+`scripts/ocr_sample.py` also supports `deepseek-ocr-local`, `deepseek-ocr2-local`, `unlimited-ocr-local`, and `all`; `all` includes the local CUDA-backed modes.
+
 ## Requirements
 
 - Python >= 3.10, < 3.14

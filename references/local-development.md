@@ -73,9 +73,13 @@ poetry run pylint --disable=import-error doc_page_extractor
 poetry run python scripts/ocr_sample.py --adapter deepseek-ocr-vendor --image tests/images/friendly-title.png
 poetry run python scripts/ocr_sample.py --adapter deepseek-ocr2-vendor --image tests/images/friendly-title.png
 poetry run python scripts/ocr_sample.py --adapter unlimited-ocr-vendor --image tests/images/friendly-title.png
+poetry run python scripts/ocr_sample.py --adapter deepseek-ocr-local --image tests/images/friendly-title.png
+poetry run python scripts/ocr_sample.py --adapter deepseek-ocr2-local --image tests/images/friendly-title.png
+poetry run python scripts/ocr_sample.py --adapter unlimited-ocr-local --image tests/images/friendly-title.png
 ```
 
 该脚本默认读取 `tests/images/friendly-title.png`，调用指定 OCR adapter。成功输出会包含图片路径、layout 数量、前几个 layout 的稳定 `kind`、供应商原始 `type`、文本预览和耗时。可以用 `--image path/to/image.png` 指定其他图片。
+`--adapter all` 会同时跑六个后端，其中包含本地 CUDA 路径，只适合 CUDA/NVIDIA 环境。
 
 新代码应依赖 `Layout.kind` 判断跨供应商稳定语义。`Layout.type` 和 `Layout.raw` 保留供应商原始数据，不应当作稳定跨供应商契约。使用 `extract_page_results()` 读取 `OCRPageResult` 和可选的 `structured` 页面结构。
 
