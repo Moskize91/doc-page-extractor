@@ -80,13 +80,13 @@ def unlimited_ocr_type_to_kind(
         return LayoutKind.TABLE
     if normalized == "table_caption":
         return LayoutKind.TABLE_CAPTION
-    if normalized == "footnote":
+    if normalized in {"footnote", "page_footnote"}:
         return LayoutKind.FOOTNOTE
     if normalized == "header":
         return LayoutKind.HEADER
     if normalized == "footer":
         return LayoutKind.FOOTER
-    if normalized == "number":
+    if normalized in {"number", "page_number"}:
         if _FOOTNOTE_MARK_PATTERN.search(text or ""):
             return LayoutKind.FOOTNOTE
         return LayoutKind.PAGE_NUMBER

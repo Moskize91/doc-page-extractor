@@ -1,9 +1,12 @@
+from contextlib import contextmanager
 from dataclasses import dataclass
 from importlib.util import find_spec
 from pathlib import Path
+import threading
 from typing import Iterable
 
 from huggingface_hub import snapshot_download
+import huggingface_hub.constants as hf_constants
 from readerwriterlock import rwlock
 from transformers import AutoModel, AutoTokenizer
 
@@ -36,6 +39,7 @@ _UNLIMITED_SIZE_CONFIGS: dict[DeepSeekOCRSize, _SizeConfig] = {
     "base": _SizeConfig(base_size=1024, image_size=1024, crop_mode=False),
     "gundam": _SizeConfig(base_size=1024, image_size=640, crop_mode=True),
 }
+_DOWNLOAD_SETTINGS_LOCK = threading.Lock()
 
 _ATTN_IMPLEMENTATION: str
 if find_spec("flash_attn") is not None:
@@ -50,6 +54,12 @@ class _Models:
     llms: list[AutoModel]
 
 
+@dataclass
+class _DownloadConfig:
+    enable_hf_transfer: bool | None = None
+    disable_xet: bool | None = None
+
+
 class HuggingFaceBackend:
     def __init__(
         self,
@@ -59,6 +69,7 @@ class HuggingFaceBackend:
         enable_devices_numbers: Iterable[int] | None,
         default_revision: str,
         attn_implementation: str | None = None,
+        download_config: _DownloadConfig | None = None,
     ) -> None:
         if local_only and model_path is None:
             raise ValueError(
@@ -73,17 +84,19 @@ class HuggingFaceBackend:
         self._enable_devices_numbers: Iterable[int] | None = enable_devices_numbers
         self._device_number_to_index: list[int | None] | None = None
         self._attn_implementation = attn_implementation or _ATTN_IMPLEMENTATION
+        self._download_config = download_config or _DownloadConfig()
 
     def download(self, revision: str | None) -> None:
         with self._rwlock.gen_wlock():
-            snapshot_download(
-                repo_id=self._model_name,
-                repo_type="model",
-                revision=revision or self._default_revision,
-                # Keep incomplete blobs so interrupted large downloads can resume.
-                force_download=False,
-                cache_dir=self._cache_dir(),
-            )
+            with _download_settings(self._download_config):
+                snapshot_download(
+                    repo_id=self._model_name,
+                    repo_type="model",
+                    revision=revision or self._default_revision,
+                    # Keep incomplete blobs so interrupted large downloads can resume.
+                    force_download=False,
+                    cache_dir=self._cache_dir(),
+                )
             if self._model_path is not None and self._find_pretrained_path() is None:
                 raise RuntimeError(
                     f"Model downloaded but not found in expected cache structure. "
@@ -315,6 +328,10 @@ class UnlimitedOCRHuggingFaceModel(HuggingFaceBackend):
             local_only=local_only,
             enable_devices_numbers=enable_devices_numbers,
             default_revision=_UNLIMITED_OCR_REVISION,
+            download_config=_DownloadConfig(
+                enable_hf_transfer=True,
+                disable_xet=True,
+            ),
         )
 
     def generate(
@@ -354,3 +371,19 @@ class UnlimitedOCRHuggingFaceModel(HuggingFaceBackend):
         raw_text = str(text_result[0] if isinstance(text_result, tuple) else text_result)
         (output_path / "result.md").write_text(raw_text, encoding="utf-8")
         return raw_text
+
+
+@contextmanager
+def _download_settings(config: _DownloadConfig):
+    with _DOWNLOAD_SETTINGS_LOCK:
+        original_hf_transfer = hf_constants.HF_HUB_ENABLE_HF_TRANSFER
+        original_disable_xet = hf_constants.HF_HUB_DISABLE_XET
+        try:
+            if config.enable_hf_transfer is not None:
+                hf_constants.HF_HUB_ENABLE_HF_TRANSFER = config.enable_hf_transfer
+            if config.disable_xet is not None:
+                hf_constants.HF_HUB_DISABLE_XET = config.disable_xet
+            yield
+        finally:
+            hf_constants.HF_HUB_ENABLE_HF_TRANSFER = original_hf_transfer
+            hf_constants.HF_HUB_DISABLE_XET = original_disable_xet

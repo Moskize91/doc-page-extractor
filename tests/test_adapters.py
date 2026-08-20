@@ -76,6 +76,23 @@ class TestAdapters(unittest.TestCase):
         self.assertEqual(layouts[0].type, "text")
         self.assertEqual(layouts[1].text, "不过，此举产生的效果适得其反。")
 
+    def test_deepseek_ocr2_layouts_fall_back_to_token_response(self):
+        image = _StubImage(1000, 1000)
+        response = (
+            "<|ref|>text<|/ref|><|det|>[[100, 200, 300, 400]]<|/det|>"
+            "ocr2 text"
+        )
+
+        layouts = parse_deepseek_ocr2_layouts(
+            image, response, source="deepseek-ocr2"
+        )
+
+        self.assertEqual(len(layouts), 1)
+        self.assertEqual(layouts[0].det, (100, 200, 300, 400))
+        self.assertEqual(layouts[0].text, "ocr2 text")
+        self.assertEqual(layouts[0].kind, LayoutKind.TEXT)
+        self.assertEqual(layouts[0].source, "deepseek-ocr2")
+
     def test_deepseek_known_refs_are_typed(self):
         image = _StubImage(1000, 1000)
         response = (
@@ -231,12 +248,14 @@ class TestAdapters(unittest.TestCase):
             "Line two\n"
             "<|det|>table [100, 500, 800, 900]<|/det|>"
             "<table><tr><td>A</td></tr></table>"
+            "<|det|>page_footnote [100, 920, 800, 950]<|/det|>① footnote\n"
+            "<|det|>page_number [880, 960, 920, 990]<|/det|>12"
         )
 
         layouts = parse_unlimited_ocr_local_layouts(image, response)
         structured = build_structured_page(layouts)
 
-        self.assertEqual(len(layouts), 3)
+        self.assertEqual(len(layouts), 5)
         self.assertEqual(layouts[0].kind, LayoutKind.TITLE)
         self.assertEqual(layouts[0].det, (100, 200, 500, 400))
         self.assertEqual(layouts[0].source, "unlimited-ocr")
@@ -244,7 +263,11 @@ class TestAdapters(unittest.TestCase):
         self.assertEqual(layouts[1].text, "Line one\nLine two")
         self.assertEqual(layouts[2].kind, LayoutKind.TABLE)
         self.assertEqual(layouts[2].html, "<table><tr><td>A</td></tr></table>")
+        self.assertEqual(layouts[3].kind, LayoutKind.FOOTNOTE)
+        self.assertEqual(layouts[4].kind, LayoutKind.PAGE_NUMBER)
         self.assertEqual(structured.blocks[2].kind, LayoutKind.TABLE)
+        self.assertEqual(len(structured.ignored), 1)
+        self.assertEqual(structured.ignored[0].kind, LayoutKind.PAGE_NUMBER)
 
 
 if __name__ == "__main__":

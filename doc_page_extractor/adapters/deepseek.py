@@ -352,6 +352,7 @@ def _parse_deepseek_ocr2_response(
     image: _ImageLike, response: str
 ) -> Generator[tuple[str, tuple[int, int, int, int], str | None], None, None]:
     if not _LINE_BLOCK_PATTERN.search(response):
+        yield from _parse_deepseek_ocr_response(image, response)
         return
 
     yield from _parse_deepseek_ocr2_line_blocks(image, response)
