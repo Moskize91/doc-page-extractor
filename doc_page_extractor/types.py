@@ -9,6 +9,7 @@ if TYPE_CHECKING:
 
 
 DeepSeekOCRSize = Literal["tiny", "small", "base", "large", "gundam"]
+OCRModelName = Literal["deepseek-ocr", "deepseek-ocr2"]
 
 
 class LayoutKind(str, Enum):
@@ -122,7 +123,7 @@ class OCRAdapter(Protocol):
 
 
 @runtime_checkable
-class DeepSeekOCRModel(Protocol):
+class OCRModel(Protocol):
     def download(self, revision: str | None) -> None:
         ...
 

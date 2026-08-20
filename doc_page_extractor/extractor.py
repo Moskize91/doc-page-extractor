@@ -1,7 +1,6 @@
 import sys
 import tempfile
 import warnings
-from os import PathLike
 from pathlib import Path
 from typing import TYPE_CHECKING, Generator, Iterable
 
@@ -9,17 +8,16 @@ from .adapters.unlimited import UnlimitedOCRAdapter, UnlimitedOCRConfig
 from .adapters.deepseek import (
     DeepSeekOCR2VendorAdapter,
     DeepSeekOCR2VendorConfig,
-    DeepSeekOCRLocalAdapter,
     DeepSeekModelOCRAdapter,
     DeepSeekOCRVendorAdapter,
     DeepSeekOCRVendorConfig,
 )
 from .types import (
-    DeepSeekOCRModel,
     DeepSeekOCRSize,
     ExtractionContext,
     Layout,
     OCRAdapter,
+    OCRModelName,
     OCRPageResult,
     PageExtractor,
 )
@@ -31,24 +29,32 @@ if TYPE_CHECKING:
 _DEFAULT_PROMPT = "<image>\n<|grounding|>Convert the document to markdown."
 
 
-def create_page_extractor(
-    model_path: PathLike | str | None = None,
+def create_ocr_page_extractor(
+    ocr_model: OCRModelName = "deepseek-ocr",
+    model_path: Path | str | None = None,
     local_only: bool = False,
     enable_devices_numbers: Iterable[int] | None = None,
 ) -> PageExtractor:
-    return _PageExtractorImpls(
-        DeepSeekOCRLocalAdapter(
-            model_path=model_path,
+    if ocr_model == "deepseek-ocr":
+        from .model import DeepSeekOCRHuggingFaceModel
+
+        model = DeepSeekOCRHuggingFaceModel(
+            model_path=Path(model_path) if model_path is not None else None,
             local_only=local_only,
             enable_devices_numbers=enable_devices_numbers,
         )
-    )
+    elif ocr_model == "deepseek-ocr2":
+        from .model import DeepSeekOCR2HuggingFaceModel
 
+        model = DeepSeekOCR2HuggingFaceModel(
+            model_path=Path(model_path) if model_path is not None else None,
+            local_only=local_only,
+            enable_devices_numbers=enable_devices_numbers,
+        )
+    else:
+        raise ValueError(f"Unsupported OCR model: {ocr_model}")
 
-def create_page_extractor_with_model(model: DeepSeekOCRModel) -> PageExtractor:
-    if not isinstance(model, DeepSeekOCRModel):
-        raise TypeError("model must implement DeepSeekOCRModel protocol")
-    return _PageExtractorImpls(DeepSeekModelOCRAdapter(model))
+    return _PageExtractorImpls(DeepSeekModelOCRAdapter(model, source=ocr_model))
 
 
 def create_page_extractor_with_adapter(adapter: OCRAdapter) -> PageExtractor:

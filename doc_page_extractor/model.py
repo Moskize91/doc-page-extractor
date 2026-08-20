@@ -41,24 +41,27 @@ class _Models:
     llms: list[AutoModel]
 
 
-class DeepSeekOCRHugginfaceModel:
+class HuggingFaceOCRModel:
     def __init__(
         self,
+        model_name: str,
         model_path: Path | None,
         local_only: bool,
         enable_devices_numbers: Iterable[int] | None,
+        attn_implementation: str | None = None,
     ) -> None:
         if local_only and model_path is None:
             raise ValueError(
                 "model_path must be provided when local_only is True")
 
         self._rwlock = rwlock.RWLockFair()
-        self._model_name = "deepseek-ai/DeepSeek-OCR"
+        self._model_name = model_name
         self._model_path: Path | None = model_path
         self._local_only = local_only
         self._models: _Models | None = None
         self._enable_devices_numbers: Iterable[int] | None = enable_devices_numbers
         self._device_number_to_index: list[int | None] | None = None
+        self._attn_implementation = attn_implementation or _ATTN_IMPLEMENTATION
 
     def download(self, revision: str | None) -> None:
         with self._rwlock.gen_wlock():
@@ -66,13 +69,14 @@ class DeepSeekOCRHugginfaceModel:
                 repo_id=self._model_name,
                 repo_type="model",
                 revision=revision,
-                force_download=True,
+                # Keep incomplete blobs so interrupted large downloads can resume.
+                force_download=False,
                 cache_dir=self._cache_dir(),
             )
             if self._model_path is not None and self._find_pretrained_path() is None:
                 raise RuntimeError(
                     f"Model downloaded but not found in expected cache structure. "
-                    f"Expected path: {self._model_path}/models--deepseek-ai--DeepSeek-OCR/snapshots/. "
+                    f"Expected path: {self._cache_model_dir()}/snapshots/. "
                     f"This may indicate a Hugging Face cache structure change. "
                     f"Please report this issue."
                 )
@@ -154,7 +158,7 @@ class DeepSeekOCRHugginfaceModel:
                     raise ValueError(
                         f"Local model not found at {self._model_path}. "
                         f"Expected Hugging Face cache structure: "
-                        f"{self._model_path}/models--deepseek-ai--DeepSeek-OCR/snapshots/[hash]/. "
+                        f"{self._cache_model_dir()}/snapshots/[hash]/. "
                         f"Please run download_models() first to download the model."
                     )
             else:
@@ -172,7 +176,7 @@ class DeepSeekOCRHugginfaceModel:
                     continue
                 model = AutoModel.from_pretrained(
                     pretrained_model_name_or_path=name_or_path,
-                    _attn_implementation=_ATTN_IMPLEMENTATION,
+                    _attn_implementation=self._attn_implementation,
                     trust_remote_code=True,
                     use_safetensors=True,
                     cache_dir=cache_dir,
@@ -195,7 +199,7 @@ class DeepSeekOCRHugginfaceModel:
     def _find_pretrained_path(self) -> str | None:
         # Hugging Face 缓存结构: cache_dir/models--{org}--{model}/snapshots/{hash}/
         assert self._model_path is not None
-        cache_model_dir = self._model_path / "models--deepseek-ai--DeepSeek-OCR"
+        cache_model_dir = self._cache_model_dir()
         if not cache_model_dir.exists():
             return None
 
@@ -214,6 +218,11 @@ class DeepSeekOCRHugginfaceModel:
             return None
         latest_snapshot = max(snapshot_dirs, key=lambda d: d.stat().st_mtime)
         return str(latest_snapshot)
+
+    def _cache_model_dir(self) -> Path:
+        assert self._model_path is not None
+        model_dir_name = f"models--{self._model_name.replace('/', '--')}"
+        return self._model_path / model_dir_name
 
     def _get_device_number_to_index(self) -> list[int | None]:
         if self._device_number_to_index is None:
@@ -245,3 +254,34 @@ class DeepSeekOCRHugginfaceModel:
             self._enable_devices_numbers = None
 
         return self._device_number_to_index
+
+
+class DeepSeekOCRHuggingFaceModel(HuggingFaceOCRModel):
+    def __init__(
+        self,
+        model_path: Path | None,
+        local_only: bool,
+        enable_devices_numbers: Iterable[int] | None,
+    ) -> None:
+        super().__init__(
+            model_name="deepseek-ai/DeepSeek-OCR",
+            model_path=model_path,
+            local_only=local_only,
+            enable_devices_numbers=enable_devices_numbers,
+        )
+
+
+class DeepSeekOCR2HuggingFaceModel(HuggingFaceOCRModel):
+    def __init__(
+        self,
+        model_path: Path | None,
+        local_only: bool,
+        enable_devices_numbers: Iterable[int] | None,
+    ) -> None:
+        super().__init__(
+            model_name="deepseek-ai/DeepSeek-OCR-2",
+            model_path=model_path,
+            local_only=local_only,
+            enable_devices_numbers=enable_devices_numbers,
+            attn_implementation="flash_attention_2" if find_spec("flash_attn") is not None else "eager",
+        )
