@@ -10,8 +10,6 @@ import time
 from pathlib import Path
 from typing import Any
 
-from PIL import Image
-
 from doc_page_extractor import (
     DeepSeekOCR2VendorAdapter,
     DeepSeekOCR2VendorConfig,
@@ -215,6 +213,8 @@ def _run_extractor(adapter_name: str, extractor, image_path: Path, size: str, li
     context = ExtractionContext(check_aborted=lambda: False)
     started = time.monotonic()
     layouts: list[Any] = []
+    from PIL import Image
+
     for _, page_result in extractor.extract_page_results(
         image=Image.open(image_path),
         size=size,  # type: ignore[arg-type]
