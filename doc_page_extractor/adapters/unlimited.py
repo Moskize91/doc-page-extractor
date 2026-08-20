@@ -50,11 +50,11 @@ class UnlimitedOCRConfig:
                 raise SystemExit(f"{name} must be an integer, got {value!r}") from exc
 
         return cls(
-            ak=required("DOC_PAGE_EXTRACTOR_UNLIMITED_OCR_AK"),
-            sk=required("DOC_PAGE_EXTRACTOR_UNLIMITED_OCR_SK"),
-            base_url=os.environ.get("DOC_PAGE_EXTRACTOR_UNLIMITED_OCR_BASE_URL", "https://aip.baidubce.com").strip(),
-            poll_interval_seconds=optional_float("DOC_PAGE_EXTRACTOR_UNLIMITED_OCR_POLL_INTERVAL_SECONDS", 2.0),
-            timeout_seconds=optional_int("DOC_PAGE_EXTRACTOR_UNLIMITED_OCR_TIMEOUT_SECONDS", 180),
+            ak=required("DPE_UNLIMITED_OCR_ACCESS_KEY"),
+            sk=required("DPE_UNLIMITED_OCR_SECRET_KEY"),
+            base_url=os.environ.get("DPE_UNLIMITED_OCR_BASE_URL", "https://aip.baidubce.com").strip(),
+            poll_interval_seconds=optional_float("DPE_UNLIMITED_OCR_POLL_INTERVAL_SECONDS", 2.0),
+            timeout_seconds=optional_int("DPE_UNLIMITED_OCR_TIMEOUT_SECONDS", 180),
         )
 
 

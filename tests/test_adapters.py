@@ -22,9 +22,9 @@ class TestAdapters(unittest.TestCase):
         with patch.dict(
             "os.environ",
             {
-                "DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_BASE_URL": "https://example.test/openai",
-                "DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_API_KEY": "test-key",
-                "DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_MODEL": "deepseek-ocr2",
+                "DPE_DEEPSEEK_OCR2_BASE_URL": "https://example.test/openai",
+                "DPE_DEEPSEEK_OCR2_API_KEY": "test-key",
+                "DPE_DEEPSEEK_OCR2_MODEL": "deepseek-ocr2",
             },
             clear=False,
         ):

@@ -18,10 +18,10 @@ DeepSeek 本地 CUDA 路径可以继续保留 `download()`、`load()` 和 `unloa
 
 本地 `.env` 不再使用单个互斥后端字段，而是同时保存多个后端配置：
 
-- `DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR_VENDOR_*`：DeepSeek OCR Vendor。
-- `DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_*`：DeepSeek OCR 2 Vendor。
-- `DOC_PAGE_EXTRACTOR_UNLIMITED_OCR_*`：Unlimited OCR。
-- `DOC_PAGE_EXTRACTOR_MODEL_PATH` 和 `DOC_PAGE_EXTRACTOR_LOCAL_ONLY`：DeepSeek 本地 Hugging Face 路径。
+- `DPE_DEEPSEEK_OCR_*`：DeepSeek OCR Vendor。
+- `DPE_DEEPSEEK_OCR2_*`：DeepSeek OCR 2 Vendor。
+- `DPE_UNLIMITED_OCR_*`：Unlimited OCR。
+- `DPE_DEEPSEEK_LOCAL_MODEL_PATH` 和 `DPE_DEEPSEEK_LOCAL_ONLY`：DeepSeek 本地 Hugging Face 路径。
 
 这只是当前脚本和后续开发适配器的约定；库代码本身不会自动读取 `.env`。
 

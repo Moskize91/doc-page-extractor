@@ -31,10 +31,10 @@ For VGE/Conductor worktrees, `setup` creates `.env` automatically from `.env.tem
 
 `.env` now stores multiple backend configurations at the same time:
 
-- `DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR_VENDOR_*` for DeepSeek OCR Vendor.
-- `DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_*` for DeepSeek OCR 2 Vendor.
-- `DOC_PAGE_EXTRACTOR_UNLIMITED_OCR_*` for Unlimited OCR.
-- `DOC_PAGE_EXTRACTOR_MODEL_PATH` and `DOC_PAGE_EXTRACTOR_LOCAL_ONLY` for the local CUDA path.
+- `DPE_DEEPSEEK_OCR_*` for DeepSeek OCR Vendor.
+- `DPE_DEEPSEEK_OCR2_*` for DeepSeek OCR 2 Vendor.
+- `DPE_UNLIMITED_OCR_*` for Unlimited OCR.
+- `DPE_DEEPSEEK_LOCAL_MODEL_PATH` and `DPE_DEEPSEEK_LOCAL_ONLY` for the local CUDA path.
 
 ## Development Workflow
 

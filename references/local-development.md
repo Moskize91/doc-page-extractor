@@ -42,10 +42,10 @@ Conductor 不会从仓库外的隐藏路径复制私有配置。需要真实远�
 
 `.env` 现在同时保存多个后端的私有配置，脚本或开发适配器按自己的 `--adapter` 参数读取对应字段：
 
-- `DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR_VENDOR_*`：DeepSeek OCR Vendor。
-- `DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_*`：DeepSeek OCR 2 Vendor。
-- `DOC_PAGE_EXTRACTOR_UNLIMITED_OCR_*`：Unlimited OCR。
-- `DOC_PAGE_EXTRACTOR_MODEL_PATH` 和 `DOC_PAGE_EXTRACTOR_LOCAL_ONLY`：DeepSeek 本地 Hugging Face 路径。
+- `DPE_DEEPSEEK_OCR_*`：DeepSeek OCR Vendor。
+- `DPE_DEEPSEEK_OCR2_*`：DeepSeek OCR 2 Vendor。
+- `DPE_UNLIMITED_OCR_*`：Unlimited OCR。
+- `DPE_DEEPSEEK_LOCAL_MODEL_PATH` 和 `DPE_DEEPSEEK_LOCAL_ONLY`：DeepSeek 本地 Hugging Face 路径。
 
 ## 验证命令
 
