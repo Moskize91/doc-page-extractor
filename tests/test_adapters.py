@@ -25,6 +25,7 @@ class TestAdapters(unittest.TestCase):
         )
 
         self.assertEqual(config.base_url, "https://example.test/openai")
+        self.assertEqual(config.api_key, "test-key")
         self.assertEqual(config.model, "deepseek-ocr2")
 
     def test_vendor_chat_completions_url_accepts_both_base_forms(self):

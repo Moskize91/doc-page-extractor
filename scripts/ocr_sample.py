@@ -97,8 +97,13 @@ def _deepseek_ocr_vendor_config_from_env() -> DeepSeekOCRVendorConfig:
         model=_required_env("DEEPSEEK_OCR_MODEL"),
         temperature=_optional_float_env("DEEPSEEK_OCR_TEMPERATURE"),
         top_p=_optional_float_env("DEEPSEEK_OCR_TOP_P"),
-        max_tokens=_optional_int_env("DEEPSEEK_OCR_MAX_TOKENS", 8000),
-        timeout_seconds=_optional_int_env("DEEPSEEK_OCR_TIMEOUT_SECONDS", 180),
+        max_tokens=_optional_int_env(
+            "DEEPSEEK_OCR_MAX_TOKENS", DeepSeekOCRVendorConfig.max_tokens
+        ),
+        timeout_seconds=_optional_int_env(
+            "DEEPSEEK_OCR_TIMEOUT_SECONDS",
+            DeepSeekOCRVendorConfig.timeout_seconds,
+        ),
     )
 
 
@@ -109,8 +114,13 @@ def _deepseek_ocr2_vendor_config_from_env() -> DeepSeekOCR2VendorConfig:
         model=_required_env("DEEPSEEK_OCR2_MODEL"),
         temperature=_optional_float_env("DEEPSEEK_OCR2_TEMPERATURE"),
         top_p=_optional_float_env("DEEPSEEK_OCR2_TOP_P"),
-        max_tokens=_optional_int_env("DEEPSEEK_OCR2_MAX_TOKENS", 8000),
-        timeout_seconds=_optional_int_env("DEEPSEEK_OCR2_TIMEOUT_SECONDS", 180),
+        max_tokens=_optional_int_env(
+            "DEEPSEEK_OCR2_MAX_TOKENS", DeepSeekOCR2VendorConfig.max_tokens
+        ),
+        timeout_seconds=_optional_int_env(
+            "DEEPSEEK_OCR2_TIMEOUT_SECONDS",
+            DeepSeekOCR2VendorConfig.timeout_seconds,
+        ),
     )
 
 
@@ -118,9 +128,16 @@ def _unlimited_ocr_config_from_env() -> UnlimitedOCRConfig:
     return UnlimitedOCRConfig(
         ak=_required_env("UNLIMITED_OCR_ACCESS_KEY"),
         sk=_required_env("UNLIMITED_OCR_SECRET_KEY"),
-        base_url=os.environ.get("UNLIMITED_OCR_BASE_URL", "https://aip.baidubce.com").strip(),
-        poll_interval_seconds=_optional_float_env("UNLIMITED_OCR_POLL_INTERVAL_SECONDS", 2.0),
-        timeout_seconds=_optional_int_env("UNLIMITED_OCR_TIMEOUT_SECONDS", 180),
+        base_url=os.environ.get(
+            "UNLIMITED_OCR_BASE_URL", UnlimitedOCRConfig.base_url
+        ).strip(),
+        poll_interval_seconds=_optional_float_env(
+            "UNLIMITED_OCR_POLL_INTERVAL_SECONDS",
+            UnlimitedOCRConfig.poll_interval_seconds,
+        ),
+        timeout_seconds=_optional_int_env(
+            "UNLIMITED_OCR_TIMEOUT_SECONDS", UnlimitedOCRConfig.timeout_seconds
+        ),
     )
 
 
