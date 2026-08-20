@@ -57,8 +57,6 @@ USAGE:
 import threading
 from typing import Any
 
-from transformers import StoppingCriteria
-
 from .types import ExtractionContext
 from .extraction_context import AbortStoppingCriteria
 
@@ -72,7 +70,7 @@ def preprocess_model(model: Any) -> Any:
     def thread_safe_generate(*args, **kwargs):
         stopping_criteria = getattr(_LOCAL, _LOCAL_KEY, None)
         if stopping_criteria is not None:
-            stopping: list[StoppingCriteria] = kwargs.get("stopping_criteria", [])
+            stopping: list[Any] = kwargs.get("stopping_criteria", [])
             stopping.append(stopping_criteria)
             kwargs["stopping_criteria"] = stopping
         return original_generate(*args, **kwargs)

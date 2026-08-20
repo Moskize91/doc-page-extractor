@@ -14,7 +14,8 @@ def check_env() -> None:
         import torch
     except ImportError:
         warnings.warn(
-            "This package requires PyTorch to run. Install it with: pip install torch torchvision",
+            "Local OCR backends require PyTorch. Install it with: "
+            "pip install torch torchvision",
             RuntimeWarning,
             stacklevel=2,
         )
@@ -28,7 +29,7 @@ def check_env() -> None:
   CUDA is not available!
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  This package requires CUDA to run, but torch.cuda.is_available() returned False.
+  Local OCR backends require CUDA, but torch.cuda.is_available() returned False.
 
   Possible causes:
   1. You installed CPU-only PyTorch. Reinstall with CUDA support:

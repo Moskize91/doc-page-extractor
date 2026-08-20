@@ -1,5 +1,4 @@
 from typing import Any, Callable, cast
-from transformers import StoppingCriteria
 
 from .types import ExtractionContext
 
@@ -19,7 +18,7 @@ class TokenLimitError(ExtractionAbortedError):
     pass
 
 
-class AbortStoppingCriteria(StoppingCriteria):
+class AbortStoppingCriteria:
     def __init__(self, context: ExtractionContext) -> None:
         super().__init__()
         self._raw_context: ExtractionContext = context

@@ -9,6 +9,11 @@ DeepSeek OCR 后端。`deepseek-ocr` 使用 `DeepSeekOCRHuggingFaceModel`，
 使用 `UnlimitedOCRHuggingFaceModel`。本地后端通过 Hugging Face 下载并
 加载模型，运行时需要 CUDA。
 
+默认包安装只包含 Vendor 和通用抽取依赖，不安装 Hugging Face 本地运行时。
+本地后端需要安装 `doc-page-extractor[local]` 或在 Poetry 开发环境中使用
+`poetry install -E local`。本库不声明 CUDA PyTorch 轮子；使用本地后端前
+应先按机器 CUDA 版本安装 `torch`/`torchvision`。
+
 从 API 角度看，模型缓存路径是可选的；生产部署应显式提供。使用
 `local_only=True` 时，必须提供 `model_path`，且其中需要包含对应模型的
 Hugging Face 缓存结构。
@@ -52,6 +57,8 @@ Adapter 协议还要求实现 `download()`、`load()` 和 `allows_multi_stage`�
 ## CUDA 路径规则
 
 - `model.py` 是唯一应该为了 CUDA 模型加载而 import torch 的模块。
+- Hugging Face、Transformers、readerwriterlock 等 local 依赖只能在显式
+  local 工厂、下载脚本或真实 local 加载路径中触发。
 - `check_env()` 的 warning 不是完整运行时保护；无 CUDA 的硬失败发生在 `_ensure_models()`。
 - 普通 import、测试、lint 或包构建过程中不得下载模型。
 - `download.py` 和 `main.py` 是真实后端手动脚本，不应成为 macOS 开发的必要步骤。
