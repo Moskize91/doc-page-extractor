@@ -6,7 +6,12 @@ from pathlib import Path
 
 from PIL import Image
 
-from doc_page_extractor import ExtractionContext, create_ocr_page_extractor, plot
+from doc_page_extractor import (
+    ExtractionContext,
+    create_deepseek_ocr_page_extractor,
+    create_unlimited_ocr_page_extractor,
+    plot,
+)
 
 _IMAGE_STEM = "friendly-title"
 _ABORT_TIMEOUT = 9999.0  # seconds
@@ -20,11 +25,7 @@ def main() -> None:
     model_path = args.model_path
     if not model_path.is_absolute():
         model_path = project_root / model_path
-    extractor = create_ocr_page_extractor(
-        ocr_model=args.ocr_model,
-        model_path=model_path,
-        local_only=args.local_only,
-    )
+    extractor = _create_extractor(args.ocr_model, model_path, args.local_only)
     begin_at = time.time()
     extractor.load_ocr_model()
     print(f"Models loaded in {time.time() - begin_at:.2f} seconds.")
@@ -71,7 +72,7 @@ def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run local OCR extraction.")
     parser.add_argument(
         "--ocr-model",
-        choices=("deepseek-ocr", "deepseek-ocr2"),
+        choices=("deepseek-ocr", "deepseek-ocr2", "unlimited-ocr"),
         default="deepseek-ocr",
         help="Local OCR model to use. Default: deepseek-ocr",
     )
@@ -96,7 +97,7 @@ def _parse_args() -> argparse.Namespace:
         "--size",
         choices=("tiny", "small", "base", "large", "gundam"),
         default="gundam",
-        help="DeepSeek-OCR size preset. Default: gundam",
+        help="OCR size preset. Unlimited OCR local supports base and gundam. Default: gundam",
     )
     parser.add_argument(
         "--stages",
@@ -105,6 +106,19 @@ def _parse_args() -> argparse.Namespace:
         help="Extraction stages. Default: 2",
     )
     return parser.parse_args()
+
+
+def _create_extractor(ocr_model: str, model_path: Path, local_only: bool):
+    if ocr_model == "unlimited-ocr":
+        return create_unlimited_ocr_page_extractor(
+            model_path=model_path,
+            local_only=local_only,
+        )
+    return create_deepseek_ocr_page_extractor(
+        ocr_model=ocr_model,  # type: ignore[arg-type]
+        model_path=model_path,
+        local_only=local_only,
+    )
 
 
 if __name__ == "__main__":

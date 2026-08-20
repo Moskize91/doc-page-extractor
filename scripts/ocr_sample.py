@@ -18,10 +18,11 @@ from doc_page_extractor import (
     DeepSeekOCRVendorAdapter,
     DeepSeekOCRVendorConfig,
     ExtractionContext,
-    UnlimitedOCRAdapter,
-    UnlimitedOCRConfig,
-    create_ocr_page_extractor,
+    UnlimitedOCRVendorConfig,
+    create_deepseek_ocr_page_extractor,
     create_page_extractor_with_adapter,
+    create_unlimited_ocr_page_extractor,
+    create_unlimited_ocr_vendor_page_extractor,
 )
 
 _DEFAULT_IMAGE = Path("tests/images/friendly-title.png")
@@ -54,8 +55,13 @@ def main() -> None:
         _print_result(result)
         return
 
-    if args.adapter == "unlimited-ocr":
-        result = _run_unlimited_ocr(image_path, args.size, args.limit)
+    if args.adapter == "unlimited-ocr-vendor":
+        result = _run_unlimited_ocr_vendor(image_path, args.size, args.limit)
+        _print_result(result)
+        return
+
+    if args.adapter == "unlimited-ocr-local":
+        result = _run_unlimited_ocr_local(project_root, image_path, args.size, args.limit)
         _print_result(result)
         return
 
@@ -72,7 +78,17 @@ def main() -> None:
         deepseek_ocr2_local_result = _run_deepseek_ocr2_local(
             project_root, image_path, args.size, args.limit
         )
-        unlimited_ocr_result = _run_unlimited_ocr(image_path, args.size, args.limit)
+        unlimited_ocr_vendor_result = _run_unlimited_ocr_vendor(
+            image_path,
+            args.size,
+            args.limit,
+        )
+        unlimited_ocr_local_result = _run_unlimited_ocr_local(
+            project_root,
+            image_path,
+            args.size,
+            args.limit,
+        )
         print(json.dumps({
             "adapter": "all",
             "image": str(image_path),
@@ -80,7 +96,8 @@ def main() -> None:
             "deepseek_ocr2_vendor": deepseek_ocr2_result,
             "deepseek_ocr_local": deepseek_ocr_local_result,
             "deepseek_ocr2_local": deepseek_ocr2_local_result,
-            "unlimited_ocr": unlimited_ocr_result,
+            "unlimited_ocr_vendor": unlimited_ocr_vendor_result,
+            "unlimited_ocr_local": unlimited_ocr_local_result,
         }, ensure_ascii=False, indent=2))
         return
 
@@ -106,10 +123,10 @@ def _run_deepseek_ocr2_vendor(
 def _run_deepseek_ocr_local(
     project_root: Path, image_path: Path, size: str, limit: int
 ) -> dict[str, Any]:
-    extractor = create_ocr_page_extractor(
+    extractor = create_deepseek_ocr_page_extractor(
         ocr_model="deepseek-ocr",
-        model_path=project_root / "models-cache",
-        local_only=True,
+        model_path=_local_model_path(project_root, "DEEPSEEK_LOCAL_MODEL_PATH"),
+        local_only=_optional_bool_env("DEEPSEEK_LOCAL_ONLY", True),
     )
     return _run_extractor("deepseek-ocr-local", extractor, image_path, size, limit)
 
@@ -117,18 +134,30 @@ def _run_deepseek_ocr_local(
 def _run_deepseek_ocr2_local(
     project_root: Path, image_path: Path, size: str, limit: int
 ) -> dict[str, Any]:
-    extractor = create_ocr_page_extractor(
+    extractor = create_deepseek_ocr_page_extractor(
         ocr_model="deepseek-ocr2",
-        model_path=project_root / "models-cache",
-        local_only=True,
+        model_path=_local_model_path(project_root, "DEEPSEEK_LOCAL_MODEL_PATH"),
+        local_only=_optional_bool_env("DEEPSEEK_LOCAL_ONLY", True),
     )
     return _run_extractor("deepseek-ocr2-local", extractor, image_path, size, limit)
 
 
-def _run_unlimited_ocr(image_path: Path, size: str, limit: int) -> dict[str, Any]:
-    config = _unlimited_ocr_config_from_env()
-    extractor = create_page_extractor_with_adapter(UnlimitedOCRAdapter(config))
-    return _run_extractor("unlimited-ocr", extractor, image_path, size, limit)
+def _run_unlimited_ocr_vendor(
+    image_path: Path, size: str, limit: int
+) -> dict[str, Any]:
+    config = _unlimited_ocr_vendor_config_from_env()
+    extractor = create_unlimited_ocr_vendor_page_extractor(config)
+    return _run_extractor("unlimited-ocr-vendor", extractor, image_path, size, limit)
+
+
+def _run_unlimited_ocr_local(
+    project_root: Path, image_path: Path, size: str, limit: int
+) -> dict[str, Any]:
+    extractor = create_unlimited_ocr_page_extractor(
+        model_path=_local_model_path(project_root, "UNLIMITED_LOCAL_MODEL_PATH"),
+        local_only=_optional_bool_env("UNLIMITED_LOCAL_ONLY", True),
+    )
+    return _run_extractor("unlimited-ocr-local", extractor, image_path, size, limit)
 
 
 def _deepseek_ocr_vendor_config_from_env() -> DeepSeekOCRVendorConfig:
@@ -165,19 +194,19 @@ def _deepseek_ocr2_vendor_config_from_env() -> DeepSeekOCR2VendorConfig:
     )
 
 
-def _unlimited_ocr_config_from_env() -> UnlimitedOCRConfig:
-    return UnlimitedOCRConfig(
+def _unlimited_ocr_vendor_config_from_env() -> UnlimitedOCRVendorConfig:
+    return UnlimitedOCRVendorConfig(
         ak=_required_env("UNLIMITED_OCR_ACCESS_KEY"),
         sk=_required_env("UNLIMITED_OCR_SECRET_KEY"),
         base_url=os.environ.get(
-            "UNLIMITED_OCR_BASE_URL", UnlimitedOCRConfig.base_url
+            "UNLIMITED_OCR_BASE_URL", UnlimitedOCRVendorConfig.base_url
         ).strip(),
         poll_interval_seconds=_optional_float_env(
             "UNLIMITED_OCR_POLL_INTERVAL_SECONDS",
-            UnlimitedOCRConfig.poll_interval_seconds,
+            UnlimitedOCRVendorConfig.poll_interval_seconds,
         ),
         timeout_seconds=_optional_int_env(
-            "UNLIMITED_OCR_TIMEOUT_SECONDS", UnlimitedOCRConfig.timeout_seconds
+            "UNLIMITED_OCR_TIMEOUT_SECONDS", UnlimitedOCRVendorConfig.timeout_seconds
         ),
     )
 
@@ -241,7 +270,8 @@ def _parse_args() -> argparse.Namespace:
             "deepseek-ocr2-vendor",
             "deepseek-ocr-local",
             "deepseek-ocr2-local",
-            "unlimited-ocr",
+            "unlimited-ocr-vendor",
+            "unlimited-ocr-local",
             "all",
         ),
         required=True,
@@ -257,7 +287,10 @@ def _parse_args() -> argparse.Namespace:
         "--size",
         choices=("tiny", "small", "base", "large", "gundam"),
         default=_DEFAULT_SIZE,
-        help=f"DeepSeek-OCR size preset. Default: {_DEFAULT_SIZE}",
+        help=(
+            "OCR size preset. Unlimited OCR local supports base and gundam. "
+            f"Default: {_DEFAULT_SIZE}"
+        ),
     )
     parser.add_argument(
         "--limit",
@@ -304,6 +337,22 @@ def _optional_int_env(name: str, default: int) -> int:
         return int(value)
     except ValueError as exc:
         raise SystemExit(f"{name} must be an integer, got {value!r}") from exc
+
+
+def _optional_bool_env(name: str, default: bool) -> bool:
+    value = os.environ.get(name, "").strip().lower()
+    if not value:
+        return default
+    if value in {"1", "true", "yes", "on"}:
+        return True
+    if value in {"0", "false", "no", "off"}:
+        return False
+    raise SystemExit(f"{name} must be a boolean, got {value!r}")
+
+
+def _local_model_path(project_root: Path, env_name: str) -> Path:
+    configured = Path(os.environ.get(env_name, "models-cache").strip())
+    return configured if configured.is_absolute() else project_root / configured
 
 
 def _resolve_path(project_root: Path, path: Path) -> Path:

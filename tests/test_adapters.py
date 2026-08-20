@@ -1,6 +1,9 @@
 import unittest
 
-from doc_page_extractor.adapters.unlimited import parse_unlimited_ocr_layouts
+from doc_page_extractor.adapters.unlimited import (
+    parse_unlimited_ocr_layouts,
+    parse_unlimited_ocr_local_layouts,
+)
 from doc_page_extractor.adapters.deepseek import (
     DeepSeekOCR2VendorConfig,
     _vendor_chat_completions_url,
@@ -159,7 +162,7 @@ class TestAdapters(unittest.TestCase):
         self.assertEqual(layouts[0].text, "第二章 鸿商巨贾")
         self.assertEqual(layouts[0].kind, LayoutKind.TITLE)
         self.assertEqual(layouts[0].type, "paragraph_title")
-        self.assertEqual(layouts[0].source, "unlimited-ocr")
+        self.assertEqual(layouts[0].source, "unlimited-ocr-vendor")
         self.assertEqual(layouts[1].kind, LayoutKind.TEXT)
         self.assertEqual(layouts[1].det, (158, 510, 1360, 1068))
 
@@ -219,6 +222,29 @@ class TestAdapters(unittest.TestCase):
             block for block in structured.blocks if block.kind == LayoutKind.TABLE
         )
         self.assertEqual(table_block.children[0].kind, LayoutKind.TABLE_CAPTION)
+
+    def test_unlimited_ocr_local_layouts_from_det_blocks(self):
+        image = _StubImage(999, 1998)
+        response = (
+            "<|det|>title [100, 100, 500, 200]<|/det|>Chapter 1\n"
+            "<|det|>text [100, 220, 800, 400]<|/det|>Line one\n"
+            "Line two\n"
+            "<|det|>table [100, 500, 800, 900]<|/det|>"
+            "<table><tr><td>A</td></tr></table>"
+        )
+
+        layouts = parse_unlimited_ocr_local_layouts(image, response)
+        structured = build_structured_page(layouts)
+
+        self.assertEqual(len(layouts), 3)
+        self.assertEqual(layouts[0].kind, LayoutKind.TITLE)
+        self.assertEqual(layouts[0].det, (100, 200, 500, 400))
+        self.assertEqual(layouts[0].source, "unlimited-ocr")
+        self.assertEqual(layouts[1].kind, LayoutKind.TEXT)
+        self.assertEqual(layouts[1].text, "Line one\nLine two")
+        self.assertEqual(layouts[2].kind, LayoutKind.TABLE)
+        self.assertEqual(layouts[2].html, "<table><tr><td>A</td></tr></table>")
+        self.assertEqual(structured.blocks[2].kind, LayoutKind.TABLE)
 
 
 if __name__ == "__main__":

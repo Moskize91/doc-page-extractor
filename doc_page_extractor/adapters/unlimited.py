@@ -1,10 +1,12 @@
 import base64
+import ast
 import json
+import re
 import time
 import urllib.parse
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING, Protocol
 
 from ..structure import unlimited_ocr_type_to_kind, build_structured_page
 from ..types import DeepSeekOCRSize, ExtractionContext, Layout, OCRPageResult
@@ -12,9 +14,36 @@ from ..types import DeepSeekOCRSize, ExtractionContext, Layout, OCRPageResult
 if TYPE_CHECKING:
     import requests
 
+_LOCAL_PROMPT = "<image>document parsing."
+_LOCAL_DET_PATTERN = re.compile(
+    r"<\|det\|>\s*"
+    r"(?P<type>[A-Za-z_][\w-]*)"
+    r"\s*(?P<coords>\[[\s\S]*?\])?"
+    r"\s*<\|/det\|>",
+)
+
+
+class _LocalUnlimitedModel(Protocol):
+    def download(self, revision: str | None) -> None:
+        ...
+
+    def load(self) -> None:
+        ...
+
+    def generate(
+        self,
+        prompt: str,
+        image_path: Path,
+        output_path: Path,
+        size: DeepSeekOCRSize,
+        context: ExtractionContext | None,
+        device_number: int | None,
+    ) -> str:
+        ...
+
 
 @dataclass
-class UnlimitedOCRConfig:
+class UnlimitedOCRVendorConfig:
     ak: str
     sk: str
     base_url: str = "https://aip.baidubce.com"
@@ -22,11 +51,11 @@ class UnlimitedOCRConfig:
     timeout_seconds: int = 180
 
 
-class UnlimitedOCRAdapter:
+class UnlimitedOCRVendorAdapter:
     allows_multi_stage = False
     max_image_side = 8192
 
-    def __init__(self, config: UnlimitedOCRConfig) -> None:
+    def __init__(self, config: UnlimitedOCRVendorConfig) -> None:
         self._config = config
         self._access_token: str | None = None
 
@@ -56,10 +85,13 @@ class UnlimitedOCRAdapter:
             )
 
         parse_result = self._download_parse_result(parse_url)
-        layouts = parse_unlimited_ocr_layouts(parse_result)
+        layouts = parse_unlimited_ocr_layouts(
+            parse_result,
+            source="unlimited-ocr-vendor",
+        )
         return OCRPageResult(
             layouts=layouts,
-            source="unlimited-ocr",
+            source="unlimited-ocr-vendor",
             structured=build_structured_page(layouts),
             raw={
                 "task_id": task_id,
@@ -189,7 +221,57 @@ class UnlimitedOCRAdapter:
         return data
 
 
-def parse_unlimited_ocr_layouts(parse_result: dict[str, Any]) -> list[Layout]:
+class UnlimitedModelOCRAdapter:
+    allows_multi_stage = False
+    prompt = _LOCAL_PROMPT
+
+    def __init__(self, model: _LocalUnlimitedModel, source: str = "unlimited-ocr") -> None:
+        self._model = model
+        self._source = source
+
+    def download(self, revision: str | None) -> None:
+        self._model.download(revision)
+
+    def load(self) -> None:
+        self._model.load()
+
+    def extract_page(
+        self,
+        prompt: str,
+        image_path: Path,
+        output_path: Path,
+        size: DeepSeekOCRSize,
+        context: ExtractionContext | None,
+        device_number: int | None,
+    ) -> OCRPageResult:
+        response = self._model.generate(
+            prompt=prompt,
+            image_path=image_path,
+            output_path=output_path,
+            size=size,
+            context=context,
+            device_number=device_number,
+        )
+        from PIL import Image
+
+        with Image.open(image_path) as image:
+            layouts = parse_unlimited_ocr_local_layouts(
+                image,
+                response,
+                source=self._source,
+            )
+        return OCRPageResult(
+            layouts=layouts,
+            source=self._source,
+            structured=build_structured_page(layouts),
+            raw_text=response,
+        )
+
+
+def parse_unlimited_ocr_layouts(
+    parse_result: dict[str, Any],
+    source: str = "unlimited-ocr-vendor",
+) -> list[Layout]:
     layouts: list[Layout] = []
     for page in parse_result.get("pages") or []:
         for item in page.get("layouts") or []:
@@ -211,11 +293,80 @@ def parse_unlimited_ocr_layouts(parse_result: dict[str, Any]) -> list[Layout]:
                     type=layout_type,
                     polygon=_parse_polygon(item.get("polygon")),
                     html=html,
-                    source="unlimited-ocr",
+                    source=source,
                     raw=item if isinstance(item, dict) else None,
                 )
             )
     return layouts
+
+
+def parse_unlimited_ocr_local_layouts(
+    image: Any,
+    response: str,
+    source: str = "unlimited-ocr",
+) -> list[Layout]:
+    width, height = image.size
+    layouts: list[Layout] = []
+    matches = list(_LOCAL_DET_PATTERN.finditer(response))
+
+    for index, matched in enumerate(matches):
+        next_start = matches[index + 1].start() if index + 1 < len(matches) else len(response)
+        layout_type = matched.group("type")
+        text = response[matched.end():next_start].strip("\n") or None
+        for det in _parse_local_dets(matched.group("coords"), width, height):
+            kind = unlimited_ocr_type_to_kind(layout_type, text)
+            layouts.append(
+                Layout(
+                    det=det,
+                    text=text,
+                    kind=kind,
+                    type=layout_type,
+                    html=text if kind.value == "table" and _looks_like_html_table(text) else None,
+                    source=source,
+                    raw={
+                        "type": layout_type,
+                        "coords": matched.group("coords"),
+                    },
+                )
+            )
+    return layouts
+
+
+def _parse_local_dets(
+    raw_coords: str | None,
+    width: int,
+    height: int,
+) -> list[tuple[int, int, int, int]]:
+    if raw_coords is None:
+        return []
+    try:
+        parsed = ast.literal_eval(raw_coords)
+    except (SyntaxError, ValueError):
+        return []
+    if not isinstance(parsed, list):
+        return []
+    boxes = parsed if parsed and isinstance(parsed[0], list) else [parsed]
+    dets: list[tuple[int, int, int, int]] = []
+    for box in boxes:
+        if not isinstance(box, list) or len(box) < 4:
+            continue
+        try:
+            x1_norm, y1_norm, x2_norm, y2_norm = [float(part) for part in box[:4]]
+        except (TypeError, ValueError):
+            continue
+        det = (
+            round(x1_norm / 999 * width),
+            round(y1_norm / 999 * height),
+            round(x2_norm / 999 * width),
+            round(y2_norm / 999 * height),
+        )
+        if det[2] > det[0] and det[3] > det[1]:
+            dets.append(det)
+    return dets
+
+
+def _looks_like_html_table(text: str | None) -> bool:
+    return bool(text and text.lstrip().lower().startswith("<table"))
 
 
 def _position_to_det(value: Any) -> tuple[int, int, int, int] | None:

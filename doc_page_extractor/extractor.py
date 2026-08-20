@@ -4,7 +4,11 @@ import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Generator, Iterable
 
-from .adapters.unlimited import UnlimitedOCRAdapter, UnlimitedOCRConfig
+from .adapters.unlimited import (
+    UnlimitedModelOCRAdapter,
+    UnlimitedOCRVendorAdapter,
+    UnlimitedOCRVendorConfig,
+)
 from .adapters.deepseek import (
     DeepSeekOCR2VendorAdapter,
     DeepSeekOCR2VendorConfig,
@@ -31,7 +35,7 @@ if TYPE_CHECKING:
 _DEFAULT_PROMPT = "<image>\n<|grounding|>Convert the document to markdown."
 
 
-def create_ocr_page_extractor(
+def create_deepseek_ocr_page_extractor(
     ocr_model: DeepSeekBackend = "deepseek-ocr",
     model_path: Path | str | None = None,
     local_only: bool = False,
@@ -67,6 +71,21 @@ def create_ocr_page_extractor(
     )
 
 
+def create_unlimited_ocr_page_extractor(
+    model_path: Path | str | None = None,
+    local_only: bool = False,
+    enable_devices_numbers: Iterable[int] | None = None,
+) -> PageExtractor:
+    from .model import UnlimitedOCRHuggingFaceModel
+
+    model = UnlimitedOCRHuggingFaceModel(
+        model_path=Path(model_path) if model_path is not None else None,
+        local_only=local_only,
+        enable_devices_numbers=enable_devices_numbers,
+    )
+    return _PageExtractorImpls(UnlimitedModelOCRAdapter(model))
+
+
 def create_page_extractor_with_adapter(adapter: OCRAdapter) -> PageExtractor:
     if not isinstance(adapter, OCRAdapter):
         raise TypeError("adapter must implement OCRAdapter protocol")
@@ -85,10 +104,10 @@ def create_deepseek_ocr2_vendor_page_extractor(
     return _PageExtractorImpls(DeepSeekOCR2VendorAdapter(config))
 
 
-def create_unlimited_ocr_page_extractor(
-    config: UnlimitedOCRConfig,
+def create_unlimited_ocr_vendor_page_extractor(
+    config: UnlimitedOCRVendorConfig,
 ) -> PageExtractor:
-    return _PageExtractorImpls(UnlimitedOCRAdapter(config))
+    return _PageExtractorImpls(UnlimitedOCRVendorAdapter(config))
 
 
 class _PageExtractorImpls:
@@ -141,7 +160,7 @@ class _PageExtractorImpls:
                 )
                 try:
                     page_result = self._adapter.extract_page(
-                        prompt=_DEFAULT_PROMPT,
+                        prompt=getattr(self._adapter, "prompt", _DEFAULT_PROMPT),
                         image_path=prepared_image_path,
                         output_path=output_path,
                         size=size,

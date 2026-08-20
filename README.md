@@ -2,7 +2,8 @@
 
 Document page extraction tool that converts page images into text layouts with pixel coordinates.
 
-The default backend remains local DeepSeek OCR. Version 1.1 adds a unified OCR adapter layer with DeepSeek OCR Vendor, DeepSeek OCR 2 Vendor, and Unlimited OCR support.
+The package provides local Hugging Face OCR backends and vendor OCR adapters
+that all return the same page layout shape.
 
 ## Installation
 
@@ -10,19 +11,29 @@ The default backend remains local DeepSeek OCR. Version 1.1 adds a unified OCR a
 pip install doc-page-extractor
 ```
 
-PyTorch is not installed automatically. You only need CUDA PyTorch when using the local DeepSeek-OCR backend.
+PyTorch is not installed automatically. You only need CUDA PyTorch when using a
+local Hugging Face OCR backend.
 
 ## Backends
 
-### Local DeepSeek OCR
+### DeepSeek OCR Local
 
-Use `create_ocr_page_extractor()` for local DeepSeek OCR models:
+Use this backend for local DeepSeek OCR or DeepSeek OCR 2 inference:
 
 ```python
-from doc_page_extractor import create_ocr_page_extractor
+from doc_page_extractor import create_deepseek_ocr_page_extractor
 
-extractor = create_ocr_page_extractor(ocr_model="deepseek-ocr")
-ocr2_extractor = create_ocr_page_extractor(ocr_model="deepseek-ocr2")
+extractor = create_deepseek_ocr_page_extractor(
+    ocr_model="deepseek-ocr",
+    model_path="models-cache",
+    local_only=True,
+)
+
+extractor2 = create_deepseek_ocr_page_extractor(
+    ocr_model="deepseek-ocr2",
+    model_path="models-cache",
+    local_only=True,
+)
 ```
 
 Install CUDA PyTorch before using this backend:
@@ -45,9 +56,26 @@ nvidia-smi
 python -c "import torch; print(torch.cuda.is_available())"
 ```
 
+### Unlimited OCR Local
+
+Use this backend for local Unlimited OCR Transformers inference:
+
+```python
+from doc_page_extractor import create_unlimited_ocr_page_extractor
+
+extractor = create_unlimited_ocr_page_extractor(
+    model_path="models-cache",
+    local_only=True,
+)
+```
+
+The local Unlimited OCR backend uses the Hugging Face model
+`baidu/Unlimited-OCR`. Single-page local inference supports the `base` and
+`gundam` size presets.
+
 ### DeepSeek OCR Vendor
 
-Use this backend when DeepSeek OCR is exposed through an OpenAI-style endpoint:
+Use this backend when DeepSeek OCR is exposed through an OpenAI-compatible endpoint:
 
 ```python
 from doc_page_extractor import (
@@ -79,7 +107,7 @@ DEEPSEEK_OCR_TIMEOUT_SECONDS=180
 
 ### DeepSeek OCR 2 Vendor
 
-Use this backend for DeepSeek OCR 2 through an OpenAI-style endpoint:
+Use this backend for DeepSeek OCR 2 through an OpenAI-compatible endpoint:
 
 ```python
 from doc_page_extractor import (
@@ -109,15 +137,18 @@ DEEPSEEK_OCR2_MAX_TOKENS=8000
 DEEPSEEK_OCR2_TIMEOUT_SECONDS=180
 ```
 
-### Unlimited OCR
+### Unlimited OCR Vendor
 
-Use this backend for Unlimited OCR:
+Use this backend for Baidu Cloud Unlimited OCR:
 
 ```python
-from doc_page_extractor import UnlimitedOCRConfig, create_unlimited_ocr_page_extractor
+from doc_page_extractor import (
+    UnlimitedOCRVendorConfig,
+    create_unlimited_ocr_vendor_page_extractor,
+)
 
-extractor = create_unlimited_ocr_page_extractor(
-    UnlimitedOCRConfig(
+extractor = create_unlimited_ocr_vendor_page_extractor(
+    UnlimitedOCRVendorConfig(
         ak="...",
         sk="...",
     )
@@ -135,8 +166,9 @@ UNLIMITED_OCR_POLL_INTERVAL_SECONDS=2
 UNLIMITED_OCR_TIMEOUT_SECONDS=180
 ```
 
-Unlimited OCR images with a side longer than 8192 px are resized proportionally before
-upload. Returned layout coordinates are mapped back to the original image size.
+Unlimited OCR Vendor images with a side longer than 8192 px are resized
+proportionally before upload. Returned layout coordinates are mapped back to the
+original image size.
 
 ## Extraction
 
@@ -178,9 +210,15 @@ for page_image, result in extractor.extract_page_results(
             print(block.html)
 ```
 
-The structured model groups asset captions with images, tables, and equations when possible. DeepSeek output is structured from flat OCR tags; DeepSeek OCR 2 output is structured from line blocks; Unlimited OCR is normalized from richer layout JSON into the same public kinds.
+The structured model groups asset captions with images, tables, and equations
+when possible. DeepSeek output is structured from flat OCR tags; DeepSeek OCR 2
+output is structured from line blocks; Unlimited OCR local output is structured
+from local detection tags; Unlimited OCR Vendor output is normalized from richer
+layout JSON into the same public kinds.
 
-Unlimited OCR extracts footnotes directly. If `stages > 1` is requested with the Unlimited OCR adapter, the extractor emits a warning and runs a single stage because DeepSeek-style multi-stage redaction can erase footnote regions.
+Unlimited OCR extracts footnotes directly. If `stages > 1` is requested with an
+Unlimited OCR adapter, the extractor emits a warning and runs a single stage
+because DeepSeek-style multi-stage redaction can erase footnote regions.
 
 ## Development
 
@@ -191,15 +229,17 @@ Useful local commands:
 ```shell
 poetry run python test.py
 poetry run pylint --disable=import-error doc_page_extractor
-poetry run python scripts/ocr_sample.py --adapter deepseek-ocr2-vendor --image tests/images/friendly-title.png
+poetry run python scripts/ocr_sample.py --adapter unlimited-ocr-vendor --image tests/images/friendly-title.png
 ```
 
 ## Requirements
 
 - Python >= 3.10, < 3.14
-- CUDA-capable NVIDIA GPU only when using local DeepSeek-OCR
+- CUDA-capable NVIDIA GPU only when using local Hugging Face OCR backends
 - Remote OCR credentials only when using vendor OCR backends
 
 ## Dependencies & Licenses
 
-This project is licensed under the MIT License. The local DeepSeek-OCR backend depends on the DeepSeek-OCR model, which uses **easydict** (LGPLv3) for configuration management.
+This project is licensed under the MIT License. Local Hugging Face OCR backends
+depend on their upstream model code and runtime dependencies. The DeepSeek-OCR
+model uses **easydict** (LGPLv3) for configuration management.
