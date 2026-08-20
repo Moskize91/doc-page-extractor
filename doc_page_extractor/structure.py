@@ -55,7 +55,7 @@ def deepseek_ref_to_kind(ref: str | None, text: str | None = None) -> LayoutKind
         return LayoutKind.EQUATION_CAPTION
     if normalized in {"footnote"}:
         return LayoutKind.FOOTNOTE
-    return LayoutKind.UNKNOWN
+    return LayoutKind.TEXT
 
 
 def unlimited_ocr_type_to_kind(

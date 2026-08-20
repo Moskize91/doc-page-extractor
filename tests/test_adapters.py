@@ -50,7 +50,7 @@ class TestAdapters(unittest.TestCase):
         self.assertEqual(layout.ref, "标题")
         self.assertEqual(layout.det, (100, 200, 300, 400))
         self.assertEqual(layout.text, "正文")
-        self.assertEqual(layout.kind, LayoutKind.UNKNOWN)
+        self.assertEqual(layout.kind, LayoutKind.TEXT)
         self.assertEqual(layout.source, "deepseek-ocr-vendor")
 
     def test_deepseek_layouts_from_ocr2_line_blocks(self):
