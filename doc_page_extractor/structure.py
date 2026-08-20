@@ -62,27 +62,31 @@ def unlimited_ocr_type_to_kind(
     layout_type: str | None, text: str | None = None
 ) -> LayoutKind:
     normalized = (layout_type or "").strip()
-    if normalized == "text":
+    if normalized in {"text", "paragraph"}:
         if _looks_like_table_caption(text):
             return LayoutKind.TABLE_CAPTION
         return LayoutKind.TEXT
-    if normalized == "paragraph_title":
+    if normalized in {"paragraph_title", "title", "sub_title"}:
         return LayoutKind.TITLE
-    if normalized == "formula":
+    if normalized in {"formula", "equation"}:
         return LayoutKind.EQUATION
-    if normalized == "image":
+    if normalized in {"image", "figure"}:
         return LayoutKind.IMAGE
-    if normalized == "figure_title":
+    if normalized in {"figure_title", "image_caption", "figure_caption"}:
+        if _looks_like_table_caption(text):
+            return LayoutKind.TABLE_CAPTION
         return LayoutKind.IMAGE_CAPTION
     if normalized == "table":
         return LayoutKind.TABLE
-    if normalized == "footnote":
+    if normalized == "table_caption":
+        return LayoutKind.TABLE_CAPTION
+    if normalized in {"footnote", "page_footnote"}:
         return LayoutKind.FOOTNOTE
     if normalized == "header":
         return LayoutKind.HEADER
     if normalized == "footer":
         return LayoutKind.FOOTER
-    if normalized == "number":
+    if normalized in {"number", "page_number"}:
         if _FOOTNOTE_MARK_PATTERN.search(text or ""):
             return LayoutKind.FOOTNOTE
         return LayoutKind.PAGE_NUMBER

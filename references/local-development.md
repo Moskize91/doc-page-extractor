@@ -42,6 +42,7 @@ Conductor 不会从仓库外的隐藏路径复制私有配置。需要真实远�
 - `DEEPSEEK_OCR2_*`：DeepSeek OCR 2 Vendor。
 - `UNLIMITED_OCR_*`：Unlimited OCR。
 - `DEEPSEEK_LOCAL_MODEL_PATH` 和 `DEEPSEEK_LOCAL_ONLY`：DeepSeek 本地 Hugging Face 路径。
+- `UNLIMITED_LOCAL_MODEL_PATH` 和 `UNLIMITED_LOCAL_ONLY`：Unlimited OCR 本地 Hugging Face 路径。
 
 ## 验证命令
 
@@ -61,7 +62,7 @@ poetry run pylint --disable=import-error doc_page_extractor
 ```shell
 poetry run python scripts/ocr_sample.py --adapter deepseek-ocr-vendor --image tests/images/friendly-title.png
 poetry run python scripts/ocr_sample.py --adapter deepseek-ocr2-vendor --image tests/images/friendly-title.png
-poetry run python scripts/ocr_sample.py --adapter unlimited-ocr --image tests/images/friendly-title.png
+poetry run python scripts/ocr_sample.py --adapter unlimited-ocr-vendor --image tests/images/friendly-title.png
 ```
 
 该脚本默认读取 `tests/images/friendly-title.png`，调用指定 OCR adapter。成功输出会包含图片路径、layout 数量、前几个 layout 的稳定 `kind`、供应商原始 `type`、文本预览和耗时。可以用 `--image path/to/image.png` 指定其他图片。
@@ -76,10 +77,10 @@ poetry run python scripts/ocr_sample.py --adapter unlimited-ocr --image tests/im
 from doc_page_extractor import (
     DeepSeekOCR2VendorConfig,
     DeepSeekOCRVendorConfig,
-    UnlimitedOCRConfig,
+    UnlimitedOCRVendorConfig,
     create_deepseek_ocr2_vendor_page_extractor,
     create_deepseek_ocr_vendor_page_extractor,
-    create_unlimited_ocr_page_extractor,
+    create_unlimited_ocr_vendor_page_extractor,
 )
 
 deepseek_ocr = create_deepseek_ocr_vendor_page_extractor(
@@ -96,8 +97,8 @@ deepseek_ocr2 = create_deepseek_ocr2_vendor_page_extractor(
         model="deepseek-ocr2",
     )
 )
-unlimited_ocr = create_unlimited_ocr_page_extractor(
-    UnlimitedOCRConfig(
+unlimited_ocr = create_unlimited_ocr_vendor_page_extractor(
+    UnlimitedOCRVendorConfig(
         ak="...",
         sk="...",
     )

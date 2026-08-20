@@ -8,8 +8,9 @@ from unittest.mock import patch
 
 from doc_page_extractor import ExtractionContext, Layout, OCRPageResult
 from doc_page_extractor.extractor import (
-    create_ocr_page_extractor,
+    create_deepseek_ocr_page_extractor,
     create_page_extractor_with_adapter,
+    create_unlimited_ocr_page_extractor,
 )
 
 class _FakeImage:
@@ -176,7 +177,7 @@ class TestExtractor(unittest.TestCase):
             [(110, 220), (439, 220), (439, 659), (110, 659)],
         )
 
-    def test_ocr_page_extractor_selects_requested_model(self):
+    def test_deepseek_page_extractor_selects_requested_model(self):
         class _DeepSeek1Model:
             def __init__(self, *args, **kwargs) -> None:
                 self.args = args
@@ -215,8 +216,14 @@ class TestExtractor(unittest.TestCase):
                 "PIL": fake_pil_module,
             },
         ):
-            extractor1 = create_ocr_page_extractor("deepseek-ocr", model_path="models-cache")
-            extractor2 = create_ocr_page_extractor("deepseek-ocr2", model_path="models-cache")
+            extractor1 = create_deepseek_ocr_page_extractor(
+                "deepseek-ocr",
+                model_path="models-cache",
+            )
+            extractor2 = create_deepseek_ocr_page_extractor(
+                "deepseek-ocr2",
+                model_path="models-cache",
+            )
 
             self.assertIsInstance(extractor1._adapter._model, _DeepSeek1Model)  # type: ignore[attr-defined]
             self.assertIsInstance(extractor2._adapter._model, _DeepSeek2Model)  # type: ignore[attr-defined]
@@ -242,6 +249,51 @@ class TestExtractor(unittest.TestCase):
         self.assertEqual(result1.layouts[0].det, (10, 10, 50, 20))
         self.assertEqual(result2.layouts[0].text, "ocr2 text")
         self.assertEqual(result2.layouts[0].det, (10, 10, 50, 20))
+
+    def test_unlimited_ocr_page_extractor_uses_local_model(self):
+        class _UnlimitedModel:
+            def __init__(self, *args, **kwargs) -> None:
+                self.args = args
+                self.kwargs = kwargs
+
+            def download(self, revision: str | None) -> None:
+                del revision
+
+            def load(self) -> None:
+                pass
+
+            def unload(self) -> None:
+                pass
+
+            def generate(self, *args, **kwargs) -> str:
+                del args, kwargs
+                return "<|det|>title [100, 100, 500, 200]<|/det|>hello"
+
+        fake_model_module = types.ModuleType("doc_page_extractor.model")
+        fake_model_module.UnlimitedOCRHuggingFaceModel = _UnlimitedModel
+        fake_pil_module = types.ModuleType("PIL")
+        fake_pil_module.Image = SimpleNamespace(open=lambda _path: _FakeOpenedImage())
+        with patch.dict(
+            sys.modules,
+            {
+                "doc_page_extractor.model": fake_model_module,
+                "PIL": fake_pil_module,
+            },
+        ):
+            extractor = create_unlimited_ocr_page_extractor(model_path="models-cache")
+            result = list(
+                extractor.extract_page_results(
+                    image=_FakeImage(),  # type: ignore[arg-type]
+                    size="gundam",
+                    stages=1,
+                    context=ExtractionContext(check_aborted=lambda: False),
+                )
+            )[0][1]
+
+        self.assertIsInstance(extractor._adapter._model, _UnlimitedModel)  # type: ignore[attr-defined]
+        self.assertEqual(result.source, "unlimited-ocr")
+        self.assertEqual(result.layouts[0].text, "hello")
+        self.assertEqual(result.layouts[0].det, (10, 10, 50, 20))
 
 
 if __name__ == "__main__":

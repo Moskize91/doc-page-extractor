@@ -1,9 +1,12 @@
+from contextlib import contextmanager
 from dataclasses import dataclass
 from importlib.util import find_spec
 from pathlib import Path
+import threading
 from typing import Iterable
 
 from huggingface_hub import snapshot_download
+import huggingface_hub.constants as hf_constants
 from readerwriterlock import rwlock
 from transformers import AutoModel, AutoTokenizer
 
@@ -20,13 +23,23 @@ class _SizeConfig:
     crop_mode: bool
 
 
-_SIZE_CONFIGS: dict[DeepSeekOCRSize, _SizeConfig] = {
+_DEEPSEEK_OCR_REVISION = "9f30c71f441d010e5429c532364a86705536c53a"
+_DEEPSEEK_OCR2_REVISION = "aaa02f3811945a91062062994c5c4a3f4c0af2b0"
+_UNLIMITED_OCR_REVISION = "07dea832e22aefee32ad281d4b80551282e1c168"
+
+_DEEPSEEK_SIZE_CONFIGS: dict[DeepSeekOCRSize, _SizeConfig] = {
     "tiny": _SizeConfig(base_size=512, image_size=512, crop_mode=False),
     "small": _SizeConfig(base_size=640, image_size=640, crop_mode=False),
     "base": _SizeConfig(base_size=1024, image_size=1024, crop_mode=False),
     "large": _SizeConfig(base_size=1280, image_size=1280, crop_mode=False),
     "gundam": _SizeConfig(base_size=1024, image_size=640, crop_mode=True),
 }
+
+_UNLIMITED_SIZE_CONFIGS: dict[DeepSeekOCRSize, _SizeConfig] = {
+    "base": _SizeConfig(base_size=1024, image_size=1024, crop_mode=False),
+    "gundam": _SizeConfig(base_size=1024, image_size=640, crop_mode=True),
+}
+_DOWNLOAD_SETTINGS_LOCK = threading.Lock()
 
 _ATTN_IMPLEMENTATION: str
 if find_spec("flash_attn") is not None:
@@ -41,6 +54,12 @@ class _Models:
     llms: list[AutoModel]
 
 
+@dataclass
+class _DownloadConfig:
+    enable_hf_transfer: bool | None = None
+    disable_xet: bool | None = None
+
+
 class HuggingFaceBackend:
     def __init__(
         self,
@@ -48,7 +67,9 @@ class HuggingFaceBackend:
         model_path: Path | None,
         local_only: bool,
         enable_devices_numbers: Iterable[int] | None,
+        default_revision: str,
         attn_implementation: str | None = None,
+        download_config: _DownloadConfig | None = None,
     ) -> None:
         if local_only and model_path is None:
             raise ValueError(
@@ -56,23 +77,26 @@ class HuggingFaceBackend:
 
         self._rwlock = rwlock.RWLockFair()
         self._model_name = model_name
+        self._default_revision = default_revision
         self._model_path: Path | None = model_path
         self._local_only = local_only
         self._models: _Models | None = None
         self._enable_devices_numbers: Iterable[int] | None = enable_devices_numbers
         self._device_number_to_index: list[int | None] | None = None
         self._attn_implementation = attn_implementation or _ATTN_IMPLEMENTATION
+        self._download_config = download_config or _DownloadConfig()
 
     def download(self, revision: str | None) -> None:
         with self._rwlock.gen_wlock():
-            snapshot_download(
-                repo_id=self._model_name,
-                repo_type="model",
-                revision=revision,
-                # Keep incomplete blobs so interrupted large downloads can resume.
-                force_download=False,
-                cache_dir=self._cache_dir(),
-            )
+            with _download_settings(self._download_config):
+                snapshot_download(
+                    repo_id=self._model_name,
+                    repo_type="model",
+                    revision=revision or self._default_revision,
+                    # Keep incomplete blobs so interrupted large downloads can resume.
+                    force_download=False,
+                    cache_dir=self._cache_dir(),
+                )
             if self._model_path is not None and self._find_pretrained_path() is None:
                 raise RuntimeError(
                     f"Model downloaded but not found in expected cache structure. "
@@ -99,18 +123,8 @@ class HuggingFaceBackend:
         device_number: int | None,
     ) -> str:
 
-        models = self._ensure_models()
-        if device_number is None:
-            model_index = self._get_device_number_to_index()[0]
-        else:
-            model_index = self._get_device_number_to_index()[device_number]
-
-        if model_index is None:
-            raise ValueError(f"Device number {device_number} is not enabled.")
-
-        tokenizer = models.tokenizer
-        llm_model = models.llms[model_index]
-        config = _SIZE_CONFIGS[size]
+        tokenizer, llm_model = self._select_model(device_number)
+        config = _DEEPSEEK_SIZE_CONFIGS[size]
 
         with self._rwlock.gen_rlock():
             with InferWithInterruption(llm_model, context) as infer:
@@ -131,6 +145,18 @@ class HuggingFaceBackend:
                     eval_mode=True,
                 )
             return text_result
+
+    def _select_model(self, device_number: int | None):
+        models = self._ensure_models()
+        if device_number is None:
+            model_index = self._get_device_number_to_index()[0]
+        else:
+            model_index = self._get_device_number_to_index()[device_number]
+
+        if model_index is None:
+            raise ValueError(f"Device number {device_number} is not enabled.")
+
+        return models.tokenizer, models.llms[model_index]
 
     def _ensure_models(self) -> _Models:
         check_env()
@@ -268,6 +294,7 @@ class DeepSeekOCRHuggingFaceModel(HuggingFaceBackend):
             model_path=model_path,
             local_only=local_only,
             enable_devices_numbers=enable_devices_numbers,
+            default_revision=_DEEPSEEK_OCR_REVISION,
         )
 
 
@@ -283,5 +310,80 @@ class DeepSeekOCR2HuggingFaceModel(HuggingFaceBackend):
             model_path=model_path,
             local_only=local_only,
             enable_devices_numbers=enable_devices_numbers,
+            default_revision=_DEEPSEEK_OCR2_REVISION,
             attn_implementation="flash_attention_2" if find_spec("flash_attn") is not None else "eager",
         )
+
+
+class UnlimitedOCRHuggingFaceModel(HuggingFaceBackend):
+    def __init__(
+        self,
+        model_path: Path | None,
+        local_only: bool,
+        enable_devices_numbers: Iterable[int] | None,
+    ) -> None:
+        super().__init__(
+            model_name="baidu/Unlimited-OCR",
+            model_path=model_path,
+            local_only=local_only,
+            enable_devices_numbers=enable_devices_numbers,
+            default_revision=_UNLIMITED_OCR_REVISION,
+            download_config=_DownloadConfig(
+                enable_hf_transfer=True,
+                disable_xet=True,
+            ),
+        )
+
+    def generate(
+        self,
+        prompt: str,
+        image_path: Path,
+        output_path: Path,
+        size: DeepSeekOCRSize,
+        context: ExtractionContext | None,
+        device_number: int | None,
+    ) -> str:
+        if size not in _UNLIMITED_SIZE_CONFIGS:
+            raise ValueError("Unlimited OCR local supports only base and gundam sizes.")
+
+        tokenizer, llm_model = self._select_model(device_number)
+        config = _UNLIMITED_SIZE_CONFIGS[size]
+
+        with self._rwlock.gen_rlock():
+            with InferWithInterruption(llm_model, context) as infer:
+                text_result = infer(
+                    tokenizer,
+                    prompt=prompt,
+                    image_file=str(image_path),
+                    output_path=str(output_path),
+                    base_size=config.base_size,
+                    image_size=config.image_size,
+                    crop_mode=config.crop_mode,
+                    save_results=False,
+                    eval_mode=True,
+                    max_length=32768,
+                    no_repeat_ngram_size=35,
+                    ngram_window=128,
+                    temperature=0.0,
+                )
+
+        output_path.mkdir(parents=True, exist_ok=True)
+        raw_text = str(text_result[0] if isinstance(text_result, tuple) else text_result)
+        (output_path / "result.md").write_text(raw_text, encoding="utf-8")
+        return raw_text
+
+
+@contextmanager
+def _download_settings(config: _DownloadConfig):
+    with _DOWNLOAD_SETTINGS_LOCK:
+        original_hf_transfer = hf_constants.HF_HUB_ENABLE_HF_TRANSFER
+        original_disable_xet = hf_constants.HF_HUB_DISABLE_XET
+        try:
+            if config.enable_hf_transfer is not None:
+                hf_constants.HF_HUB_ENABLE_HF_TRANSFER = config.enable_hf_transfer
+            if config.disable_xet is not None:
+                hf_constants.HF_HUB_DISABLE_XET = config.disable_xet
+            yield
+        finally:
+            hf_constants.HF_HUB_ENABLE_HF_TRANSFER = original_hf_transfer
+            hf_constants.HF_HUB_DISABLE_XET = original_disable_xet

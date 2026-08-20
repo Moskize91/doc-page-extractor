@@ -1,6 +1,9 @@
 import unittest
 
-from doc_page_extractor.adapters.unlimited import parse_unlimited_ocr_layouts
+from doc_page_extractor.adapters.unlimited import (
+    parse_unlimited_ocr_layouts,
+    parse_unlimited_ocr_local_layouts,
+)
 from doc_page_extractor.adapters.deepseek import (
     DeepSeekOCR2VendorConfig,
     _vendor_chat_completions_url,
@@ -72,6 +75,23 @@ class TestAdapters(unittest.TestCase):
         self.assertEqual(layouts[0].kind, LayoutKind.TEXT)
         self.assertEqual(layouts[0].type, "text")
         self.assertEqual(layouts[1].text, "不过，此举产生的效果适得其反。")
+
+    def test_deepseek_ocr2_layouts_fall_back_to_token_response(self):
+        image = _StubImage(1000, 1000)
+        response = (
+            "<|ref|>text<|/ref|><|det|>[[100, 200, 300, 400]]<|/det|>"
+            "ocr2 text"
+        )
+
+        layouts = parse_deepseek_ocr2_layouts(
+            image, response, source="deepseek-ocr2"
+        )
+
+        self.assertEqual(len(layouts), 1)
+        self.assertEqual(layouts[0].det, (100, 200, 300, 400))
+        self.assertEqual(layouts[0].text, "ocr2 text")
+        self.assertEqual(layouts[0].kind, LayoutKind.TEXT)
+        self.assertEqual(layouts[0].source, "deepseek-ocr2")
 
     def test_deepseek_known_refs_are_typed(self):
         image = _StubImage(1000, 1000)
@@ -159,7 +179,7 @@ class TestAdapters(unittest.TestCase):
         self.assertEqual(layouts[0].text, "第二章 鸿商巨贾")
         self.assertEqual(layouts[0].kind, LayoutKind.TITLE)
         self.assertEqual(layouts[0].type, "paragraph_title")
-        self.assertEqual(layouts[0].source, "unlimited-ocr")
+        self.assertEqual(layouts[0].source, "unlimited-ocr-vendor")
         self.assertEqual(layouts[1].kind, LayoutKind.TEXT)
         self.assertEqual(layouts[1].det, (158, 510, 1360, 1068))
 
@@ -219,6 +239,35 @@ class TestAdapters(unittest.TestCase):
             block for block in structured.blocks if block.kind == LayoutKind.TABLE
         )
         self.assertEqual(table_block.children[0].kind, LayoutKind.TABLE_CAPTION)
+
+    def test_unlimited_ocr_local_layouts_from_det_blocks(self):
+        image = _StubImage(999, 1998)
+        response = (
+            "<|det|>title [[100, 100, 500, 200]]<|/det|>Chapter 1\n"
+            "<|det|>text [100, 220, 800, 400]<|/det|>Line one\n"
+            "Line two\n"
+            "<|det|>table [100, 500, 800, 900]<|/det|>"
+            "<table><tr><td>A</td></tr></table>"
+            "<|det|>page_footnote [100, 920, 800, 950]<|/det|>① footnote\n"
+            "<|det|>page_number [880, 960, 920, 990]<|/det|>12"
+        )
+
+        layouts = parse_unlimited_ocr_local_layouts(image, response)
+        structured = build_structured_page(layouts)
+
+        self.assertEqual(len(layouts), 5)
+        self.assertEqual(layouts[0].kind, LayoutKind.TITLE)
+        self.assertEqual(layouts[0].det, (100, 200, 500, 400))
+        self.assertEqual(layouts[0].source, "unlimited-ocr")
+        self.assertEqual(layouts[1].kind, LayoutKind.TEXT)
+        self.assertEqual(layouts[1].text, "Line one\nLine two")
+        self.assertEqual(layouts[2].kind, LayoutKind.TABLE)
+        self.assertEqual(layouts[2].html, "<table><tr><td>A</td></tr></table>")
+        self.assertEqual(layouts[3].kind, LayoutKind.FOOTNOTE)
+        self.assertEqual(layouts[4].kind, LayoutKind.PAGE_NUMBER)
+        self.assertEqual(structured.blocks[2].kind, LayoutKind.TABLE)
+        self.assertEqual(len(structured.ignored), 1)
+        self.assertEqual(structured.ignored[0].kind, LayoutKind.PAGE_NUMBER)
 
 
 if __name__ == "__main__":

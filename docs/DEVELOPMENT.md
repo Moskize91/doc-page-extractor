@@ -32,6 +32,7 @@ For VGE/Conductor worktrees, `setup` creates `.env` automatically from `.env.tem
 - `DEEPSEEK_OCR2_*` for DeepSeek OCR 2 Vendor.
 - `UNLIMITED_OCR_*` for Unlimited OCR.
 - `DEEPSEEK_LOCAL_MODEL_PATH` and `DEEPSEEK_LOCAL_ONLY` for the local CUDA path.
+- `UNLIMITED_LOCAL_MODEL_PATH` and `UNLIMITED_LOCAL_ONLY` for Unlimited OCR local.
 
 ## Development Workflow
 
@@ -51,7 +52,10 @@ poetry run pylint --disable=import-error doc_page_extractor
 
 ### macOS Model-Free Development
 
-macOS development should use `create_page_extractor_with_adapter()` for remote backend work and fake adapters. Do not call `create_ocr_page_extractor().load_ocr_model()` unless you are on a CUDA-capable Linux/NVIDIA environment.
+macOS development should use vendor factories or
+`create_page_extractor_with_adapter()` for remote backend work and fake adapters.
+Do not call local extractor `load_ocr_model()` unless you are on a
+CUDA-capable Linux/NVIDIA environment.
 
 Adapter code implements the OCR adapter protocol and returns page results directly:
 
@@ -59,10 +63,10 @@ Adapter code implements the OCR adapter protocol and returns page results direct
 from doc_page_extractor import (
     DeepSeekOCR2VendorConfig,
     DeepSeekOCRVendorConfig,
-    UnlimitedOCRConfig,
+    UnlimitedOCRVendorConfig,
     create_deepseek_ocr2_vendor_page_extractor,
     create_deepseek_ocr_vendor_page_extractor,
-    create_unlimited_ocr_page_extractor,
+    create_unlimited_ocr_vendor_page_extractor,
 )
 
 deepseek_ocr = create_deepseek_ocr_vendor_page_extractor(
@@ -79,8 +83,8 @@ deepseek_ocr2 = create_deepseek_ocr2_vendor_page_extractor(
         model="deepseek-ocr2",
     )
 )
-unlimited_ocr = create_unlimited_ocr_page_extractor(
-    UnlimitedOCRConfig(
+unlimited_ocr = create_unlimited_ocr_vendor_page_extractor(
+    UnlimitedOCRVendorConfig(
         ak="...",
         sk="...",
     )
@@ -112,7 +116,7 @@ After filling private settings in `.env`, run:
 ```shell
 poetry run python scripts/ocr_sample.py --adapter deepseek-ocr-vendor --image tests/images/friendly-title.png
 poetry run python scripts/ocr_sample.py --adapter deepseek-ocr2-vendor --image tests/images/friendly-title.png
-poetry run python scripts/ocr_sample.py --adapter unlimited-ocr --image tests/images/friendly-title.png
+poetry run python scripts/ocr_sample.py --adapter unlimited-ocr-vendor --image tests/images/friendly-title.png
 ```
 
 The sample reads `tests/images/friendly-title.png`, runs the configured OCR adapter, and prints layout summaries, including `kind`, provider `type`, text previews, and elapsed time. Use `--image path/to/image.png` to try another image.

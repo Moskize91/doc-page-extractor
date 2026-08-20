@@ -2,14 +2,14 @@
 Model Inference Interruption Injection
 
 This module provides a context manager to inject interruption capabilities into
-DeepSeek-OCR model's infer() method via monkey patching.
+local OCR model infer() methods via monkey patching.
 
 WHY WE NEED THIS HACK:
 ----------------------
-1. DeepSeek-OCR's model.infer() is a time-consuming operation (can take seconds to minutes)
+1. Local OCR model.infer() is a time-consuming operation (can take seconds to minutes)
 2. The infer() method internally calls self.generate() from transformers library
 3. transformers.generate() supports stopping_criteria for interruption control
-4. However, DeepSeek-OCR's infer() method does NOT expose this parameter
+4. However, the local OCR infer() methods do NOT expose this parameter
 5. The model code is downloaded from HuggingFace Hub with trust_remote_code=True
 6. Modifying cached files would break when model updates, so we use runtime injection
 
