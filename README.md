@@ -55,18 +55,25 @@ from doc_page_extractor import (
 )
 
 extractor = create_deepseek_ocr_vendor_page_extractor(
-    DeepSeekOCRVendorConfig.from_env()
+    DeepSeekOCRVendorConfig(
+        base_url="https://example.test/openai",
+        api_key="...",
+        model="deepseek-ocr",
+    )
 )
 ```
 
-Expected environment variables:
+The package does not read environment variables automatically. `.env.template`
+is only for local debugging scripts.
 
 ```dotenv
-DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR_VENDOR_BASE_URL=
-DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR_VENDOR_API_KEY=
-DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR_VENDOR_MODEL=deepseek-ocr
-DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR_VENDOR_TEMPERATURE=0.0
-DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR_VENDOR_TOP_P=0.7
+DEEPSEEK_OCR_BASE_URL=
+DEEPSEEK_OCR_API_KEY=
+DEEPSEEK_OCR_MODEL=deepseek-ocr
+DEEPSEEK_OCR_TEMPERATURE=0.0
+DEEPSEEK_OCR_TOP_P=0.7
+DEEPSEEK_OCR_MAX_TOKENS=8000
+DEEPSEEK_OCR_TIMEOUT_SECONDS=180
 ```
 
 ### DeepSeek OCR 2 Vendor
@@ -80,18 +87,25 @@ from doc_page_extractor import (
 )
 
 extractor = create_deepseek_ocr2_vendor_page_extractor(
-    DeepSeekOCR2VendorConfig.from_env()
+    DeepSeekOCR2VendorConfig(
+        base_url="https://example.test/openai",
+        api_key="...",
+        model="deepseek-ocr2",
+    )
 )
 ```
 
-Expected environment variables:
+The package does not read environment variables automatically. `.env.template`
+is only for local debugging scripts.
 
 ```dotenv
-DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_BASE_URL=
-DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_API_KEY=
-DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_MODEL=
-DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_TEMPERATURE=0.0
-DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_TOP_P=0.7
+DEEPSEEK_OCR2_BASE_URL=
+DEEPSEEK_OCR2_API_KEY=
+DEEPSEEK_OCR2_MODEL=
+DEEPSEEK_OCR2_TEMPERATURE=0.0
+DEEPSEEK_OCR2_TOP_P=0.7
+DEEPSEEK_OCR2_MAX_TOKENS=8000
+DEEPSEEK_OCR2_TIMEOUT_SECONDS=180
 ```
 
 ### Unlimited OCR
@@ -101,15 +115,23 @@ Use this backend for Unlimited OCR:
 ```python
 from doc_page_extractor import UnlimitedOCRConfig, create_unlimited_ocr_page_extractor
 
-extractor = create_unlimited_ocr_page_extractor(UnlimitedOCRConfig.from_env())
+extractor = create_unlimited_ocr_page_extractor(
+    UnlimitedOCRConfig(
+        ak="...",
+        sk="...",
+    )
+)
 ```
 
-Expected environment variables:
+The package does not read environment variables automatically. `.env.template`
+is only for local debugging scripts.
 
 ```dotenv
-DOC_PAGE_EXTRACTOR_UNLIMITED_OCR_AK=
-DOC_PAGE_EXTRACTOR_UNLIMITED_OCR_SK=
-DOC_PAGE_EXTRACTOR_UNLIMITED_OCR_BASE_URL=https://aip.baidubce.com
+UNLIMITED_OCR_ACCESS_KEY=
+UNLIMITED_OCR_SECRET_KEY=
+UNLIMITED_OCR_BASE_URL=https://aip.baidubce.com
+UNLIMITED_OCR_POLL_INTERVAL_SECONDS=2
+UNLIMITED_OCR_TIMEOUT_SECONDS=180
 ```
 
 Unlimited OCR images with a side longer than 8192 px are resized proportionally before

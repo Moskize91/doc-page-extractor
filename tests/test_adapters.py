@@ -1,5 +1,4 @@
 import unittest
-from unittest.mock import patch
 
 from doc_page_extractor.adapters.unlimited import parse_unlimited_ocr_layouts
 from doc_page_extractor.adapters.deepseek import (
@@ -18,19 +17,15 @@ class _StubImage:
 
 
 class TestAdapters(unittest.TestCase):
-    def test_deepseek_ocr2_vendor_reads_openai_compatible_settings(self):
-        with patch.dict(
-            "os.environ",
-            {
-                "DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_BASE_URL": "https://example.test/openai",
-                "DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_API_KEY": "test-key",
-                "DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_MODEL": "deepseek-ocr2",
-            },
-            clear=False,
-        ):
-            config = DeepSeekOCR2VendorConfig.from_env()
+    def test_deepseek_ocr2_vendor_config_accepts_openai_compatible_settings(self):
+        config = DeepSeekOCR2VendorConfig(
+            base_url="https://example.test/openai",
+            api_key="test-key",
+            model="deepseek-ocr2",
+        )
 
         self.assertEqual(config.base_url, "https://example.test/openai")
+        self.assertEqual(config.api_key, "test-key")
         self.assertEqual(config.model, "deepseek-ocr2")
 
     def test_vendor_chat_completions_url_accepts_both_base_forms(self):

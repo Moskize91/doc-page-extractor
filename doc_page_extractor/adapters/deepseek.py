@@ -138,44 +138,6 @@ class DeepSeekOCRVendorConfig:
     max_tokens: int = _DEFAULT_VENDOR_MAX_TOKENS
     timeout_seconds: int = 180
 
-    @classmethod
-    def from_env(cls) -> "DeepSeekOCRVendorConfig":
-        import os
-
-        def required(name: str) -> str:
-            value = os.environ.get(name, "").strip()
-            if not value:
-                raise SystemExit(f"Missing required environment variable: {name}")
-            return value
-
-        def optional_float(name: str) -> float | None:
-            value = os.environ.get(name, "").strip()
-            if not value:
-                return None
-            try:
-                return float(value)
-            except ValueError as exc:
-                raise SystemExit(f"{name} must be a float, got {value!r}") from exc
-
-        def optional_int(name: str, default: int) -> int:
-            value = os.environ.get(name, "").strip()
-            if not value:
-                return default
-            try:
-                return int(value)
-            except ValueError as exc:
-                raise SystemExit(f"{name} must be an integer, got {value!r}") from exc
-
-        return cls(
-            base_url=required("DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR_VENDOR_BASE_URL"),
-            api_key=required("DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR_VENDOR_API_KEY"),
-            model=required("DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR_VENDOR_MODEL"),
-            temperature=optional_float("DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR_VENDOR_TEMPERATURE"),
-            top_p=optional_float("DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR_VENDOR_TOP_P"),
-            max_tokens=optional_int("DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR_VENDOR_MAX_TOKENS", 8000),
-            timeout_seconds=optional_int("DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR_VENDOR_TIMEOUT_SECONDS", 180),
-        )
-
 
 @dataclass
 class DeepSeekOCR2VendorConfig:
@@ -186,44 +148,6 @@ class DeepSeekOCR2VendorConfig:
     top_p: float | None = None
     max_tokens: int = _DEFAULT_VENDOR_MAX_TOKENS
     timeout_seconds: int = 180
-
-    @classmethod
-    def from_env(cls) -> "DeepSeekOCR2VendorConfig":
-        import os
-
-        def required(name: str) -> str:
-            value = os.environ.get(name, "").strip()
-            if not value:
-                raise SystemExit(f"Missing required environment variable: {name}")
-            return value
-
-        def optional_float(name: str) -> float | None:
-            value = os.environ.get(name, "").strip()
-            if not value:
-                return None
-            try:
-                return float(value)
-            except ValueError as exc:
-                raise SystemExit(f"{name} must be a float, got {value!r}") from exc
-
-        def optional_int(name: str, default: int) -> int:
-            value = os.environ.get(name, "").strip()
-            if not value:
-                return default
-            try:
-                return int(value)
-            except ValueError as exc:
-                raise SystemExit(f"{name} must be an integer, got {value!r}") from exc
-
-        return cls(
-            base_url=required("DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_BASE_URL"),
-            api_key=required("DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_API_KEY"),
-            model=required("DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_MODEL"),
-            temperature=optional_float("DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_TEMPERATURE"),
-            top_p=optional_float("DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_TOP_P"),
-            max_tokens=optional_int("DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_MAX_TOKENS", 8000),
-            timeout_seconds=optional_int("DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_TIMEOUT_SECONDS", 180),
-        )
 
 
 class DeepSeekOCRVendorAdapter:

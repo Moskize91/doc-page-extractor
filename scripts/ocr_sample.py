@@ -71,7 +71,7 @@ def main() -> None:
 def _run_deepseek_ocr_vendor(
     image_path: Path, size: str, limit: int
 ) -> dict[str, Any]:
-    config = DeepSeekOCRVendorConfig.from_env()
+    config = _deepseek_ocr_vendor_config_from_env()
     extractor = create_page_extractor_with_adapter(DeepSeekOCRVendorAdapter(config))
     return _run_extractor("deepseek-ocr-vendor", extractor, image_path, size, limit)
 
@@ -79,15 +79,66 @@ def _run_deepseek_ocr_vendor(
 def _run_deepseek_ocr2_vendor(
     image_path: Path, size: str, limit: int
 ) -> dict[str, Any]:
-    config = DeepSeekOCR2VendorConfig.from_env()
+    config = _deepseek_ocr2_vendor_config_from_env()
     extractor = create_page_extractor_with_adapter(DeepSeekOCR2VendorAdapter(config))
     return _run_extractor("deepseek-ocr2-vendor", extractor, image_path, size, limit)
 
 
 def _run_unlimited_ocr(image_path: Path, size: str, limit: int) -> dict[str, Any]:
-    config = UnlimitedOCRConfig.from_env()
+    config = _unlimited_ocr_config_from_env()
     extractor = create_page_extractor_with_adapter(UnlimitedOCRAdapter(config))
     return _run_extractor("unlimited-ocr", extractor, image_path, size, limit)
+
+
+def _deepseek_ocr_vendor_config_from_env() -> DeepSeekOCRVendorConfig:
+    return DeepSeekOCRVendorConfig(
+        base_url=_required_env("DEEPSEEK_OCR_BASE_URL"),
+        api_key=_required_env("DEEPSEEK_OCR_API_KEY"),
+        model=_required_env("DEEPSEEK_OCR_MODEL"),
+        temperature=_optional_float_env("DEEPSEEK_OCR_TEMPERATURE"),
+        top_p=_optional_float_env("DEEPSEEK_OCR_TOP_P"),
+        max_tokens=_optional_int_env(
+            "DEEPSEEK_OCR_MAX_TOKENS", DeepSeekOCRVendorConfig.max_tokens
+        ),
+        timeout_seconds=_optional_int_env(
+            "DEEPSEEK_OCR_TIMEOUT_SECONDS",
+            DeepSeekOCRVendorConfig.timeout_seconds,
+        ),
+    )
+
+
+def _deepseek_ocr2_vendor_config_from_env() -> DeepSeekOCR2VendorConfig:
+    return DeepSeekOCR2VendorConfig(
+        base_url=_required_env("DEEPSEEK_OCR2_BASE_URL"),
+        api_key=_required_env("DEEPSEEK_OCR2_API_KEY"),
+        model=_required_env("DEEPSEEK_OCR2_MODEL"),
+        temperature=_optional_float_env("DEEPSEEK_OCR2_TEMPERATURE"),
+        top_p=_optional_float_env("DEEPSEEK_OCR2_TOP_P"),
+        max_tokens=_optional_int_env(
+            "DEEPSEEK_OCR2_MAX_TOKENS", DeepSeekOCR2VendorConfig.max_tokens
+        ),
+        timeout_seconds=_optional_int_env(
+            "DEEPSEEK_OCR2_TIMEOUT_SECONDS",
+            DeepSeekOCR2VendorConfig.timeout_seconds,
+        ),
+    )
+
+
+def _unlimited_ocr_config_from_env() -> UnlimitedOCRConfig:
+    return UnlimitedOCRConfig(
+        ak=_required_env("UNLIMITED_OCR_ACCESS_KEY"),
+        sk=_required_env("UNLIMITED_OCR_SECRET_KEY"),
+        base_url=os.environ.get(
+            "UNLIMITED_OCR_BASE_URL", UnlimitedOCRConfig.base_url
+        ).strip(),
+        poll_interval_seconds=_optional_float_env(
+            "UNLIMITED_OCR_POLL_INTERVAL_SECONDS",
+            UnlimitedOCRConfig.poll_interval_seconds,
+        ),
+        timeout_seconds=_optional_int_env(
+            "UNLIMITED_OCR_TIMEOUT_SECONDS", UnlimitedOCRConfig.timeout_seconds
+        ),
+    )
 
 
 def _run_extractor(adapter_name: str, extractor, image_path: Path, size: str, limit: int) -> dict[str, Any]:
@@ -185,6 +236,33 @@ def _load_dotenv(path: Path) -> None:
             continue
         key, value = line.split("=", 1)
         os.environ.setdefault(key.strip(), value.strip())
+
+
+def _required_env(name: str) -> str:
+    value = os.environ.get(name, "").strip()
+    if not value:
+        raise SystemExit(f"Missing required environment variable: {name}")
+    return value
+
+
+def _optional_float_env(name: str, default: float | None = None) -> float | None:
+    value = os.environ.get(name, "").strip()
+    if not value:
+        return default
+    try:
+        return float(value)
+    except ValueError as exc:
+        raise SystemExit(f"{name} must be a float, got {value!r}") from exc
+
+
+def _optional_int_env(name: str, default: int) -> int:
+    value = os.environ.get(name, "").strip()
+    if not value:
+        return default
+    try:
+        return int(value)
+    except ValueError as exc:
+        raise SystemExit(f"{name} must be an integer, got {value!r}") from exc
 
 
 def _resolve_path(project_root: Path, path: Path) -> Path:

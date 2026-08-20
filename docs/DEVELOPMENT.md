@@ -21,20 +21,17 @@ For machine-specific local values, copy the environment template:
 cp .env.template .env
 ```
 
-`.env` is ignored by git. The package does not automatically load it; source it only for scripts or development adapters that need those values:
-
-```shell
-set -a && source .env && set +a
-```
+`.env` is ignored by git. The package does not automatically load it; local
+debugging scripts read it explicitly when they need private OCR settings.
 
 For VGE/Conductor worktrees, `setup` creates `.env` automatically from `.env.template` when missing.
 
 `.env` now stores multiple backend configurations at the same time:
 
-- `DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR_VENDOR_*` for DeepSeek OCR Vendor.
-- `DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_*` for DeepSeek OCR 2 Vendor.
-- `DOC_PAGE_EXTRACTOR_UNLIMITED_OCR_*` for Unlimited OCR.
-- `DOC_PAGE_EXTRACTOR_MODEL_PATH` and `DOC_PAGE_EXTRACTOR_LOCAL_ONLY` for the local CUDA path.
+- `DEEPSEEK_OCR_*` for DeepSeek OCR Vendor.
+- `DEEPSEEK_OCR2_*` for DeepSeek OCR 2 Vendor.
+- `UNLIMITED_OCR_*` for Unlimited OCR.
+- `DEEPSEEK_LOCAL_MODEL_PATH` and `DEEPSEEK_LOCAL_ONLY` for the local CUDA path.
 
 ## Development Workflow
 
@@ -69,12 +66,25 @@ from doc_page_extractor import (
 )
 
 deepseek_ocr = create_deepseek_ocr_vendor_page_extractor(
-    DeepSeekOCRVendorConfig.from_env()
+    DeepSeekOCRVendorConfig(
+        base_url="https://example.test/openai",
+        api_key="...",
+        model="deepseek-ocr",
+    )
 )
 deepseek_ocr2 = create_deepseek_ocr2_vendor_page_extractor(
-    DeepSeekOCR2VendorConfig.from_env()
+    DeepSeekOCR2VendorConfig(
+        base_url="https://example.test/openai",
+        api_key="...",
+        model="deepseek-ocr2",
+    )
 )
-unlimited_ocr = create_unlimited_ocr_page_extractor(UnlimitedOCRConfig.from_env())
+unlimited_ocr = create_unlimited_ocr_page_extractor(
+    UnlimitedOCRConfig(
+        ak="...",
+        sk="...",
+    )
+)
 ```
 
 ### Layout Contract
