@@ -11,6 +11,8 @@ from .adapters.deepseek import (
     DeepSeekModelOCRAdapter,
     DeepSeekOCRVendorAdapter,
     DeepSeekOCRVendorConfig,
+    parse_deepseek_ocr2_layouts,
+    parse_deepseek_ocr_layouts,
 )
 from .types import (
     DeepSeekOCRSize,
@@ -43,6 +45,7 @@ def create_ocr_page_extractor(
             local_only=local_only,
             enable_devices_numbers=enable_devices_numbers,
         )
+        parse_layouts = parse_deepseek_ocr_layouts
     elif ocr_model == "deepseek-ocr2":
         from .model import DeepSeekOCR2HuggingFaceModel
 
@@ -51,10 +54,17 @@ def create_ocr_page_extractor(
             local_only=local_only,
             enable_devices_numbers=enable_devices_numbers,
         )
+        parse_layouts = parse_deepseek_ocr2_layouts
     else:
         raise ValueError(f"Unsupported OCR model: {ocr_model}")
 
-    return _PageExtractorImpls(DeepSeekModelOCRAdapter(model, source=ocr_model))
+    return _PageExtractorImpls(
+        DeepSeekModelOCRAdapter(
+            model,
+            source=ocr_model,
+            parse_layouts=parse_layouts,
+        )
+    )
 
 
 def create_page_extractor_with_adapter(adapter: OCRAdapter) -> PageExtractor:

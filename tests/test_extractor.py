@@ -3,6 +3,7 @@ import types
 import unittest
 import warnings
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from doc_page_extractor import ExtractionContext, Layout, OCRPageResult
@@ -17,6 +18,16 @@ class _FakeImage:
     def save(self, path: Path, image_format: str) -> None:
         del image_format
         path.write_bytes(b"fake")
+
+
+class _FakeOpenedImage:
+    size = (100, 100)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
+        del exc_type, exc_value, traceback
 
 
 class _FakeResizedImage:
@@ -199,20 +210,55 @@ class TestExtractor(unittest.TestCase):
 
             def generate(self, *args, **kwargs) -> str:
                 del args, kwargs
-                return "<|ref|>text<|/ref|><|det|>[[1, 1, 10, 10]]<|/det|>ok"
+                return (
+                    "<|ref|>text<|/ref|>"
+                    "<|det|>[[100, 100, 500, 200]]<|/det|>ocr1 text"
+                )
 
         class _DeepSeek2Model(_DeepSeek1Model):
-            pass
+            def generate(self, *args, **kwargs) -> str:
+                del args, kwargs
+                return "text[[100, 100, 500, 200]]\nocr2 text"
 
         fake_model_module = types.ModuleType("doc_page_extractor.model")
         fake_model_module.DeepSeekOCRHuggingFaceModel = _DeepSeek1Model
         fake_model_module.DeepSeekOCR2HuggingFaceModel = _DeepSeek2Model
-        with patch.dict(sys.modules, {"doc_page_extractor.model": fake_model_module}):
+        fake_pil_module = types.ModuleType("PIL")
+        fake_pil_module.Image = SimpleNamespace(open=lambda _path: _FakeOpenedImage())
+        with patch.dict(
+            sys.modules,
+            {
+                "doc_page_extractor.model": fake_model_module,
+                "PIL": fake_pil_module,
+            },
+        ):
             extractor1 = create_ocr_page_extractor("deepseek-ocr", model_path="models-cache")
             extractor2 = create_ocr_page_extractor("deepseek-ocr2", model_path="models-cache")
 
-        self.assertIsInstance(extractor1._adapter._model, _DeepSeek1Model)  # type: ignore[attr-defined]
-        self.assertIsInstance(extractor2._adapter._model, _DeepSeek2Model)  # type: ignore[attr-defined]
+            self.assertIsInstance(extractor1._adapter._model, _DeepSeek1Model)  # type: ignore[attr-defined]
+            self.assertIsInstance(extractor2._adapter._model, _DeepSeek2Model)  # type: ignore[attr-defined]
+
+            result1 = list(
+                extractor1.extract_page_results(
+                    image=_FakeImage(),  # type: ignore[arg-type]
+                    size="tiny",
+                    stages=1,
+                    context=ExtractionContext(check_aborted=lambda: False),
+                )
+            )[0][1]
+            result2 = list(
+                extractor2.extract_page_results(
+                    image=_FakeImage(),  # type: ignore[arg-type]
+                    size="tiny",
+                    stages=1,
+                    context=ExtractionContext(check_aborted=lambda: False),
+                )
+            )[0][1]
+
+        self.assertEqual(result1.layouts[0].text, "ocr1 text")
+        self.assertEqual(result1.layouts[0].det, (10, 10, 50, 20))
+        self.assertEqual(result2.layouts[0].text, "ocr2 text")
+        self.assertEqual(result2.layouts[0].det, (10, 10, 50, 20))
 
 
 if __name__ == "__main__":
