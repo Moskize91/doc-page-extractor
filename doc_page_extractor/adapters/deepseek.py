@@ -167,13 +167,13 @@ class DeepSeekOCRVendorConfig:
                 raise SystemExit(f"{name} must be an integer, got {value!r}") from exc
 
         return cls(
-            base_url=required("DPE_DEEPSEEK_OCR_BASE_URL"),
-            api_key=required("DPE_DEEPSEEK_OCR_API_KEY"),
-            model=required("DPE_DEEPSEEK_OCR_MODEL"),
-            temperature=optional_float("DPE_DEEPSEEK_OCR_TEMPERATURE"),
-            top_p=optional_float("DPE_DEEPSEEK_OCR_TOP_P"),
-            max_tokens=optional_int("DPE_DEEPSEEK_OCR_MAX_TOKENS", 8000),
-            timeout_seconds=optional_int("DPE_DEEPSEEK_OCR_TIMEOUT_SECONDS", 180),
+            base_url=required("DEEPSEEK_OCR_BASE_URL"),
+            api_key=required("DEEPSEEK_OCR_API_KEY"),
+            model=required("DEEPSEEK_OCR_MODEL"),
+            temperature=optional_float("DEEPSEEK_OCR_TEMPERATURE"),
+            top_p=optional_float("DEEPSEEK_OCR_TOP_P"),
+            max_tokens=optional_int("DEEPSEEK_OCR_MAX_TOKENS", 8000),
+            timeout_seconds=optional_int("DEEPSEEK_OCR_TIMEOUT_SECONDS", 180),
         )
 
 
@@ -216,13 +216,13 @@ class DeepSeekOCR2VendorConfig:
                 raise SystemExit(f"{name} must be an integer, got {value!r}") from exc
 
         return cls(
-            base_url=required("DPE_DEEPSEEK_OCR2_BASE_URL"),
-            api_key=required("DPE_DEEPSEEK_OCR2_API_KEY"),
-            model=required("DPE_DEEPSEEK_OCR2_MODEL"),
-            temperature=optional_float("DPE_DEEPSEEK_OCR2_TEMPERATURE"),
-            top_p=optional_float("DPE_DEEPSEEK_OCR2_TOP_P"),
-            max_tokens=optional_int("DPE_DEEPSEEK_OCR2_MAX_TOKENS", 8000),
-            timeout_seconds=optional_int("DPE_DEEPSEEK_OCR2_TIMEOUT_SECONDS", 180),
+            base_url=required("DEEPSEEK_OCR2_BASE_URL"),
+            api_key=required("DEEPSEEK_OCR2_API_KEY"),
+            model=required("DEEPSEEK_OCR2_MODEL"),
+            temperature=optional_float("DEEPSEEK_OCR2_TEMPERATURE"),
+            top_p=optional_float("DEEPSEEK_OCR2_TOP_P"),
+            max_tokens=optional_int("DEEPSEEK_OCR2_MAX_TOKENS", 8000),
+            timeout_seconds=optional_int("DEEPSEEK_OCR2_TIMEOUT_SECONDS", 180),
         )
 
 
