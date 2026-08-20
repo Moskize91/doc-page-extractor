@@ -3,7 +3,7 @@ import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Generator, Protocol, cast
+from typing import TYPE_CHECKING, Any, Callable, Generator, Protocol, cast
 
 from ..parser import ParsedItemKind, parse_ocr_response
 from ..structure import build_structured_page, deepseek_ref_to_kind
@@ -22,6 +22,9 @@ if TYPE_CHECKING:
 
 class _ImageLike(Protocol):
     size: tuple[int, int]
+
+
+DeepSeekLayoutParser = Callable[[_ImageLike, str, str], list[Layout]]
 
 
 def parse_deepseek_ocr_layouts(
@@ -64,9 +67,15 @@ def _deepseek_layout(
 class DeepSeekModelOCRAdapter:
     supports_multi_stage = True
 
-    def __init__(self, model: OCRModel, source: str = "deepseek-ocr") -> None:
+    def __init__(
+        self,
+        model: OCRModel,
+        source: str = "deepseek-ocr",
+        parse_layouts: DeepSeekLayoutParser = parse_deepseek_ocr_layouts,
+    ) -> None:
         self._model = model
         self._source = source
+        self._parse_layouts = parse_layouts
 
     def download(self, revision: str | None) -> None:
         self._model.download(revision)
@@ -94,7 +103,7 @@ class DeepSeekModelOCRAdapter:
         from PIL import Image
 
         with Image.open(image_path) as image:
-            layouts = parse_deepseek_ocr_layouts(image, response, source=self._source)
+            layouts = self._parse_layouts(image, response, self._source)
         return OCRPageResult(
             layouts=layouts,
             source=self._source,
