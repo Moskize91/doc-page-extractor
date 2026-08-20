@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "doc-page-extractor"
-version = "1.1.2"
+version = "1.2.0"
 description = "Document page extraction tool with local and vendor OCR backends"
 authors = [
     {name = "Tao Zeyu", email = "i@taozeyu.com"}
