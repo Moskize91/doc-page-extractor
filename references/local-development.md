@@ -42,8 +42,9 @@ Conductor 不会从仓库外的隐藏路径复制私有配置。需要真实远�
 
 `.env` 现在同时保存多个后端的私有配置，脚本或开发适配器按自己的 `--adapter` 参数读取对应字段：
 
-- `DOC_PAGE_EXTRACTOR_DEEPSEEK_VENDOR_*`：DeepSeek OpenAI-compatible Vendor。
-- `DOC_PAGE_EXTRACTOR_BAIDU_*`：百度云 Unlimited-OCR。
+- `DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR_VENDOR_*`：DeepSeek OCR Vendor。
+- `DOC_PAGE_EXTRACTOR_DEEPSEEK_OCR2_VENDOR_*`：DeepSeek OCR 2 Vendor。
+- `DOC_PAGE_EXTRACTOR_UNLIMITED_OCR_*`：Unlimited OCR。
 - `DOC_PAGE_EXTRACTOR_MODEL_PATH` 和 `DOC_PAGE_EXTRACTOR_LOCAL_ONLY`：DeepSeek 本地 Hugging Face 路径。
 
 ## 验证命令
@@ -62,29 +63,36 @@ poetry run pylint --disable=import-error doc_page_extractor
 填写 `.env` 中的私有配置后，可以运行：
 
 ```shell
-poetry run python scripts/ocr_sample.py --adapter deepseek-vendor --image tests/images/friendly-title.png
-poetry run python scripts/ocr_sample.py --adapter baidu --image tests/images/friendly-title.png
-poetry run python scripts/ocr_sample.py --adapter both --image tests/images/friendly-title.png
+poetry run python scripts/ocr_sample.py --adapter deepseek-ocr-vendor --image tests/images/friendly-title.png
+poetry run python scripts/ocr_sample.py --adapter deepseek-ocr2-vendor --image tests/images/friendly-title.png
+poetry run python scripts/ocr_sample.py --adapter unlimited-ocr --image tests/images/friendly-title.png
 ```
 
-该脚本默认读取 `tests/images/friendly-title.png`，分别调用 DeepSeek Vendor、百度云 OCR，或两者同时运行。成功输出会包含图片路径、layout 数量、前几个 layout 的 `ref`、稳定 `kind`、供应商原始 `type`、文本预览和耗时。可以用 `--image path/to/image.png` 指定其他图片。
+该脚本默认读取 `tests/images/friendly-title.png`，调用指定 OCR adapter。成功输出会包含图片路径、layout 数量、前几个 layout 的 `ref`、稳定 `kind`、供应商原始 `type`、文本预览和耗时。可以用 `--image path/to/image.png` 指定其他图片。
 
 新代码应优先依赖 `Layout.kind` 判断跨供应商稳定语义。`Layout.ref` 是兼容旧 DeepSeek 风格 API 的字段；`Layout.type` 和 `Layout.raw` 保留供应商原始数据，不应当作稳定跨供应商契约。需要结构化页面结果时，使用 `extract_page_results()` 读取 `OCRPageResult.structured`；只需要旧式扁平 layout 列表时，继续使用 `extract()`。
 
 ## 开发后端模式
 
-需要在无 CUDA 环境测试完整抽取循环时，新后端优先实现 `OCRAdapter`，并通过 `create_page_extractor_with_adapter()` 或专用工厂函数接入。DeepSeek Vendor 和百度云可直接使用：
+需要在无 CUDA 环境测试完整抽取循环时，新后端优先实现 `OCRAdapter`，并通过 `create_page_extractor_with_adapter()` 或专用工厂函数接入。远程 OCR adapter 可直接使用：
 
 ```python
 from doc_page_extractor import (
-    BaiduCloudOCRConfig,
-    DeepSeekVendorOCRConfig,
-    create_baidu_page_extractor,
-    create_deepseek_vendor_page_extractor,
+    DeepSeekOCR2VendorConfig,
+    DeepSeekOCRVendorConfig,
+    UnlimitedOCRConfig,
+    create_deepseek_ocr2_vendor_page_extractor,
+    create_deepseek_ocr_vendor_page_extractor,
+    create_unlimited_ocr_page_extractor,
 )
 
-deepseek = create_deepseek_vendor_page_extractor(DeepSeekVendorOCRConfig.from_env())
-baidu = create_baidu_page_extractor(BaiduCloudOCRConfig.from_env())
+deepseek_ocr = create_deepseek_ocr_vendor_page_extractor(
+    DeepSeekOCRVendorConfig.from_env()
+)
+deepseek_ocr2 = create_deepseek_ocr2_vendor_page_extractor(
+    DeepSeekOCR2VendorConfig.from_env()
+)
+unlimited_ocr = create_unlimited_ocr_page_extractor(UnlimitedOCRConfig.from_env())
 ```
 
 兼容旧 DeepSeek 模型协议或编写极小 fixture 时，也可以使用 `create_page_extractor_with_model()`：

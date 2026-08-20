@@ -5,12 +5,14 @@ from os import PathLike
 from pathlib import Path
 from typing import TYPE_CHECKING, Generator, Iterable
 
-from .adapters.baidu import BaiduCloudOCRAdapter, BaiduCloudOCRConfig
+from .adapters.unlimited import UnlimitedOCRAdapter, UnlimitedOCRConfig
 from .adapters.deepseek import (
-    DeepSeekLocalOCRAdapter,
+    DeepSeekOCR2VendorAdapter,
+    DeepSeekOCR2VendorConfig,
+    DeepSeekOCRLocalAdapter,
     DeepSeekModelOCRAdapter,
-    DeepSeekVendorOCRAdapter,
-    DeepSeekVendorOCRConfig,
+    DeepSeekOCRVendorAdapter,
+    DeepSeekOCRVendorConfig,
 )
 from .types import (
     DeepSeekOCRModel,
@@ -35,7 +37,7 @@ def create_page_extractor(
     enable_devices_numbers: Iterable[int] | None = None,
 ) -> PageExtractor:
     return _PageExtractorImpls(
-        DeepSeekLocalOCRAdapter(
+        DeepSeekOCRLocalAdapter(
             model_path=model_path,
             local_only=local_only,
             enable_devices_numbers=enable_devices_numbers,
@@ -57,14 +59,22 @@ def create_page_extractor_with_adapter(adapter: OCRAdapter) -> PageExtractor:
     return _PageExtractorImpls(adapter)
 
 
-def create_deepseek_vendor_page_extractor(
-    config: DeepSeekVendorOCRConfig,
+def create_deepseek_ocr_vendor_page_extractor(
+    config: DeepSeekOCRVendorConfig,
 ) -> PageExtractor:
-    return _PageExtractorImpls(DeepSeekVendorOCRAdapter(config))
+    return _PageExtractorImpls(DeepSeekOCRVendorAdapter(config))
 
 
-def create_baidu_page_extractor(config: BaiduCloudOCRConfig) -> PageExtractor:
-    return _PageExtractorImpls(BaiduCloudOCRAdapter(config))
+def create_deepseek_ocr2_vendor_page_extractor(
+    config: DeepSeekOCR2VendorConfig,
+) -> PageExtractor:
+    return _PageExtractorImpls(DeepSeekOCR2VendorAdapter(config))
+
+
+def create_unlimited_ocr_page_extractor(
+    config: UnlimitedOCRConfig,
+) -> PageExtractor:
+    return _PageExtractorImpls(UnlimitedOCRAdapter(config))
 
 
 class _PageExtractorImpls:

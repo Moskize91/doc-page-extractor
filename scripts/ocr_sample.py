@@ -13,11 +13,13 @@ from typing import Any
 from PIL import Image
 
 from doc_page_extractor import (
-    BaiduCloudOCRAdapter,
-    BaiduCloudOCRConfig,
-    DeepSeekVendorOCRAdapter,
-    DeepSeekVendorOCRConfig,
+    DeepSeekOCR2VendorAdapter,
+    DeepSeekOCR2VendorConfig,
+    DeepSeekOCRVendorAdapter,
+    DeepSeekOCRVendorConfig,
     ExtractionContext,
+    UnlimitedOCRAdapter,
+    UnlimitedOCRConfig,
     create_page_extractor_with_adapter,
 )
 
@@ -31,40 +33,61 @@ def main() -> None:
     _load_dotenv(project_root / ".env")
     image_path = _resolve_path(project_root, args.image)
 
-    if args.adapter == "deepseek-vendor":
-        result = _run_deepseek_vendor(image_path, args.size, args.limit)
+    if args.adapter == "deepseek-ocr-vendor":
+        result = _run_deepseek_ocr_vendor(image_path, args.size, args.limit)
         _print_result(result)
         return
 
-    if args.adapter == "baidu":
-        result = _run_baidu(image_path, args.size, args.limit)
+    if args.adapter == "deepseek-ocr2-vendor":
+        result = _run_deepseek_ocr2_vendor(image_path, args.size, args.limit)
         _print_result(result)
         return
 
-    if args.adapter == "both":
-        deepseek_result = _run_deepseek_vendor(image_path, args.size, args.limit)
-        baidu_result = _run_baidu(image_path, args.size, args.limit)
+    if args.adapter == "unlimited-ocr":
+        result = _run_unlimited_ocr(image_path, args.size, args.limit)
+        _print_result(result)
+        return
+
+    if args.adapter == "all":
+        deepseek_ocr_result = _run_deepseek_ocr_vendor(
+            image_path, args.size, args.limit
+        )
+        deepseek_ocr2_result = _run_deepseek_ocr2_vendor(
+            image_path, args.size, args.limit
+        )
+        unlimited_ocr_result = _run_unlimited_ocr(image_path, args.size, args.limit)
         print(json.dumps({
-            "adapter": "both",
+            "adapter": "all",
             "image": str(image_path),
-            "deepseek_vendor": deepseek_result,
-            "baidu": baidu_result,
+            "deepseek_ocr_vendor": deepseek_ocr_result,
+            "deepseek_ocr2_vendor": deepseek_ocr2_result,
+            "unlimited_ocr": unlimited_ocr_result,
         }, ensure_ascii=False, indent=2))
         return
 
     raise SystemExit(f"Unsupported adapter: {args.adapter}")
 
 
-def _run_deepseek_vendor(image_path: Path, size: str, limit: int) -> dict[str, Any]:
-    config = DeepSeekVendorOCRConfig.from_env()
-    extractor = create_page_extractor_with_adapter(DeepSeekVendorOCRAdapter(config))
-    return _run_extractor("deepseek-vendor", extractor, image_path, size, limit)
+def _run_deepseek_ocr_vendor(
+    image_path: Path, size: str, limit: int
+) -> dict[str, Any]:
+    config = DeepSeekOCRVendorConfig.from_env()
+    extractor = create_page_extractor_with_adapter(DeepSeekOCRVendorAdapter(config))
+    return _run_extractor("deepseek-ocr-vendor", extractor, image_path, size, limit)
 
 
-def _run_baidu(image_path: Path, size: str, limit: int) -> dict[str, Any]:
-    config = BaiduCloudOCRConfig.from_env()
-    extractor = create_page_extractor_with_adapter(BaiduCloudOCRAdapter(config))
-    return _run_extractor("baidu", extractor, image_path, size, limit)
+def _run_deepseek_ocr2_vendor(
+    image_path: Path, size: str, limit: int
+) -> dict[str, Any]:
+    config = DeepSeekOCR2VendorConfig.from_env()
+    extractor = create_page_extractor_with_adapter(DeepSeekOCR2VendorAdapter(config))
+    return _run_extractor("deepseek-ocr2-vendor", extractor, image_path, size, limit)
+
+
+def _run_unlimited_ocr(image_path: Path, size: str, limit: int) -> dict[str, Any]:
+    config = UnlimitedOCRConfig.from_env()
+    extractor = create_page_extractor_with_adapter(UnlimitedOCRAdapter(config))
+    return _run_extractor("unlimited-ocr", extractor, image_path, size, limit)
 
 
 def _run_extractor(adapter_name: str, extractor, image_path: Path, size: str, limit: int) -> dict[str, Any]:
@@ -123,7 +146,12 @@ def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run unified OCR samples through adapters.")
     parser.add_argument(
         "--adapter",
-        choices=("deepseek-vendor", "baidu", "both"),
+        choices=(
+            "deepseek-ocr-vendor",
+            "deepseek-ocr2-vendor",
+            "unlimited-ocr",
+            "all",
+        ),
         required=True,
         help="OCR adapter to run.",
     )
