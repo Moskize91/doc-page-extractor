@@ -1,0 +1,734 @@
+{
+  "json_result": [
+    [
+      {
+        "bbox_2d": [
+          63,
+          15,
+          427,
+          28
+        ],
+        "content": "HEADER • LOCAL RETENTION VALIDATION",
+        "index": 0,
+        "label": "header",
+        "native_label": "header",
+        "polygon": [
+          [
+            63,
+            15
+          ],
+          [
+            63,
+            28
+          ],
+          [
+            427,
+            28
+          ],
+          [
+            427,
+            15
+          ]
+        ]
+      },
+      {
+        "bbox_2d": [
+          63,
+          50,
+          763,
+          78
+        ],
+        "content": "# GLM-OCR Structured Region Test",
+        "index": 1,
+        "label": "text",
+        "native_label": "doc_title",
+        "polygon": [
+          [
+            63,
+            50
+          ],
+          [
+            63,
+            78
+          ],
+          [
+            763,
+            78
+          ],
+          [
+            763,
+            50
+          ]
+        ]
+      },
+      {
+        "bbox_2d": [
+          63,
+          86,
+          572,
+          102
+        ],
+        "content": "Synthetic document: text, table, formula, image, caption, footnote",
+        "index": 2,
+        "label": "text",
+        "native_label": "text",
+        "polygon": [
+          [
+            63,
+            86
+          ],
+          [
+            63,
+            101
+          ],
+          [
+            571,
+            101
+          ],
+          [
+            571,
+            86
+          ]
+        ]
+      },
+      {
+        "bbox_2d": [
+          62,
+          135,
+          229,
+          151
+        ],
+        "content": "## Text retention",
+        "index": 3,
+        "label": "text",
+        "native_label": "paragraph_title",
+        "polygon": [
+          [
+            62,
+            135
+          ],
+          [
+            62,
+            151
+          ],
+          [
+            228,
+            151
+          ],
+          [
+            228,
+            135
+          ]
+        ]
+      },
+      {
+        "bbox_2d": [
+          61,
+          158,
+          447,
+          241
+        ],
+        "content": "This paragraph is ordinary body text. The adapter should retain its content and geometry instead of reconstructing a page from Markdown alone. The synthetic page is intentionally local and contains no private or network-derived material.",
+        "index": 4,
+        "label": "text",
+        "native_label": "text",
+        "polygon": [
+          [
+            61,
+            158
+          ],
+          [
+            61,
+            241
+          ],
+          [
+            447,
+            241
+          ],
+          [
+            447,
+            158
+          ]
+        ]
+      },
+      {
+        "bbox_2d": [
+          61,
+          252,
+          444,
+          303
+        ],
+        "content": "The service should preserve reading order, labels native labels, normalized boxes, and polygons for every region that survives layout detection.",
+        "index": 5,
+        "label": "text",
+        "native_label": "text",
+        "polygon": [
+          [
+            61,
+            252
+          ],
+          [
+            61,
+            302
+          ],
+          [
+            429,
+            302
+          ],
+          [
+            443,
+            297
+          ],
+          [
+            443,
+            252
+          ]
+        ]
+      },
+      {
+        "bbox_2d": [
+          511,
+          134,
+          693,
+          152
+        ],
+        "content": "## Formula region",
+        "index": 6,
+        "label": "text",
+        "native_label": "paragraph_title",
+        "polygon": [
+          [
+            511,
+            134
+          ],
+          [
+            511,
+            148
+          ],
+          [
+            516,
+            152
+          ],
+          [
+            693,
+            152
+          ],
+          [
+            693,
+            134
+          ]
+        ]
+      },
+      {
+        "bbox_2d": [
+          62,
+          357,
+          352,
+          376
+        ],
+        "content": "Table 1. Region inventory",
+        "index": 7,
+        "label": "text",
+        "native_label": "figure_title",
+        "polygon": [
+          [
+            62,
+            357
+          ],
+          [
+            62,
+            363
+          ],
+          [
+            62,
+            375
+          ],
+          [
+            351,
+            375
+          ],
+          [
+            351,
+            357
+          ]
+        ]
+      },
+      {
+        "bbox_2d": [
+          510,
+          158,
+          892,
+          209
+        ],
+        "content": "A prominent display equation is placed in its own box. Formula numbering is separate so disabling merge_formula_numbers can be observed.",
+        "index": 8,
+        "label": "text",
+        "native_label": "text",
+        "polygon": [
+          [
+            510,
+            158
+          ],
+          [
+            510,
+            208
+          ],
+          [
+            887,
+            208
+          ],
+          [
+            892,
+            158
+          ]
+        ]
+      },
+      {
+        "bbox_2d": [
+          850,
+          320,
+          875,
+          336
+        ],
+        "content": "(1) ",
+        "index": 9,
+        "label": "text",
+        "native_label": "formula_number",
+        "polygon": [
+          [
+            850,
+            320
+          ],
+          [
+            850,
+            336
+          ],
+          [
+            874,
+            336
+          ],
+          [
+            874,
+            320
+          ]
+        ]
+      },
+      {
+        "bbox_2d": [
+          528,
+          339,
+          757,
+          353
+        ],
+        "content": "Equation 1: mass-energy equivalence",
+        "index": 10,
+        "label": "text",
+        "native_label": "text",
+        "polygon": [
+          [
+            528,
+            339
+          ],
+          [
+            528,
+            353
+          ],
+          [
+            756,
+            353
+          ],
+          [
+            756,
+            339
+          ]
+        ]
+      },
+      {
+        "bbox_2d": [
+          64,
+          384,
+          520,
+          492
+        ],
+        "content": "<table border=\"1\"><tr><td>Kind</td><td>Expected</td><td>Retain</td></tr><tr><td>text</td><td>body copy</td><td>yes</td></tr><tr><td>table</td><td>HTML/region</td><td>yes</td></tr><tr><td>image</td><td>asset box</td><td>yes</td></tr></table>",
+        "index": 11,
+        "label": "table",
+        "native_label": "table",
+        "polygon": [
+          [
+            64,
+            384
+          ],
+          [
+            64,
+            491
+          ],
+          [
+            520,
+            491
+          ],
+          [
+            520,
+            420
+          ],
+          [
+            515,
+            384
+          ]
+        ]
+      },
+      {
+        "bbox_2d": [
+          62,
+          518,
+          231,
+          536
+        ],
+        "content": "## Interpretation",
+        "index": 12,
+        "label": "text",
+        "native_label": "paragraph_title",
+        "polygon": [
+          [
+            62,
+            518
+          ],
+          [
+            62,
+            535
+          ],
+          [
+            230,
+            535
+          ],
+          [
+            230,
+            518
+          ]
+        ]
+      },
+      {
+        "bbox_2d": [
+          61,
+          541,
+          426,
+          609
+        ],
+        "content": "The table and figure are deliberately separated from prose. A useful parse keeps these boxes in order and does not merge nearby text blocks merely because their reading order is adjacent.",
+        "index": 13,
+        "label": "text",
+        "native_label": "text",
+        "polygon": [
+          [
+            61,
+            546
+          ],
+          [
+            61,
+            608
+          ],
+          [
+            425,
+            608
+          ],
+          [
+            425,
+            541
+          ],
+          [
+            66,
+            541
+          ]
+        ]
+      },
+      {
+        "bbox_2d": [
+          523,
+          391,
+          917,
+          587
+        ],
+        "content": null,
+        "image_path": "imgs/cropped_page0_idx0.jpg",
+        "index": 14,
+        "label": "image",
+        "native_label": "chart",
+        "polygon": [
+          [
+            523,
+            391
+          ],
+          [
+            523,
+            586
+          ],
+          [
+            917,
+            586
+          ],
+          [
+            917,
+            416
+          ],
+          [
+            877,
+            401
+          ],
+          [
+            862,
+            391
+          ]
+        ]
+      },
+      {
+        "bbox_2d": [
+          531,
+          603,
+          949,
+          618
+        ],
+        "content": "Figure 1 caption: a colored plot retained as an image region.",
+        "index": 15,
+        "label": "text",
+        "native_label": "figure_title",
+        "polygon": [
+          [
+            531,
+            603
+          ],
+          [
+            531,
+            618
+          ],
+          [
+            948,
+            618
+          ],
+          [
+            948,
+            603
+          ]
+        ]
+      },
+      {
+        "bbox_2d": [
+          511,
+          638,
+          726,
+          656
+        ],
+        "content": "## Caption and labels",
+        "index": 16,
+        "label": "text",
+        "native_label": "paragraph_title",
+        "polygon": [
+          [
+            511,
+            638
+          ],
+          [
+            511,
+            656
+          ],
+          [
+            725,
+            656
+          ],
+          [
+            725,
+            638
+          ]
+        ]
+      },
+      {
+        "bbox_2d": [
+          510,
+          661,
+          894,
+          729
+        ],
+        "content": "Captions are short text regions directly below their assets. Header and footer text, when detected, are meaningful document furniture and should remain available to callers.",
+        "index": 17,
+        "label": "text",
+        "native_label": "text",
+        "polygon": [
+          [
+            510,
+            661
+          ],
+          [
+            510,
+            728
+          ],
+          [
+            893,
+            728
+          ],
+          [
+            893,
+            661
+          ]
+        ]
+      },
+      {
+        "bbox_2d": [
+          62,
+          846,
+          595,
+          862
+        ],
+        "content": "1 Footnote: this region must not be discarded by the SDK label_task_mapping.",
+        "index": 18,
+        "label": "footnote",
+        "native_label": "footnote",
+        "polygon": [
+          [
+            62,
+            846
+          ],
+          [
+            62,
+            861
+          ],
+          [
+            595,
+            861
+          ],
+          [
+            595,
+            846
+          ]
+        ]
+      },
+      {
+        "bbox_2d": [
+          63,
+          886,
+          373,
+          900
+        ],
+        "content": "References: local synthetic fixture; no external source.",
+        "index": 19,
+        "label": "footer",
+        "native_label": "footer",
+        "polygon": [
+          [
+            63,
+            886
+          ],
+          [
+            63,
+            900
+          ],
+          [
+            372,
+            900
+          ],
+          [
+            372,
+            886
+          ]
+        ]
+      },
+      {
+        "bbox_2d": [
+          65,
+          953,
+          117,
+          965
+        ],
+        "content": "FOOTER",
+        "index": 20,
+        "label": "footer",
+        "native_label": "footer",
+        "polygon": [
+          [
+            65,
+            953
+          ],
+          [
+            65,
+            965
+          ],
+          [
+            116,
+            965
+          ],
+          [
+            116,
+            953
+          ]
+        ]
+      },
+      {
+        "bbox_2d": [
+          155,
+          953,
+          209,
+          966
+        ],
+        "content": "page 1",
+        "index": 21,
+        "label": "number",
+        "native_label": "number",
+        "polygon": [
+          [
+            155,
+            953
+          ],
+          [
+            155,
+            966
+          ],
+          [
+            208,
+            966
+          ],
+          [
+            208,
+            953
+          ]
+        ]
+      },
+      {
+        "bbox_2d": [
+          225,
+          953,
+          451,
+          965
+        ],
+        "content": "offline runtime evidence",
+        "index": 22,
+        "label": "footer",
+        "native_label": "footer",
+        "polygon": [
+          [
+            225,
+            953
+          ],
+          [
+            225,
+            965
+          ],
+          [
+            240,
+            965
+          ],
+          [
+            246,
+            965
+          ],
+          [
+            450,
+            965
+          ],
+          [
+            450,
+            953
+          ]
+        ]
+      }
+    ]
+  ],
+  "usage": {}
+}

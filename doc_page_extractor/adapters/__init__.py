@@ -1,6 +1,9 @@
 # pylint: disable=undefined-all-variable
 
 _LAZY_EXPORTS = {
+    "GLMOCRServiceAdapter": ("glmocr", "GLMOCRServiceAdapter"),
+    "GLMOCRServiceConfig": ("glmocr", "GLMOCRServiceConfig"),
+    "parse_glm_ocr_layouts": ("glmocr", "parse_glm_ocr_layouts"),
     "DeepSeekOCR2VendorAdapter": ("deepseek", "DeepSeekOCR2VendorAdapter"),
     "DeepSeekOCR2VendorConfig": ("deepseek", "DeepSeekOCR2VendorConfig"),
     "DeepSeekOCRVendorAdapter": ("deepseek", "DeepSeekOCRVendorAdapter"),
@@ -15,6 +18,9 @@ _LAZY_EXPORTS = {
 }
 
 __all__ = [
+    "GLMOCRServiceAdapter",
+    "GLMOCRServiceConfig",
+    "parse_glm_ocr_layouts",
     "DeepSeekOCR2VendorAdapter",
     "DeepSeekOCR2VendorConfig",
     "DeepSeekOCRVendorAdapter",

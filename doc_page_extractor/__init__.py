@@ -4,6 +4,8 @@ __version__ = "1.2.0"
 
 _LAZY_EXPORTS = {
     "AbortError": ("extraction_context", "AbortError"),
+    "GLMOCRServiceAdapter": ("adapters", "GLMOCRServiceAdapter"),
+    "GLMOCRServiceConfig": ("adapters", "GLMOCRServiceConfig"),
     "DeepSeekOCR2VendorAdapter": ("adapters", "DeepSeekOCR2VendorAdapter"),
     "DeepSeekOCR2VendorConfig": ("adapters", "DeepSeekOCR2VendorConfig"),
     "DeepSeekBackend": ("types", "DeepSeekBackend"),
@@ -23,6 +25,7 @@ _LAZY_EXPORTS = {
     "UnlimitedModelOCRAdapter": ("adapters", "UnlimitedModelOCRAdapter"),
     "UnlimitedOCRVendorAdapter": ("adapters", "UnlimitedOCRVendorAdapter"),
     "UnlimitedOCRVendorConfig": ("adapters", "UnlimitedOCRVendorConfig"),
+    "create_glm_ocr_service_page_extractor": ("extractor", "create_glm_ocr_service_page_extractor"),
     "create_deepseek_ocr_page_extractor": ("extractor", "create_deepseek_ocr_page_extractor"),
     "create_page_extractor_with_adapter": ("extractor", "create_page_extractor_with_adapter"),
     "create_deepseek_ocr2_vendor_page_extractor": ("extractor", "create_deepseek_ocr2_vendor_page_extractor"),
@@ -34,6 +37,9 @@ _LAZY_EXPORTS = {
 
 __all__ = [
     "plot",
+    "create_glm_ocr_service_page_extractor",
+    "GLMOCRServiceConfig",
+    "GLMOCRServiceAdapter",
     "create_deepseek_ocr_page_extractor",
     "create_page_extractor_with_adapter",
     "create_deepseek_ocr_vendor_page_extractor",

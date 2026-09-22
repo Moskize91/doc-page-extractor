@@ -9,6 +9,10 @@ from .adapters.unlimited import (
     UnlimitedOCRVendorAdapter,
     UnlimitedOCRVendorConfig,
 )
+from .adapters.glmocr import (
+    GLMOCRServiceAdapter,
+    GLMOCRServiceConfig,
+)
 from .adapters.deepseek import (
     DeepSeekOCR2VendorAdapter,
     DeepSeekOCR2VendorConfig,
@@ -108,6 +112,17 @@ def create_unlimited_ocr_vendor_page_extractor(
     config: UnlimitedOCRVendorConfig,
 ) -> PageExtractor:
     return _PageExtractorImpls(UnlimitedOCRVendorAdapter(config))
+
+
+def create_glm_ocr_service_page_extractor(
+    config: GLMOCRServiceConfig | None = None,
+) -> PageExtractor:
+    """Create an extractor for the full GLM-OCR SDK parse service.
+
+    This factory does not start the externally managed service or load any
+    model.  The endpoint must be the SDK's structured ``/glmocr/parse`` API.
+    """
+    return _PageExtractorImpls(GLMOCRServiceAdapter(config or GLMOCRServiceConfig()))
 
 
 class _PageExtractorImpls:

@@ -179,6 +179,51 @@ Unlimited OCR Vendor images with a side longer than 8192 px are resized
 proportionally before upload. Returned layout coordinates are mapped back to the
 original image size.
 
+### GLM-OCR SDK Service
+
+Use this backend with the GLM-OCR SDK's full structured parsing service, not its
+underlying MLX/vLLM recognition endpoint:
+
+```python
+from doc_page_extractor import (
+    GLMOCRServiceConfig,
+    create_glm_ocr_service_page_extractor,
+)
+
+extractor = create_glm_ocr_service_page_extractor(
+    GLMOCRServiceConfig(
+        endpoint_url="http://127.0.0.1:5002/glmocr/parse",
+        api_key=None,
+        timeout_seconds=180,
+    )
+)
+```
+
+The adapter uploads page bytes as a data URL, converts the SDK's normalized
+0–1000 `bbox_2d`/polygon geometry to input-image pixels, and preserves the
+SDK formatter's `index` reading order and native labels. It maps returned
+text, titles, captions, tables, formulas, images, and footnotes into the
+standard structured page model. The service is externally managed and does not
+support model downloads or multi-stage redaction. Token limits are rejected
+because the SDK service currently returns no usable token usage/limit contract;
+HTTP timeouts and service/geometry errors are propagated.
+
+Only labels actually returned by the SDK can be mapped. The SDK repository's
+shipped server configuration marks `footnote`, `header`, `footer`, `number`,
+`aside_text`, and `reference` as `abandon`; configure the SDK service's
+`pipeline.layout.label_task_mapping` to retain any of these regions before
+using them. Also disable `pipeline.result_formatter.enable_merge_text_blocks`
+and `enable_merge_formula_numbers` to retain region-level geometry. The adapter
+uses `native_label` before display-label fallback and removes SDK-added Markdown
+heading markers from title text. It cannot recover labels discarded by that
+service. SDK failures/empty recognition results may already have been filtered
+out before the response reaches this adapter; inspect representative outputs.
+
+The adapter was exercised against SDK source revision
+`cef4d0ea120d1741f5cefe8985eee45f6c8eff1d` (0.1.5), MLX-VLM 0.7.2, and CPU
+PP-DocLayoutV3 on Apple Silicon. A sanitized real synthetic-page response is
+stored in `tests/fixtures/glmocr/`. Regular tests use no models or network.
+
 ## Extraction
 
 All backends return the same `PageExtractor` shape:
