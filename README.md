@@ -179,6 +179,27 @@ Unlimited OCR Vendor images with a side longer than 8192 px are resized
 proportionally before upload. Returned layout coordinates are mapped back to the
 original image size.
 
+### Vendor request errors
+
+Vendor HTTP, transport, and provider response errors are raised as
+`VendorOCRRequestError`. The original `requests` exception is preserved as the
+exception's `__cause__`, including its response when one is available. The
+package does not classify or retry these errors; callers can inspect the cause
+and apply their own retry and fallback policy.
+
+```python
+import requests
+
+from doc_page_extractor import VendorOCRRequestError
+
+try:
+    next(extractor.extract_page_results(image, size="gundam"))
+except VendorOCRRequestError as error:
+    cause = error.__cause__
+    if isinstance(cause, requests.RequestException) and cause.response is not None:
+        print(cause.response.status_code, cause.response.text)
+```
+
 ## Extraction
 
 All backends return the same `PageExtractor` shape:

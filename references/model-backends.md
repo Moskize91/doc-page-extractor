@@ -52,6 +52,8 @@ Adapter 协议还要求实现 `download()`、`load()` 和 `allows_multi_stage`�
 - 如果供应商返回 usage 信息，更新 `context.input_tokens` 和 `context.output_tokens`。
 - Unlimited OCR Vendor adapter 需要处理异步 submit/query/download 流程，
   并把 `parse_result_url` JSON 映射成统一布局。
+- Vendor HTTP、网络和供应商响应错误统一包装为 `VendorOCRRequestError`，
+  原始 `requests` 异常通过 `__cause__` 保留。库本身不分类或重试这些错误。
 - 本地 sample 使用 `scripts/ocr_sample.py`，它是开发验证脚本，不是生产后端抽象。
 
 ## CUDA 路径规则

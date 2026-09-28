@@ -29,6 +29,7 @@ class TestImportBoundaries(unittest.TestCase):
                 ExtractionAbortedError,
                 TokenLimitError,
                 UnlimitedOCRVendorConfig,
+                VendorOCRRequestError,
                 create_deepseek_ocr_vendor_page_extractor,
                 create_unlimited_ocr_vendor_page_extractor,
             )
@@ -46,6 +47,7 @@ class TestImportBoundaries(unittest.TestCase):
             create_unlimited_ocr_vendor_page_extractor(
                 UnlimitedOCRVendorConfig(ak="ak", sk="sk")
             )
+            assert issubclass(VendorOCRRequestError, RuntimeError)
             """
         )
         env = os.environ.copy()

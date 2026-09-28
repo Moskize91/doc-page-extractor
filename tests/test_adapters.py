@@ -1,15 +1,20 @@
 import unittest
 
+import requests
+
 from doc_page_extractor.adapters.unlimited import (
+    UnlimitedOCRVendorAdapter,
     parse_unlimited_ocr_layouts,
     parse_unlimited_ocr_local_layouts,
 )
 from doc_page_extractor.adapters.deepseek import (
     DeepSeekOCR2VendorConfig,
+    _raise_vendor_error,
     _vendor_chat_completions_url,
     parse_deepseek_ocr2_layouts,
     parse_deepseek_ocr_layouts,
 )
+from doc_page_extractor.errors import VendorOCRRequestError
 from doc_page_extractor.structure import build_structured_page
 from doc_page_extractor.types import LayoutKind
 
@@ -20,6 +25,36 @@ class _StubImage:
 
 
 class TestAdapters(unittest.TestCase):
+    def test_deepseek_http_error_preserves_original_response(self):
+        response = requests.Response()
+        response.status_code = 429
+        response.headers["Retry-After"] = "3"
+        response._content = b'{"error":"rate limited"}'  # pylint: disable=protected-access
+        response.url = "https://example.test/v1/chat/completions"
+
+        with self.assertRaises(VendorOCRRequestError) as raised:
+            _raise_vendor_error(response)
+
+        cause = raised.exception.__cause__
+        self.assertIsInstance(cause, requests.HTTPError)
+        self.assertIs(cause.response, response)
+        self.assertEqual(cause.response.headers["Retry-After"], "3")
+
+    def test_unlimited_provider_error_preserves_original_response(self):
+        response = requests.Response()
+        response.status_code = 200
+        response._content = (  # pylint: disable=protected-access
+            b'{"error_code":18,"error_msg":"Open api qps request limit reached"}'
+        )
+
+        with self.assertRaises(VendorOCRRequestError) as raised:
+            UnlimitedOCRVendorAdapter._checked_response(response, "submit")
+
+        cause = raised.exception.__cause__
+        self.assertIsInstance(cause, requests.RequestException)
+        self.assertIs(cause.response, response)
+        self.assertEqual(cause.response.json()["error_code"], 18)
+
     def test_deepseek_ocr2_vendor_config_accepts_openai_style_settings(self):
         config = DeepSeekOCR2VendorConfig(
             base_url="https://example.test/openai",
