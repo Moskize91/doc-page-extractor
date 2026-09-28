@@ -1,15 +1,21 @@
+import sys
 import unittest
+from types import SimpleNamespace
+from unittest.mock import patch
 
 from doc_page_extractor.adapters.unlimited import (
+    UnlimitedOCRVendorAdapter,
     parse_unlimited_ocr_layouts,
     parse_unlimited_ocr_local_layouts,
 )
 from doc_page_extractor.adapters.deepseek import (
     DeepSeekOCR2VendorConfig,
+    _raise_vendor_error,
     _vendor_chat_completions_url,
     parse_deepseek_ocr2_layouts,
     parse_deepseek_ocr_layouts,
 )
+from doc_page_extractor.errors import VendorOCRRequestError
 from doc_page_extractor.structure import build_structured_page
 from doc_page_extractor.types import LayoutKind
 
@@ -19,7 +25,68 @@ class _StubImage:
         self.size = (width, height)
 
 
+class _StubRequestException(Exception):
+    def __init__(self, message="", response=None) -> None:
+        super().__init__(message)
+        self.response = response
+
+
+class _StubHTTPError(_StubRequestException):
+    pass
+
+
+class _StubResponse:
+    def __init__(self, status_code: int, data: dict, headers=None) -> None:
+        self.status_code = status_code
+        self._data = data
+        self.headers = headers or {}
+        self.text = str(data)
+
+    def json(self):
+        return self._data
+
+    def raise_for_status(self) -> None:
+        raise _StubHTTPError(response=self)
+
+
+_REQUESTS_STUB = SimpleNamespace(RequestException=_StubRequestException)
+
+
 class TestAdapters(unittest.TestCase):
+    def test_deepseek_http_error_preserves_original_response(self):
+        response = _StubResponse(
+            429,
+            {"error": "rate limited"},
+            headers={"Retry-After": "3"},
+        )
+
+        with patch.dict(sys.modules, {"requests": _REQUESTS_STUB}):
+            with self.assertRaises(VendorOCRRequestError) as raised:
+                _raise_vendor_error(response)
+
+        cause = raised.exception.__cause__
+        self.assertIsInstance(cause, _StubHTTPError)
+        self.assertIs(cause.response, response)
+        self.assertEqual(cause.response.headers["Retry-After"], "3")
+
+    def test_unlimited_provider_error_preserves_original_response(self):
+        response = _StubResponse(
+            200,
+            {
+                "error_code": 18,
+                "error_msg": "Open api qps request limit reached",
+            },
+        )
+
+        with patch.dict(sys.modules, {"requests": _REQUESTS_STUB}):
+            with self.assertRaises(VendorOCRRequestError) as raised:
+                UnlimitedOCRVendorAdapter._checked_response(response, "submit")
+
+        cause = raised.exception.__cause__
+        self.assertIsInstance(cause, _StubRequestException)
+        self.assertIs(cause.response, response)
+        self.assertEqual(cause.response.json()["error_code"], 18)
+
     def test_deepseek_ocr2_vendor_config_accepts_openai_style_settings(self):
         config = DeepSeekOCR2VendorConfig(
             base_url="https://example.test/openai",

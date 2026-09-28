@@ -1,6 +1,6 @@
 # pylint: disable=undefined-all-variable
 
-__version__ = "1.2.0"
+__version__ = "1.2.1"
 
 _LAZY_EXPORTS = {
     "AbortError": ("extraction_context", "AbortError"),
@@ -20,6 +20,7 @@ _LAZY_EXPORTS = {
     "PageExtractor": ("types", "PageExtractor"),
     "StructuredPage": ("types", "StructuredPage"),
     "TokenLimitError": ("extraction_context", "TokenLimitError"),
+    "VendorOCRRequestError": ("errors", "VendorOCRRequestError"),
     "UnlimitedModelOCRAdapter": ("adapters", "UnlimitedModelOCRAdapter"),
     "UnlimitedOCRVendorAdapter": ("adapters", "UnlimitedOCRVendorAdapter"),
     "UnlimitedOCRVendorConfig": ("adapters", "UnlimitedOCRVendorConfig"),
@@ -56,6 +57,7 @@ __all__ = [
     "AbortError",
     "ExtractionAbortedError",
     "TokenLimitError",
+    "VendorOCRRequestError",
     "Layout",
     "LayoutKind",
     "PageBlock",

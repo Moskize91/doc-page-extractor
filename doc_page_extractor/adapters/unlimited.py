@@ -10,6 +10,7 @@ from typing import Any, TYPE_CHECKING, Protocol
 
 from ..structure import unlimited_ocr_type_to_kind, build_structured_page
 from ..types import DeepSeekOCRSize, ExtractionContext, Layout, OCRPageResult
+from ..errors import VendorOCRRequestError
 
 if TYPE_CHECKING:
     import requests
@@ -105,29 +106,38 @@ class UnlimitedOCRVendorAdapter:
             return self._access_token
         import requests
 
-        response = requests.post(
-            f"{self._config.base_url.rstrip('/')}/oauth/2.0/token",
-            headers={
-                "Accept": "application/json",
-                "User-Agent": "doc-page-extractor-unlimited-ocr/1.0",
-            },
-            data={
-                "grant_type": "client_credentials",
-                "client_id": self._config.ak,
-                "client_secret": self._config.sk,
-            },
-            timeout=self._config.timeout_seconds,
-        )
-        if response.status_code >= 400:
-            raise RuntimeError(
-                f"Unlimited OCR token request failed with HTTP {response.status_code}: "
-                f"{response.text[:500]}"
+        try:
+            response = requests.post(
+                f"{self._config.base_url.rstrip('/')}/oauth/2.0/token",
+                headers={
+                    "Accept": "application/json",
+                    "User-Agent": "doc-page-extractor-unlimited-ocr/1.0",
+                },
+                data={
+                    "grant_type": "client_credentials",
+                    "client_id": self._config.ak,
+                    "client_secret": self._config.sk,
+                },
+                timeout=self._config.timeout_seconds,
             )
-        data = response.json()
+        except requests.RequestException as error:
+            raise VendorOCRRequestError(
+                "Unlimited OCR token request failed"
+            ) from error
+        if response.status_code >= 400:
+            self._raise_http_error(response, "token")
+        try:
+            data = response.json()
+        except ValueError as error:
+            raise VendorOCRRequestError(
+                "Unlimited OCR token request returned invalid JSON"
+            ) from error
         token = str(data.get("access_token") or "")
         if not token:
-            raise RuntimeError(
-                f"Unlimited OCR token response did not include access_token: {data}"
+            self._raise_response_error(
+                response,
+                "token",
+                f"response did not include access_token: {data}",
             )
         self._access_token = token
         return token
@@ -135,24 +145,33 @@ class UnlimitedOCRVendorAdapter:
     def _submit_task(self, token: str, image_path: Path) -> str:
         import requests
 
-        response = requests.post(
-            self._api_url("/rest/2.0/brain/online/v2/unlimited-ocr-parser/task", token),
-            headers={
-                "Content-Type": "application/x-www-form-urlencoded",
-                "Accept": "application/json",
-                "User-Agent": "doc-page-extractor-unlimited-ocr/1.0",
-            },
-            data={
-                "file_data": base64.b64encode(image_path.read_bytes()).decode("ascii"),
-                "file_name": image_path.name,
-            },
-            timeout=self._config.timeout_seconds,
-        )
+        try:
+            response = requests.post(
+                self._api_url(
+                    "/rest/2.0/brain/online/v2/unlimited-ocr-parser/task", token
+                ),
+                headers={
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "Accept": "application/json",
+                    "User-Agent": "doc-page-extractor-unlimited-ocr/1.0",
+                },
+                data={
+                    "file_data": base64.b64encode(image_path.read_bytes()).decode("ascii"),
+                    "file_name": image_path.name,
+                },
+                timeout=self._config.timeout_seconds,
+            )
+        except requests.RequestException as error:
+            raise VendorOCRRequestError(
+                "Unlimited OCR submit request failed"
+            ) from error
         data = self._checked_response(response, "submit")
         task_id = str((data.get("result") or {}).get("task_id") or "")
         if not task_id:
-            raise RuntimeError(
-                f"Unlimited OCR submit response did not include task_id: {data}"
+            self._raise_response_error(
+                response,
+                "submit",
+                f"response did not include task_id: {data}",
             )
         return task_id
 
@@ -165,26 +184,41 @@ class UnlimitedOCRVendorAdapter:
                 context.check_aborted()
             import requests
 
-            response = requests.post(
-                self._api_url(
-                    "/rest/2.0/brain/online/v2/unlimited-ocr-parser/task/query",
-                    token,
-                ),
-                headers={
-                    "Content-Type": "application/x-www-form-urlencoded",
-                    "Accept": "application/json",
-                    "User-Agent": "doc-page-extractor-unlimited-ocr/1.0",
-                },
-                data={"task_id": task_id},
-                timeout=self._config.timeout_seconds,
-            )
+            try:
+                response = requests.post(
+                    self._api_url(
+                        "/rest/2.0/brain/online/v2/unlimited-ocr-parser/task/query",
+                        token,
+                    ),
+                    headers={
+                        "Content-Type": "application/x-www-form-urlencoded",
+                        "Accept": "application/json",
+                        "User-Agent": "doc-page-extractor-unlimited-ocr/1.0",
+                    },
+                    data={"task_id": task_id},
+                    timeout=self._config.timeout_seconds,
+                )
+            except requests.RequestException as error:
+                raise VendorOCRRequestError(
+                    "Unlimited OCR query request failed"
+                ) from error
             data = self._checked_response(response, "query")
             result = data.get("result") or {}
             status = result.get("status")
             if status == "success" or result.get("parse_result_url"):
+                if not result.get("parse_result_url"):
+                    self._raise_response_error(
+                        response,
+                        "query",
+                        f"task {task_id} did not return parse_result_url: {result}",
+                    )
                 return result
             if status == "failed":
-                raise RuntimeError(f"Unlimited OCR task {task_id} failed: {result}")
+                self._raise_response_error(
+                    response,
+                    "query",
+                    f"task {task_id} failed: {result}",
+                )
             if time.monotonic() >= deadline:
                 raise TimeoutError(f"Unlimited OCR task {task_id} timed out.")
             time.sleep(self._config.poll_interval_seconds)
@@ -192,17 +226,24 @@ class UnlimitedOCRVendorAdapter:
     def _download_parse_result(self, url: str) -> dict[str, Any]:
         import requests
 
-        response = requests.get(
-            url,
-            headers={"User-Agent": "doc-page-extractor-unlimited-ocr/1.0"},
-            timeout=self._config.timeout_seconds,
-        )
-        if response.status_code >= 400:
-            raise RuntimeError(
-                f"Unlimited OCR parse result download failed with HTTP {response.status_code}: "
-                f"{response.text[:500]}"
+        try:
+            response = requests.get(
+                url,
+                headers={"User-Agent": "doc-page-extractor-unlimited-ocr/1.0"},
+                timeout=self._config.timeout_seconds,
             )
-        return json.loads(response.content.decode("utf-8"))
+        except requests.RequestException as error:
+            raise VendorOCRRequestError(
+                "Unlimited OCR parse result download failed"
+            ) from error
+        if response.status_code >= 400:
+            self._raise_http_error(response, "parse result download")
+        try:
+            return json.loads(response.content.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            raise VendorOCRRequestError(
+                "Unlimited OCR parse result download returned invalid JSON"
+            ) from error
 
     def _api_url(self, path: str, token: str) -> str:
         query = urllib.parse.urlencode({"access_token": token})
@@ -211,14 +252,50 @@ class UnlimitedOCRVendorAdapter:
     @staticmethod
     def _checked_response(response: Any, action: str) -> dict[str, Any]:
         if response.status_code >= 400:
-            raise RuntimeError(
-                f"Unlimited OCR {action} request failed with HTTP {response.status_code}: "
-                f"{response.text[:500]}"
-            )
-        data = response.json()
+            UnlimitedOCRVendorAdapter._raise_http_error(response, action)
+        try:
+            data = response.json()
+        except ValueError as error:
+            raise VendorOCRRequestError(
+                f"Unlimited OCR {action} request returned invalid JSON"
+            ) from error
         if int(data.get("error_code") or 0) != 0:
-            raise RuntimeError(f"Unlimited OCR {action} request failed: {data}")
+            import requests
+
+            error = requests.RequestException(
+                f"Unlimited OCR {action} request failed: {data}",
+                response=response,
+            )
+            raise VendorOCRRequestError(
+                f"Unlimited OCR {action} request failed"
+            ) from error
         return data
+
+    @staticmethod
+    def _raise_http_error(response: Any, action: str) -> None:
+        message = (
+            f"Unlimited OCR {action} request failed with HTTP "
+            f"{response.status_code}: {response.text[:500]}"
+        )
+        import requests
+
+        try:
+            response.raise_for_status()
+        except requests.RequestException as error:
+            raise VendorOCRRequestError(message) from error
+        raise VendorOCRRequestError(message)
+
+    @staticmethod
+    def _raise_response_error(response: Any, action: str, detail: str) -> None:
+        import requests
+
+        error = requests.RequestException(
+            f"Unlimited OCR {action} request failed: {detail}",
+            response=response,
+        )
+        raise VendorOCRRequestError(
+            f"Unlimited OCR {action} request failed"
+        ) from error
 
 
 class UnlimitedModelOCRAdapter:

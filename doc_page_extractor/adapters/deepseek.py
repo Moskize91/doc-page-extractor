@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Callable, Generator, Protocol, cast
 from ..parser import ParsedItemKind, parse_ocr_response
 from ..structure import build_structured_page, deepseek_ref_to_kind
 from ..types import DeepSeekOCRSize, ExtractionContext, Layout, LayoutKind, OCRPageResult
+from ..errors import VendorOCRRequestError
 
 _DEFAULT_VENDOR_MAX_TOKENS = 8000
 _LINE_BLOCK_PATTERN = re.compile(
@@ -199,21 +200,29 @@ class DeepSeekOCRVendorAdapter:
 
         import requests
 
-        response = requests.post(
-            _vendor_chat_completions_url(self._config.base_url),
-            headers={
-                "Authorization": f"Bearer {self._config.api_key}",
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-                "User-Agent": "doc-page-extractor-deepseek-ocr-vendor/1.0",
-            },
-            json=payload,
-            timeout=self._config.timeout_seconds,
-        )
+        try:
+            response = requests.post(
+                _vendor_chat_completions_url(self._config.base_url),
+                headers={
+                    "Authorization": f"Bearer {self._config.api_key}",
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "User-Agent": "doc-page-extractor-deepseek-ocr-vendor/1.0",
+                },
+                json=payload,
+                timeout=self._config.timeout_seconds,
+            )
+        except requests.RequestException as error:
+            raise VendorOCRRequestError("DeepSeek OCR Vendor request failed") from error
         if response.status_code >= 400:
             _raise_vendor_error(response)
 
-        data = response.json()
+        try:
+            data = response.json()
+        except ValueError as error:
+            raise VendorOCRRequestError(
+                "DeepSeek OCR Vendor returned invalid JSON"
+            ) from error
         usage = data.get("usage") or {}
         if context is not None:
             context.input_tokens += int(usage.get("prompt_tokens") or 0)
@@ -285,21 +294,29 @@ class DeepSeekOCR2VendorAdapter:
 
         import requests
 
-        response = requests.post(
-            _vendor_chat_completions_url(self._config.base_url),
-            headers={
-                "Authorization": f"Bearer {self._config.api_key}",
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-                "User-Agent": "doc-page-extractor-deepseek-ocr2-vendor/1.0",
-            },
-            json=payload,
-            timeout=self._config.timeout_seconds,
-        )
+        try:
+            response = requests.post(
+                _vendor_chat_completions_url(self._config.base_url),
+                headers={
+                    "Authorization": f"Bearer {self._config.api_key}",
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "User-Agent": "doc-page-extractor-deepseek-ocr2-vendor/1.0",
+                },
+                json=payload,
+                timeout=self._config.timeout_seconds,
+            )
+        except requests.RequestException as error:
+            raise VendorOCRRequestError("DeepSeek OCR 2 Vendor request failed") from error
         if response.status_code >= 400:
             _raise_vendor_error(response)
 
-        data = response.json()
+        try:
+            data = response.json()
+        except ValueError as error:
+            raise VendorOCRRequestError(
+                "DeepSeek OCR 2 Vendor returned invalid JSON"
+            ) from error
         usage = data.get("usage") or {}
         if context is not None:
             context.input_tokens += int(usage.get("prompt_tokens") or 0)
@@ -425,7 +442,14 @@ def _raise_vendor_error(response: Any) -> None:
         body = response.text
     if not isinstance(body, str):
         body = json.dumps(body, ensure_ascii=False)
-    raise RuntimeError(
+    message = (
         f"DeepSeek Vendor request failed with HTTP {response.status_code}: "
         f"{body[:500]}"
     )
+    import requests
+
+    try:
+        response.raise_for_status()
+    except requests.RequestException as error:
+        raise VendorOCRRequestError(message) from error
+    raise VendorOCRRequestError(message)
