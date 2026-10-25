@@ -72,7 +72,7 @@ jobs:
           PY
 
       - name: Install dependencies
-        run: poetry install --only dev
+        run: poetry install --with dev
 
       - name: Run tests
         run: poetry run python test.py

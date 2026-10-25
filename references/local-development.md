@@ -10,7 +10,7 @@ PYTHON_BIN="$(pyenv which python3 2>/dev/null || command -v python3)"
 "$PYTHON_BIN" -m venv .venv
 export VIRTUAL_ENV="$PWD/.venv"
 export PATH="$VIRTUAL_ENV/bin:$PATH"
-poetry install --only dev
+poetry install --with dev
 ```
 
 这个环境刻意避开 CUDA PyTorch 和模型下载。它足够用于解析器测试、包导入检查、lint，以及使用开发模型的测试。

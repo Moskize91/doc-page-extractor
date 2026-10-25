@@ -138,6 +138,7 @@ class _PageExtractorImpls:
             )
             stages = 1
 
+        erased_rectangles: list[tuple[int, int, int, int]] = []
         fill_color: tuple[int, int, int] | None = None
         output_path: Path | None = None
         temp_dir: tempfile.TemporaryDirectory | None = None
@@ -177,6 +178,12 @@ class _PageExtractorImpls:
                     _scale_layout_coordinates(layouts, scale_x, scale_y)
                     if page_result.structured is not None:
                         page_result.structured = build_structured_page(layouts)
+                if erased_rectangles:
+                    from .redacter import clip_layouts_to_unmasked_area
+
+                    layouts = clip_layouts_to_unmasked_area(layouts, erased_rectangles)
+                    page_result.layouts = layouts
+                    page_result.structured = build_structured_page(layouts)
                 if page_result.structured is None:
                     page_result.structured = build_structured_page(layouts)
                 yield image, page_result
@@ -186,13 +193,14 @@ class _PageExtractorImpls:
 
                     if fill_color is None:
                         fill_color = background_color(image)
+                    rectangles = list(self._redact_rectangles(
+                        image=image, dets=(layout.det for layout in layouts),
+                    ))
+                    erased_rectangles.extend(rectangles)
                     image = redact(
                         image=image.copy(),
                         fill_color=fill_color,
-                        rectangles=self._redact_rectangles(
-                            image=image,
-                            dets=(layout.det for layout in layouts),
-                        ),
+                        rectangles=rectangles,
                     )
         finally:
             if temp_dir is not None:

@@ -1,6 +1,9 @@
+from dataclasses import replace
 from typing import Any, Generator, Iterable, cast
 
 from PIL import Image, ImageDraw
+
+from .types import Layout
 
 
 def redact(
@@ -109,3 +112,78 @@ def _iter_pixels(
             r = g = b = cast(int, pixel)
             a = 255
         yield (r / 255.0, g / 255.0, b / 255.0, a / 255.0)
+
+
+def clip_layouts_to_unmasked_area(
+    layouts: Iterable[Layout],
+    rectangles: Iterable[tuple[int, int, int, int]],
+) -> list[Layout]:
+    """Keep each layout's largest rectangle outside all actual redactions.
+
+    Layout boxes are half-open pixel bounds. Redactions use inclusive endpoints,
+    exactly like ``redact`` / Pillow. Pass the cumulative rectangles used to
+    prepare this OCR input, in original image coordinates (after any rescaling).
+    Empty remnants are dropped. Changed boxes lose their stale polygon; raw
+    vendor data is retained for diagnostics. Equal areas prefer top, then left.
+    """
+    masks = [(x1, y1, x2 + 1, y2 + 1) for x1, y1, x2, y2 in rectangles]
+    result = []
+    for layout in layouts:
+        clipped = _largest_unmasked_rectangle(layout.det, masks)
+        if clipped is not None:
+            result.append(
+                layout if clipped == layout.det
+                else replace(layout, det=clipped, polygon=None)
+            )
+    return result
+
+
+def _largest_unmasked_rectangle(
+    box: tuple[int, int, int, int],
+    masks: list[tuple[int, int, int, int]],
+) -> tuple[int, int, int, int] | None:
+    x1, y1, x2, y2 = box
+    if x1 >= x2 or y1 >= y2:
+        return None
+    obstacles = [
+        (max(x1, a), max(y1, b), min(x2, c), min(y2, d))
+        for a, b, c, d in masks
+        if max(x1, a) < min(x2, c) and max(y1, b) < min(y2, d)
+    ]
+    if not obstacles:
+        return box
+
+    # Coordinate-compressed histogram: quadratic cells in mask count, independent
+    # of page resolution. A monotonic stack finds the widest rectangle per height.
+    xs = sorted({x1, x2} | {v for a, _, c, _ in obstacles for v in (a, c)})
+    ys = sorted({y1, y2} | {v for _, b, _, d in obstacles for v in (b, d)})
+    x_indices = {x: i for i, x in enumerate(xs)}
+    heights = [0] * (len(xs) - 1)
+    best = None
+    best_key = (0, 0, 0, 0, 0)
+    for top, bottom in zip(ys, ys[1:]):
+        changes = [0] * len(xs)
+        for left, upper, right, lower in obstacles:
+            if upper < bottom and lower > top:
+                changes[x_indices[left]] += 1
+                changes[x_indices[right]] -= 1
+        covered = 0
+        stack: list[tuple[int, int]] = []
+        for i in range(len(xs)):
+            if i < len(heights):
+                covered += changes[i]
+                heights[i] = 0 if covered else heights[i] + bottom - top
+                height = heights[i]
+            else:
+                height = 0
+            start = i
+            while stack and stack[-1][1] > height:
+                start, previous_height = stack.pop()
+                candidate = (xs[start], bottom - previous_height, xs[i], bottom)
+                area = (xs[i] - xs[start]) * previous_height
+                key = (area, -candidate[1], -candidate[0], -candidate[3], -candidate[2])
+                if key > best_key:
+                    best, best_key = candidate, key
+            if height and (not stack or stack[-1][1] < height):
+                stack.append((start, height))
+    return best

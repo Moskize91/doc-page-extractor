@@ -1,8 +1,9 @@
 # pylint: disable=undefined-all-variable
 
-__version__ = "1.2.1"
+__version__ = "1.2.2"
 
 _LAZY_EXPORTS = {
+    "clip_layouts_to_unmasked_area": ("redacter", "clip_layouts_to_unmasked_area"),
     "AbortError": ("extraction_context", "AbortError"),
     "DeepSeekOCR2VendorAdapter": ("adapters", "DeepSeekOCR2VendorAdapter"),
     "DeepSeekOCR2VendorConfig": ("adapters", "DeepSeekOCR2VendorConfig"),
@@ -34,6 +35,7 @@ _LAZY_EXPORTS = {
 }
 
 __all__ = [
+    "clip_layouts_to_unmasked_area",
     "plot",
     "create_deepseek_ocr_page_extractor",
     "create_page_extractor_with_adapter",
