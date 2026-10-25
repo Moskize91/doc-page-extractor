@@ -275,3 +275,31 @@ poetry run python scripts/ocr_sample.py --adapter unlimited-ocr-vendor --image t
 This project is licensed under the MIT License. Local Hugging Face OCR backends
 depend on their upstream model code and runtime dependencies. The DeepSeek-OCR
 model uses **easydict** (LGPLv3) for configuration management.
+
+
+### Multi-stage redaction safety
+
+From 1.2.2, each later OCR stage clips its layout boxes against **all** regions
+actually erased before that stage. The retained box is the largest axis-aligned
+rectangle inside the OCR box that intersects no erased pixel; a fully covered
+box is discarded. Ties prefer the topmost, then leftmost rectangle. Text and raw
+vendor diagnostics are retained; a changed box loses its stale polygon, and the
+structured page is rebuilt. Stage 1 is unchanged. This is a geometry fallback
+for incorrect OCR boxes, not a guarantee that OCR text is correct.
+
+Custom pipelines that orchestrate OCR calls themselves can use the same helper:
+
+```python
+from doc_page_extractor import clip_layouts_to_unmasked_area
+
+# Accumulate the exact rectangles passed to redacter.redact across all earlier
+# stages. These masks use Pillow's inclusive right/bottom pixel coordinates.
+# Layout boxes use half-open bounds, in the original image coordinate system.
+layouts = clip_layouts_to_unmasked_area(result.layouts, cumulative_redactions)
+```
+
+Call the helper after mapping resized OCR coordinates back to the original image.
+If storing `result.structured`, rebuild it from the corrected layouts. Updating
+the package alone does not modify a downstream pipeline's custom staging loop.
+The algorithm uses coordinate compression; its quadratic work depends on the
+number of intersecting masks, rather than the image's pixel resolution.

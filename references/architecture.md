@@ -18,7 +18,8 @@
   实现细节，应和纯解析/后处理代码保持隔离。
 - `parser.py` 解析 DeepSeek `<|ref|>` 和 `<|det|>` 标签，并把归一化坐标
   缩放成图片像素坐标。它不负责解析 Unlimited OCR JSON 或本地输出。
-- `redacter.py` 计算接近纸张背景的填充色，并在阶段之间涂抹区域。
+- `redacter.py` 计算接近纸张背景的填充色，并在阶段之间涂抹区域；提供公开的
+  `clip_layouts_to_unmasked_area()`，按实际擦除区域裁剪异常 OCR 框。
 - `plot.py` 在抽取结果上绘制调试标注。
 - `extraction_context.py` 提供生成过程中的中断和 token 限制统计。
 - `injection.py` 在运行时 patch 下载得到的模型对象，让本包无需修改 Hugging Face 缓存文件也能注入 stopping criteria。
@@ -45,3 +46,13 @@ Vendor adapter 直接把 `parse_result_url` JSON 映射成布局。各 adapter �
 - 不要把模型供应商逻辑加进 `parser.py`、`redacter.py` 或 `plot.py`。
 - 不要让 `types.py` 引入超出公开类型契约所需的重量级运行时依赖。
 - 新后端实现 `OCRAdapter`，再通过 `create_page_extractor_with_adapter()` 或专用工厂函数接入。
+
+
+## 多阶段坐标兜底
+
+`extractor.py` 为一次抽取累计所有历史轮次实际传给 `redact()` 的矩形。
+后续轮次先还原缩放坐标，再用累计擦除区域裁剪布局，最后重建结构化页面。
+裁剪只保留不与擦除区域相交的最大矩形；完全覆盖则丢弃。相同面积优先上方，
+再优先左方。擦除矩形遵守 Pillow 的闭区间像素语义，布局使用半开区间。
+改变框后移除旧 polygon，供应商原始诊断数据不变。
+自编排 OCR 的消费者须显式调用公开裁剪函数，并自行保存累计擦除区域。
