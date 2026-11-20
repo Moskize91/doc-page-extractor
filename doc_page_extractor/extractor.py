@@ -18,6 +18,7 @@ from .adapters.deepseek import (
     parse_deepseek_ocr2_layouts,
     parse_deepseek_ocr_layouts,
 )
+from .adapters.minicpm import MiniCPMOCRVendorAdapter, MiniCPMOCRVendorConfig
 from .types import (
     DeepSeekOCRSize,
     DeepSeekBackend,
@@ -108,6 +109,12 @@ def create_unlimited_ocr_vendor_page_extractor(
     config: UnlimitedOCRVendorConfig,
 ) -> PageExtractor:
     return _PageExtractorImpls(UnlimitedOCRVendorAdapter(config))
+
+
+def create_minicpm_ocr_vendor_page_extractor(
+    config: MiniCPMOCRVendorConfig,
+) -> PageExtractor:
+    return _PageExtractorImpls(MiniCPMOCRVendorAdapter(config))
 
 
 class _PageExtractorImpls:

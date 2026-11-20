@@ -24,6 +24,8 @@ class TestImportBoundaries(unittest.TestCase):
             builtins.__import__ = guarded_import
 
             from doc_page_extractor import (
+                MiniCPMOCRVendorConfig,
+                create_minicpm_ocr_vendor_page_extractor,
                 AbortError,
                 DeepSeekOCRVendorConfig,
                 ExtractionAbortedError,
@@ -34,6 +36,9 @@ class TestImportBoundaries(unittest.TestCase):
                 create_unlimited_ocr_vendor_page_extractor,
             )
 
+            create_minicpm_ocr_vendor_page_extractor(
+                MiniCPMOCRVendorConfig(base_url="https://example.test")
+            )
             assert AbortError
             assert ExtractionAbortedError
             assert TokenLimitError

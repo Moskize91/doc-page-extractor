@@ -303,3 +303,27 @@ If storing `result.structured`, rebuild it from the corrected layouts. Updating
 the package alone does not modify a downstream pipeline's custom staging loop.
 The algorithm uses coordinate compression; its quadratic work depends on the
 number of intersecting masks, rather than the image's pixel resolution.
+
+### MiniCPM-OCR document parsing
+
+Use a full ModelBest hosted or self-hosted MiniCPM-OCR document-parsing service,
+not a single-region vision endpoint:
+
+```python
+from doc_page_extractor import MiniCPMOCRVendorConfig, create_minicpm_ocr_vendor_page_extractor
+
+extractor = create_minicpm_ocr_vendor_page_extractor(MiniCPMOCRVendorConfig(
+    base_url="https://api.modelbest.cn/v1",
+    api_key="your-api-key",
+))
+```
+
+For the official self-hosted service, use its URL, `model="minicpm-ocr"`, and
+leave `api_key` empty. This adapter uses one stage and disables orientation
+correction so returned regions remain aligned with the input image. Explicit
+failed recognition blocks reject the page instead of silently dropping text.
+`parse_minicpm_ocr_layouts` in `doc_page_extractor.adapters.minicpm` is also
+available to consumers that own an asynchronous HTTP transport. It accepts the
+response mapping and input image size, and returns common `Layout` objects.
+
+MiniCPM-OCR support originated from [Caldalis’s pdf-craft contribution](https://github.com/oomol-lab/pdf-craft/pull/669).

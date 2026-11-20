@@ -1,8 +1,11 @@
 # pylint: disable=undefined-all-variable
 
-__version__ = "1.2.2"
+__version__ = "1.2.3"
 
 _LAZY_EXPORTS = {
+    "create_minicpm_ocr_vendor_page_extractor": ("extractor", "create_minicpm_ocr_vendor_page_extractor"),
+    "MiniCPMOCRVendorConfig": ("adapters", "MiniCPMOCRVendorConfig"),
+    "MiniCPMOCRVendorAdapter": ("adapters", "MiniCPMOCRVendorAdapter"),
     "clip_layouts_to_unmasked_area": ("redacter", "clip_layouts_to_unmasked_area"),
     "AbortError": ("extraction_context", "AbortError"),
     "DeepSeekOCR2VendorAdapter": ("adapters", "DeepSeekOCR2VendorAdapter"),
@@ -35,6 +38,9 @@ _LAZY_EXPORTS = {
 }
 
 __all__ = [
+    "create_minicpm_ocr_vendor_page_extractor",
+    "MiniCPMOCRVendorConfig",
+    "MiniCPMOCRVendorAdapter",
     "clip_layouts_to_unmasked_area",
     "plot",
     "create_deepseek_ocr_page_extractor",
