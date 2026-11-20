@@ -1,6 +1,9 @@
 # pylint: disable=undefined-all-variable
 
 _LAZY_EXPORTS = {
+    "parse_minicpm_ocr_layouts": ("minicpm", "parse_minicpm_ocr_layouts"),
+    "MiniCPMOCRVendorConfig": ("minicpm", "MiniCPMOCRVendorConfig"),
+    "MiniCPMOCRVendorAdapter": ("minicpm", "MiniCPMOCRVendorAdapter"),
     "DeepSeekOCR2VendorAdapter": ("deepseek", "DeepSeekOCR2VendorAdapter"),
     "DeepSeekOCR2VendorConfig": ("deepseek", "DeepSeekOCR2VendorConfig"),
     "DeepSeekOCRVendorAdapter": ("deepseek", "DeepSeekOCRVendorAdapter"),
@@ -15,6 +18,9 @@ _LAZY_EXPORTS = {
 }
 
 __all__ = [
+    "parse_minicpm_ocr_layouts",
+    "MiniCPMOCRVendorConfig",
+    "MiniCPMOCRVendorAdapter",
     "DeepSeekOCR2VendorAdapter",
     "DeepSeekOCR2VendorConfig",
     "DeepSeekOCRVendorAdapter",
