@@ -57,6 +57,23 @@ def parse_deepseek_ocr_layouts(
     ]
 
 
+def parse_deepseek_official_ocr_layouts(
+    image: _ImageLike, response: str, source: str = "deepseek-ocr-official"
+) -> list[Layout]:
+    """Adapt official OCR markers to the existing DeepSeek layout parser."""
+    response = re.sub(
+        r"<[|｜](/?)(ref|box|det)[|｜]>",
+        lambda match: f"<|{match[1]}{'det' if match[2] == 'box' else match[2]}|>",
+        response,
+    )
+    response = re.sub(
+        r"<\|ref\|>(.*?)<\|/ref\|>",
+        lambda match: f"<|ref|>{match[1].strip().lower()}<|/ref|>",
+        response, flags=re.DOTALL,
+    )
+    return parse_deepseek_ocr_layouts(image, response, source)
+
+
 def parse_deepseek_ocr2_layouts(
     image: _ImageLike, response: str, source: str = "deepseek-ocr2-vendor"
 ) -> list[Layout]:
