@@ -1,6 +1,6 @@
 # pylint: disable=undefined-all-variable
 
-__version__ = "1.2.3"
+__version__ = "1.2.4"
 
 _LAZY_EXPORTS = {
     "create_minicpm_ocr_vendor_page_extractor": ("extractor", "create_minicpm_ocr_vendor_page_extractor"),
